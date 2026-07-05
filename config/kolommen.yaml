@@ -1,0 +1,11 @@
+# Mapping van engine-velden naar kolomkoppen in de pandendatabase
+# (Yield Report Database.xlsx). Pas de rechterkant aan aan de werkelijke
+# koppen in jouw bestand; links staan de veldnamen van de engine.
+kolommen:
+  adres: "Adres"
+  koopsom: "Koopsom"
+  huur_per_maand: "Huur per maand"
+  kosten_koper_pct: "Kosten koper %"
+  verbouwing: "Verbouwing"
+  hypotheekbedrag: "Hypotheek"
+  rente_pct: "Rente"

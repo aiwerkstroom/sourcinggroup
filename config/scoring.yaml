@@ -1,0 +1,26 @@
+# Scoringsconfiguratie — dit is de "weging" van het model.
+# Neem hier de drempels en wegingen uit TSG Model.xlsx over.
+#
+# Per KPI: een ondergrens (score 0) en bovengrens (score 100),
+# lineair geschaald daartussen. Wegingen tellen op tot 1.0.
+# KPI's die niet berekend kunnen worden (bv. dscr zonder hypotheek)
+# vallen weg; de overige wegingen worden dan herschaald.
+
+wegingen:
+  bar: 0.20
+  nar: 0.30
+  cash_on_cash: 0.30
+  dscr: 0.20
+
+schalen:
+  bar:          { min: 0.040, max: 0.100 }   # 4% -> 0 punten, 10% -> 100 punten
+  nar:          { min: 0.025, max: 0.070 }
+  cash_on_cash: { min: 0.000, max: 0.100 }
+  dscr:         { min: 1.000, max: 2.000 }
+
+labels:
+  - { vanaf: 80, label: "Uitstekend" }
+  - { vanaf: 65, label: "Goed" }
+  - { vanaf: 50, label: "Redelijk" }
+  - { vanaf: 35, label: "Matig" }
+  - { vanaf: 0,  label: "Onvoldoende" }

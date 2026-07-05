@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sourcing Group — Rentabiliteitsbeoordeling</title>
+<style>
+  :root {
+    --page:           #f9f9f7;
+    --surface:        #fcfcfb;
+    --ink:            #0b0b0b;
+    --ink-2:          #52514e;
+    --muted:          #898781;
+    --grid:           #e1e0d9;
+    --border:         rgba(11,11,11,0.10);
+    --accent:         #2a78d6;   /* sequentiële hue: blauw */
+    --accent-track:   #cde2fb;
+    --good:           #006300;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --page:         #0d0d0d;
+      --surface:      #1a1a19;
+      --ink:          #ffffff;
+      --ink-2:        #c3c2b7;
+      --muted:        #898781;
+      --grid:         #2c2c2a;
+      --border:       rgba(255,255,255,0.10);
+      --accent:       #3987e5;
+      --accent-track: #184f95;
+      --good:         #0ca30c;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 2rem 1.25rem; background: var(--page); color: var(--ink);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .wrap { max-width: 1060px; margin: 0 auto; }
+  h1 { font-size: 1.35rem; margin: 0 0 .25rem; }
+  .sub { color: var(--ink-2); margin: 0 0 1.5rem; }
+  .layout { display: grid; grid-template-columns: minmax(280px, 380px) 1fr; gap: 1.25rem; }
+  @media (max-width: 820px) { .layout { grid-template-columns: 1fr; } }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1.1rem 1.25rem; }
+  .card h2 { font-size: .8rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 0 0 .8rem; }
+  label { display: block; font-size: .82rem; color: var(--ink-2); margin: .65rem 0 .2rem; }
+  input {
+    width: 100%; padding: .45rem .6rem; border: 1px solid var(--grid); border-radius: 6px;
+    background: var(--page); color: var(--ink); font: inherit;
+  }
+  input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .rij2 { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+  button {
+    margin-top: 1.1rem; width: 100%; padding: .6rem; border: 0; border-radius: 8px;
+    background: var(--accent); color: #fff; font: inherit; font-weight: 600; cursor: pointer;
+  }
+  button:hover { filter: brightness(1.08); }
+
+  /* Hero-score + KPI-tegels */
+  .hero { text-align: left; padding: 1.25rem; }
+  .hero .waarde { font-size: 3rem; font-weight: 700; line-height: 1.1; }
+  .hero .label { color: var(--ink-2); font-weight: 600; }
+  .tegels { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: .8rem; margin-top: .8rem; }
+  .tegel { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: .8rem 1rem; }
+  .tegel .naam { font-size: .75rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  .tegel .waarde { font-size: 1.35rem; font-weight: 700; margin-top: .15rem; }
+  .tegel .sub { font-size: .78rem; color: var(--ink-2); margin: 0; }
+
+  /* Deelscore-balken: één serie, één hue, directe labels */
+  .balken { margin-top: 1rem; }
+  .balk-rij { display: grid; grid-template-columns: 110px 1fr 48px; align-items: center; gap: .6rem; margin: .45rem 0; }
+  .balk-rij .naam { font-size: .82rem; color: var(--ink-2); }
+  .balk-track { display: block; height: 10px; background: var(--accent-track); border-radius: 5px; overflow: hidden; }
+  .balk-vul { display: block; height: 100%; background: var(--accent); border-radius: 0 4px 4px 0; }
+  .balk-rij .cijfer { font-size: .82rem; color: var(--ink); font-variant-numeric: tabular-nums; text-align: right; }
+
+  #resultaat { display: none; }
+  #fout { display: none; color: #d03b3b; margin-top: .8rem; font-size: .85rem; }
+  .voetnoot { color: var(--muted); font-size: .78rem; margin-top: 1.25rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Sourcing Group</h1>
+  <p class="sub">Rentabiliteitsbeoordeling van een investeringspand</p>
+
+  <div class="layout">
+    <form class="card" id="formulier">
+      <h2>Pand &amp; plan</h2>
+      <label for="adres">Adres</label>
+      <input id="adres" placeholder="Voorbeeldstraat 1, Amsterdam">
+      <div class="rij2">
+        <div><label for="koopsom">Koopsom (€)</label><input id="koopsom" type="number" min="1" required value="285000"></div>
+        <div><label for="huur">Huur per maand (€)</label><input id="huur" type="number" min="0" required value="1650"></div>
+      </div>
+      <div class="rij2">
+        <div><label for="kk">Kosten koper (%)</label><input id="kk" type="number" step="0.1" value="8"></div>
+        <div><label for="overig">Overige aankoopkosten (€)</label><input id="overig" type="number" min="0" value="3500"></div>
+      </div>
+      <label for="verbouwing">Bestedingsplan / verbouwing totaal (€)</label>
+      <input id="verbouwing" type="number" min="0" value="25000">
+      <div class="rij2">
+        <div><label for="hypotheek">Hypotheek (€)</label><input id="hypotheek" type="number" min="0" value="200000"></div>
+        <div><label for="rente">Rente (%)</label><input id="rente" type="number" step="0.01" value="4.5"></div>
+      </div>
+      <button type="submit">Beoordeel</button>
+      <p id="fout"></p>
+    </form>
+
+    <div id="resultaat">
+      <div class="card hero">
+        <h2>Totaalscore</h2>
+        <div class="waarde"><span id="score">–</span><span style="font-size:1.2rem;color:var(--muted)"> / 100</span></div>
+        <div class="label" id="label"></div>
+        <div class="balken" id="balken" role="img" aria-label="Deelscores per kengetal"></div>
+      </div>
+      <div class="tegels" id="tegels"></div>
+      <p class="voetnoot">Kengetallen: BAR = bruto jaarhuur / totale investering · NAR = netto jaarhuur / totale investering ·
+        Cash-on-cash = jaarcashflow / eigen inbreng · DSCR = netto jaarhuur / schuldendienst.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const eur = n => new Intl.NumberFormat('nl-NL', {style:'currency', currency:'EUR', maximumFractionDigits:0}).format(n);
+const pct = n => (n*100).toFixed(1).replace('.', ',') + '%';
+const kpiNamen = { bar: 'BAR', nar: 'NAR', cash_on_cash: 'Cash-on-cash', dscr: 'DSCR' };
+
+document.getElementById('formulier').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const v = id => parseFloat(document.getElementById(id).value) || 0;
+  const body = {
+    pand: {
+      adres: document.getElementById('adres').value,
+      koopsom: v('koopsom'),
+      huur_per_maand: v('huur'),
+      kosten_koper_pct: v('kk') / 100,
+      overige_aankoopkosten: v('overig'),
+    },
+    bestedingsplan: v('verbouwing') > 0
+      ? { posten: [{ omschrijving: 'Verbouwing', bedrag: v('verbouwing') }] } : { posten: [] },
+    financiering: { hypotheekbedrag: v('hypotheek'), rente_pct: v('rente') / 100 },
+  };
+  const fout = document.getElementById('fout');
+  fout.style.display = 'none';
+  try {
+    const res = await fetch('/api/beoordeling', {
+      method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error((await res.json()).detail?.[0]?.msg || 'Beoordeling mislukt');
+    toon(await res.json());
+  } catch (err) {
+    fout.textContent = err.message; fout.style.display = 'block';
+  }
+});
+
+function toon(b) {
+  document.getElementById('resultaat').style.display = 'block';
+  document.getElementById('score').textContent = b.score.totaal.toLocaleString('nl-NL');
+  document.getElementById('label').textContent = b.score.label;
+
+  const balken = document.getElementById('balken');
+  balken.innerHTML = '';
+  for (const [kpi, deel] of Object.entries(b.score.per_kpi)) {
+    balken.insertAdjacentHTML('beforeend', `
+      <div class="balk-rij">
+        <span class="naam">${kpiNamen[kpi] || kpi}</span>
+        <span class="balk-track"><span class="balk-vul" style="width:${deel}%"></span></span>
+        <span class="cijfer">${deel.toLocaleString('nl-NL')}</span>
+      </div>`);
+  }
+
+  const tegels = [
+    ['Totale investering', eur(b.totale_investering), 'incl. kosten koper & plan'],
+    ['Eigen inbreng', eur(b.eigen_inbreng), ''],
+    ['BAR', pct(b.bar), 'bruto aanvangsrendement'],
+    ['NAR', pct(b.nar), 'netto aanvangsrendement'],
+    ['Cashflow per jaar', eur(b.cashflow_jaar), 'na rente & aflossing'],
+    ['Cash-on-cash', b.cash_on_cash == null ? '–' : pct(b.cash_on_cash), 'op eigen inbreng'],
+    ['DSCR', b.dscr == null ? '–' : b.dscr.toFixed(2).replace('.', ','), 'dekking schuldendienst'],
+  ];
+  document.getElementById('tegels').innerHTML = tegels.map(([naam, waarde, sub]) => `
+    <div class="tegel"><div class="naam">${naam}</div><div class="waarde">${waarde}</div><p class="sub">${sub}</p></div>`).join('');
+}
+</script>
+</body>
+</html>
