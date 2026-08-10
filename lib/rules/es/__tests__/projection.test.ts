@@ -76,33 +76,33 @@ describe("multi-year cashflow after tax (reference case)", () => {
       },
       2: {
         grossIncome: 24188.8324,
-        noi: 15216.507,
+        noi: 15240.267,
         interestPaid: 10824.775084,
         principalPaid: 12200.278328,
         mortgageBalance: 223658.521236,
-        preTaxCashflow: -7808.546366,
-        taxDue: 30.700554,
-        cashflowAfterTax: -7839.24692,
+        preTaxCashflow: -7784.786366,
+        taxDue: 35.214954,
+        cashflowAfterTax: -7820.00132,
       },
       5: {
         grossIncome: 26817.9649,
-        noi: 17111.2947,
+        noi: 17222.4924,
         interestPaid: 8981.220523,
         principalPaid: 14043.832889,
         mortgageBalance: 183428.207879,
-        preTaxCashflow: -5913.758706,
-        taxDue: 779.00587,
-        cashflowAfterTax: -6692.764576,
+        preTaxCashflow: -5802.560989,
+        taxDue: 800.133436,
+        cashflowAfterTax: -6602.694425,
       },
       10: {
         grossIncome: 31089.3715,
-        noi: 20080.1742,
+        noi: 20376.7808,
         interestPaid: 5269.038107,
         principalPaid: 17756.015305,
         mortgageBalance: 102420.428129,
-        preTaxCashflow: -2944.87923,
-        taxDue: 2115.935648,
-        cashflowAfterTax: -5060.814878,
+        preTaxCashflow: -2648.272632,
+        taxDue: 2172.290901,
+        cashflowAfterTax: -4820.563533,
       },
     },
     base: {
@@ -118,33 +118,33 @@ describe("multi-year cashflow after tax (reference case)", () => {
       },
       2: {
         grossIncome: 29862.756,
-        noi: 20557.1457,
+        noi: 20594.1057,
         interestPaid: 9645.503785,
         principalPaid: 12622.081392,
         mortgageBalance: 222774.098666,
-        preTaxCashflow: -1710.439449,
-        taxDue: 1123.669679,
-        cashflowAfterTax: -2834.109128,
+        preTaxCashflow: -1673.479449,
+        taxDue: 1130.692079,
+        cashflowAfterTax: -2804.171528,
       },
       5: {
         grossIncome: 33108.5987,
-        noi: 22980.5824,
+        noi: 23152.035,
         interestPaid: 7953.732534,
         principalPaid: 14313.852643,
         mortgageBalance: 181571.585031,
-        preTaxCashflow: 712.997197,
-        taxDue: 1940.123084,
-        cashflowAfterTax: -1227.125887,
+        preTaxCashflow: 884.449865,
+        taxDue: 1972.699091,
+        cashflowAfterTax: -1088.249226,
       },
       10: {
         grossIncome: 38381.9401,
-        noi: 26777.3113,
+        noi: 27242.8996,
         interestPaid: 4615.372495,
         principalPaid: 17652.212682,
         mortgageBalance: 100266.961333,
-        preTaxCashflow: 4509.726131,
-        taxDue: 3357.179096,
-        cashflowAfterTax: 1152.547035,
+        preTaxCashflow: 4975.314381,
+        taxDue: 3445.640863,
+        cashflowAfterTax: 1529.673518,
       },
     },
     optimistic: {
@@ -160,33 +160,33 @@ describe("multi-year cashflow after tax (reference case)", () => {
       },
       2: {
         grossIncome: 36133.9348,
-        noi: 26242.2792,
+        noi: 26292.4392,
         interestPaid: 9058.08593,
         principalPaid: 12836.302922,
         mortgageBalance: 222323.744315,
-        preTaxCashflow: 4347.890327,
-        taxDue: 2227.499542,
-        cashflowAfterTax: 2120.390785,
+        preTaxCashflow: 4398.050327,
+        taxDue: 2237.029942,
+        cashflowAfterTax: 2161.020385,
       },
       5: {
         grossIncome: 40061.4044,
-        noi: 29239.5823,
+        noi: 29473.0363,
         interestPaid: 7446.002776,
         principalPaid: 14448.386076,
         mortgageBalance: 180633.040069,
-        preTaxCashflow: 7345.193404,
-        taxDue: 3136.118634,
-        cashflowAfterTax: 4209.074769,
+        preTaxCashflow: 7578.647409,
+        taxDue: 3180.474895,
+        cashflowAfterTax: 4398.172514,
       },
       10: {
         grossIncome: 46442.1475,
-        noi: 33926.8967,
+        noi: 34574.8439,
         interestPaid: 4296.86191,
         principalPaid: 17597.526942,
         mortgageBalance: 99191.89344,
-        preTaxCashflow: 12032.507822,
-        taxDue: 4683.36479,
-        cashflowAfterTax: 7349.143031,
+        preTaxCashflow: 12680.455053,
+        taxDue: 4806.474764,
+        cashflowAfterTax: 7873.980289,
       },
     },
   };
@@ -216,6 +216,14 @@ describe("multi-year cashflow after tax (reference case)", () => {
     const y1 = projectionFor("conservative")[0]!;
     expect(y1.taxableIncome).toBeLessThan(0);
     expect(y1.taxDue).toBe(0);
+  });
+
+  it("indexes IBI with CPI, not with the property's market value growth", () => {
+    // Base scenario: 1320 x costIndex(year 2) = 1320 x 1.022 = 1349.04.
+    // A market-value-linked IBI (growth 1.05) would give 1386 instead - the
+    // regression this test guards against.
+    const y2 = projectionFor("base")[1]!;
+    expect(y2.propertyTaxIBI).toBeCloseTo(1349.04, 2);
   });
 
   it("the mortgage is fully repaid within the 15-year term, well inside the 10-year window", () => {

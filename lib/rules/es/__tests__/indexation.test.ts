@@ -82,18 +82,6 @@ describe("index series (base scenario, 10 years from 2026)", () => {
     expect(series[9]!.propertyValueIndex).toBeCloseTo(1.628894626777442, 12);
   });
 
-  it("keeps the IBI index at 1 in year 1, unlike the exit-price index", () => {
-    expect(series[0]!.ibiValueIndex).toBe(1);
-    expect(series[1]!.ibiValueIndex).toBeCloseTo(1.05, 12);
-    expect(series[4]!.ibiValueIndex).toBeCloseTo(1.21550625, 12);
-    expect(series[9]!.ibiValueIndex).toBeCloseTo(1.5513282159785162, 12);
-  });
-
-  it("ibiValueIndex(year) equals propertyValueIndex(year - 1)", () => {
-    for (let i = 1; i < series.length; i++) {
-      expect(series[i]!.ibiValueIndex).toBeCloseTo(series[i - 1]!.propertyValueIndex, 12);
-    }
-  });
 
   it("marks 2031 onwards as extrapolated", () => {
     expect(series.filter((y) => y.extrapolated).map((y) => y.calendarYear)).toEqual([

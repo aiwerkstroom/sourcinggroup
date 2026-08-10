@@ -217,3 +217,54 @@ budget: ja · renovatie binnen budget: ja. Vaste exploitatie (incl.
 hypotheekrente): € 12.845. Belasting (basis, EU/EER): aftrekbaar € 24.462,29 ·
 belastbaar € 3.978,43 · verschuldigd € 755,90; aftrekbaar optimistisch
 € 24.850,74 (rente aflossingsvrij 9.776,25 bij 3,95%).
+
+## 12. Fase 1b — meerjarige projectie, exit en IRR
+
+Aanvulling volgens `MODEL_SPEC_FASE1B.md`. Horizon: 10 jaar, met een
+tussenstand op jaar 5. Jaar 1 is het fase-1-basisjaar (huur- en kostenindex
+= 1); indexatie werkt vanaf jaar 2.
+
+**Indexatie** (`lib/rules/es/indexation.ts`), bron Correction Factors:
+- huurgroei uit rij "Rent Price Changes" (2026: 1,06 aflopend naar 1,03 in
+  2030), toegepast op de bruto huur;
+- kosteninflatie uit rij "CPI (YoY%)" (~2%), toegepast op onderhoud,
+  nutskosten, verzekeringen, bankkosten **en IBI**;
+- waardegroei 4/5/6% per scenario, samengesteld, gebruikt voor de
+  verkoopprijs bij exit (§5) — niet voor IBI.
+- Reeks loopt tot 2030; daarna wordt de laatst bekende waarde doorgetrokken
+  en het jaar gemarkeerd als `extrapolated`.
+
+**[HERZIEN t.o.v. MODEL_SPEC_FASE1B.md §3]** De oorspronkelijke fase-1b-spec
+liet IBI de pandwaarde volgen. Dat is feitelijk onjuist: IBI wordt geheven
+over de **kadastrale waarde** (valor catastral), die administratief wordt
+vastgesteld en periodiek wordt herzien — niet over de marktwaarde, en dus
+niet over hetzelfde groeipad als de verkoopprijs. Dit model heeft geen
+kadastrale-waardereeks; de IBI-grondslag is daarom een **benadering**: IBI
+wordt met CPI geïndexeerd, net als de overige vaste lasten. Zodra een
+kadastrale-waardereeks beschikbaar is, hoort die de indexatie te bepalen in
+plaats van CPI.
+
+**Cashflow na belasting** (`lib/rules/es/projection.ts`):
+```
+rente(jaar)      = uit het aflossingsschema (annuïteit gesplitst per jaar,
+                    niet de vlakke aflossingsvrije schatting van fase 1)
+NOI(jaar)         = bruto huur(jaar) − (management + onderhoud + nutskosten
+                    + IBI + verzekeringen + bankkosten)(jaar)
+cashflow voor belasting(jaar) = NOI(jaar) − rente(jaar) − aflossing(jaar)
+belastbaar(jaar)  = bruto huur(jaar) − aftrekbare kosten(jaar)
+                    (rente + IBI + verzekeringen + onderhoud + management +
+                    afschrijving + bankkosten, allemaal van dat jaar)
+belasting(jaar)   = MAX(0, belastbaar(jaar)) × belastingtarief
+cashflow na belasting(jaar) = cashflow voor belasting(jaar) − belasting(jaar)
+```
+Property management schaalt mee met de geïndexeerde huur (is per definitie
+een percentage van de huur van dat jaar, geen aparte CPI nodig). Afschrijving
+blijft vlak: gekoppeld aan de historische aanschafwaarde, niet geïndexeerd.
+Een negatief belastbaar bedrag levert geen belastingteruggave op — de
+Spaanse IRNR-heffing voor niet-ingezetenen is een periodieke aangifte, geen
+jaarlijkse verrekening met terugbetaling; de belasting is daarom geklemd op
+€ 0 in plaats van negatief getoond.
+
+Golden tests: onafhankelijke Python-doorrekening (er is geen Excel-
+tegenhanger voor fase 1b), vastgelegd in
+`lib/rules/es/__tests__/{indexation,financing,projection}.test.ts`.

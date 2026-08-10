@@ -69,9 +69,10 @@ export function buildProjectionYears(args: {
     const propertyManagement = grossIncome * PROPERTY_MANAGEMENT_FEE;
     const maintenance = args.scenarioResult.maintenance * idx.costIndex;
     const utilities = args.scenarioResult.utilities * idx.costIndex;
-    // IBI recomputes on the property's current value (MODEL_SPEC_FASE1B §3);
-    // insurance and the bank fee are CPI-indexed absolute cost lines.
-    const propertyTaxIBI = args.fixedCosts.propertyTaxIBI * idx.ibiValueIndex;
+    // IBI is levied on the cadastral value, which is set administratively
+    // and does not track market price; absent a cadastral-value series it
+    // is CPI-indexed like the other fixed cost lines (MODEL_SPEC.md §6/§10).
+    const propertyTaxIBI = args.fixedCosts.propertyTaxIBI * idx.costIndex;
     const insurance = args.fixedCosts.insurance * idx.costIndex;
     const bankAccountFee = args.fixedCosts.bankAccountFee * idx.costIndex;
     const fixedCosts = propertyTaxIBI + insurance + bankAccountFee;
