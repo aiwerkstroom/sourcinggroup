@@ -5,6 +5,7 @@ export * from "./renovation";
 export * from "./financing";
 export * from "./acquisition";
 export * from "./operating";
+export * from "./indexation";
 export * from "./scenarios";
 export * from "./tax";
 export * from "./validation";

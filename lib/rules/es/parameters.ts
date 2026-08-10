@@ -310,10 +310,70 @@ export const DEPRECIATION_SCENARIO_FACTORS: Readonly<Record<ScenarioId, number>>
  * - conservative 4%: below long-run average, market moderation (WTG Spain forecast)
  * - base 5%: BBVA Research forecast +5.3% for 2026, national cooling trend
  * - optimistic 6%: Valencia outperforming Spain, adjusted down (Valencia Property, 2025)
- * Not yet wired into an output (no multi-year projection in the model).
+ * Applied compounded to the property value in the multi-year projection.
  */
 export const VALUE_GROWTH_ANNUAL: Readonly<Record<ScenarioId, number>> = {
   conservative: 1.04,
   base: 1.05,
   optimistic: 1.06,
 };
+
+// ---------------------------------------------------------------------------
+// Phase 1b - multi-year projection (MODEL_SPEC_FASE1B §2, §3)
+// ---------------------------------------------------------------------------
+
+/**
+ * Projection horizon: model 10 years, report the year-5 and year-10 stand
+ * (MODEL_SPEC_FASE1B §2). Spanish acquisition costs run to ~13% of the
+ * purchase price, so a 5-year-only view flatters a short hold.
+ */
+export const PROJECTION_YEARS = 10;
+export const PROJECTION_INTERIM_YEAR = 5;
+
+/**
+ * Rent growth per calendar year, as a multiplier on gross rent.
+ * Correction Factors!O26:S26 (row "Rent Price Changes"), TSG_Model_v3.xlsx
+ * (2026-08). Sources: Eurostat HICP, Global Property Guide (Spain 2024 rent
+ * data), Idealista market outlook, Oxford Economics housing forecasts,
+ * European Commission AMECO, BBVA Research.
+ *
+ * Only the estimate years (2026 and later) are listed: the historical part
+ * of that row mixes units (2014-2016 are percentages, 2017+ are multipliers)
+ * and is not used for forward projection.
+ */
+export const RENT_GROWTH_BY_YEAR: Readonly<Record<number, number>> = {
+  2026: 1.06,
+  2027: 1.05,
+  2028: 1.04,
+  2029: 1.035,
+  2030: 1.03,
+};
+
+/**
+ * Consumer price inflation per calendar year, in percent.
+ * Correction Factors!O12:S12 (row "CPI (YoY%)"), TSG_Model_v3.xlsx (2026-08).
+ * Sources: historical FactSet; estimates IMF WEO (Apr 2025) / European
+ * Commission Economic Forecasts (Spring 2024).
+ * Applied to maintenance, utilities, insurance and bank fees.
+ */
+export const CPI_PERCENT_BY_YEAR: Readonly<Record<number, number>> = {
+  2026: 2.0,
+  2027: 2.2,
+  2028: 2.1,
+  2029: 2.0,
+  2030: 2.0,
+};
+
+/**
+ * Last calendar year covered by the Correction Factors series. Beyond it the
+ * projection carries the last known value forward and flags those years as
+ * extrapolated (MODEL_SPEC_FASE1B §3: never extend the series silently).
+ */
+export const CORRECTION_FACTORS_LAST_YEAR = 2030;
+
+/**
+ * First estimate year in the Correction Factors series, used as the default
+ * first projection year. Not a source value - a modelling convention, so it
+ * is stated here rather than hidden in the projection code.
+ */
+export const CORRECTION_FACTORS_FIRST_ESTIMATE_YEAR = 2026;
