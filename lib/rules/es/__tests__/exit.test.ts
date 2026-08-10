@@ -38,7 +38,7 @@ describe("exit (reference case, 10-year holding period)", () => {
     });
     return computeExit({
       scenario,
-      finalYear: years[years.length - 1]!,
+      years,
       purchasePrice: referenceCase.property.purchasePrice,
       acquisition: engineResult.acquisition,
       renovation: engineResult.selectedRenovation,
@@ -46,11 +46,14 @@ describe("exit (reference case, 10-year holding period)", () => {
     });
   }
 
-  it("computes the acquisition value for CGT from ITP/AJD/notary/registration/legal only (not agency fees or bank fee)", () => {
-    // 330000 + 33000 + 4950 + 1650 + 990 + 3300 = 373890, +0 mejora (default share 0).
+  it("computes the acquisition value for CGT from ITP/AJD/notary/registration/legal, +0 mejora, minus cumulative depreciation", () => {
+    // 330000 + 33000 + 4950 + 1650 + 990 + 3300 = 373890, +0 mejora (default
+    // share 0), - 69300 cumulative depreciation (6930/year x 10 years, the
+    // same figure §4's tax layer actually deducted) = 304590.
     const result = exitFor("base");
-    expect(result.acquisitionValueForCapitalGainsTax).toBeCloseTo(373890, 6);
     expect(result.renovationImprovementValue).toBe(0);
+    expect(result.cumulativeDepreciation).toBeCloseTo(69300, 6);
+    expect(result.acquisitionValueForCapitalGainsTax).toBeCloseTo(304590, 6);
   });
 
   it("defaults renovationImprovementShare to 0: no renovation cost raises the acquisition value without justification", () => {
@@ -71,20 +74,21 @@ describe("exit (reference case, 10-year holding period)", () => {
     });
     const result = computeExit({
       scenario: "base",
-      finalYear: years[years.length - 1]!,
+      years,
       purchasePrice: referenceCase.property.purchasePrice,
       acquisition: engineResult.acquisition,
       renovation: engineResult.selectedRenovation,
       assumptions: testAssumptions,
       renovationImprovementShare: 0.5,
     });
-    // 55000 (light strategy capex) x 0.5 = 27500.
+    // 55000 (light strategy capex) x 0.5 = 27500 mejora; 373890 + 27500 -
+    // 69300 cumulative depreciation = 332090.
     expect(result.renovationImprovementValue).toBeCloseTo(27500, 6);
-    expect(result.acquisitionValueForCapitalGainsTax).toBeCloseTo(401390, 6);
+    expect(result.acquisitionValueForCapitalGainsTax).toBeCloseTo(332090, 6);
     expect(result.transferValueForCapitalGainsTax).toBeCloseTo(512533.8177630936, 4);
-    expect(result.capitalGain).toBeCloseTo(111143.81776309363, 4);
-    expect(result.capitalGainsTax).toBeCloseTo(21117.325374987788, 4);
-    expect(result.netSaleProceeds).toBeCloseTo(391149.53105510585, 4);
+    expect(result.capitalGain).toBeCloseTo(180443.81776309363, 4);
+    expect(result.capitalGainsTax).toBeCloseTo(34284.32537498779, 4);
+    expect(result.netSaleProceeds).toBeCloseTo(377982.53105510585, 4);
   });
 
   const golden: Record<
@@ -104,30 +108,30 @@ describe("exit (reference case, 10-year holding period)", () => {
       sellingPrice: 488480.61402305367,
       sellingCommission: 19539.224560922146,
       transferValueForCapitalGainsTax: 465441.38946213154,
-      capitalGain: 91551.38946213154,
-      capitalGainsTax: 17394.763997804992,
+      capitalGain: 156693.38946213154,
+      capitalGainsTax: 29771.74399780499,
       mortgageBalanceAtExit: 102420.428129,
-      netSaleProceeds: 345626.1973353265,
+      netSaleProceeds: 333249.21733532654,
       nonResidentWithholdingAdvance: 14654.418420691609,
     },
     base: {
       sellingPrice: 537535.2268365559,
       sellingCommission: 21501.409073462237,
       transferValueForCapitalGainsTax: 512533.8177630936,
-      capitalGain: 138643.81776309363,
-      capitalGainsTax: 26342.325374987788,
+      capitalGain: 207943.81776309363,
+      capitalGainsTax: 39509.32537498779,
       mortgageBalanceAtExit: 100266.961333,
-      netSaleProceeds: 385924.53105510585,
+      netSaleProceeds: 372757.53105510585,
       nonResidentWithholdingAdvance: 16126.056805096676,
     },
     optimistic: {
       sellingPrice: 590979.739859142,
       sellingCommission: 23639.189594365682,
       transferValueForCapitalGainsTax: 563840.5502647763,
-      capitalGain: 189950.55026477634,
-      capitalGainsTax: 36090.60455030751,
+      capitalGain: 262022.55026477634,
+      capitalGainsTax: 49784.28455030751,
       mortgageBalanceAtExit: 99191.89344,
-      netSaleProceeds: 428558.0522744688,
+      netSaleProceeds: 414864.3722744688,
       nonResidentWithholdingAdvance: 17729.39219577426,
     },
   };
@@ -198,7 +202,7 @@ describe("exit (reference case, 10-year holding period)", () => {
     // of the sale price - real acquisition costs never dominate like this.
     const result = computeExit({
       scenario: "base",
-      finalYear: years[0]!,
+      years,
       purchasePrice: referenceCase.property.purchasePrice,
       acquisition: { ...engineResult.acquisition, legalAdvice: 250000 },
       renovation: engineResult.selectedRenovation,
@@ -206,5 +210,67 @@ describe("exit (reference case, 10-year holding period)", () => {
     });
     expect(result.capitalGain).toBeLessThan(0);
     expect(result.capitalGainsTax).toBe(0);
+  });
+
+  it("sums cumulativeDepreciation directly from the projection's own per-year track, not a second calculation", () => {
+    const scenarioResult = engineResult.scenarios.find((s) => s.id === "base")!;
+    const years = buildProjectionYears({
+      years: 10,
+      scenario: "base",
+      scenarioResult,
+      purchasePrice: referenceCase.property.purchasePrice,
+      financing: engineResult.selectedFinancing,
+      fixedCosts: engineResult.fixedOperatingCosts,
+      euResident: true,
+      renovation: engineResult.selectedRenovation,
+    });
+    const manualSum = years.reduce((sum, y) => sum + y.depreciation, 0);
+    const result = computeExit({
+      scenario: "base",
+      years,
+      purchasePrice: referenceCase.property.purchasePrice,
+      acquisition: engineResult.acquisition,
+      renovation: engineResult.selectedRenovation,
+      assumptions: testAssumptions,
+    });
+    expect(result.cumulativeDepreciation).toBeCloseTo(manualSum, 9);
+  });
+
+  it("shortens the holding period when fewer projection years are passed in", () => {
+    const scenarioResult = engineResult.scenarios.find((s) => s.id === "base")!;
+    const years = buildProjectionYears({
+      years: 5,
+      scenario: "base",
+      scenarioResult,
+      purchasePrice: referenceCase.property.purchasePrice,
+      financing: engineResult.selectedFinancing,
+      fixedCosts: engineResult.fixedOperatingCosts,
+      euResident: true,
+      renovation: engineResult.selectedRenovation,
+    });
+    const result = computeExit({
+      scenario: "base",
+      years,
+      purchasePrice: referenceCase.property.purchasePrice,
+      acquisition: engineResult.acquisition,
+      renovation: engineResult.selectedRenovation,
+      assumptions: testAssumptions,
+    });
+    expect(result.holdingYears).toBe(5);
+    // 6930/year x 5 years = 34650, not the 10-year figure of 69300.
+    expect(result.cumulativeDepreciation).toBeCloseTo(34650, 6);
+  });
+
+  it("rejects an empty projection instead of computing an exit for a zero-year holding period", () => {
+    expect(() =>
+      computeExit({
+        scenario: "base",
+        years: [],
+        purchasePrice: referenceCase.property.purchasePrice,
+        acquisition: engineResult.acquisition,
+        renovation: engineResult.selectedRenovation,
+        assumptions: testAssumptions,
+      }),
+    ).toThrow(/at least one projection year/);
   });
 });

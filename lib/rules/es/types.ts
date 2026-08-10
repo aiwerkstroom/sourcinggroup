@@ -300,7 +300,9 @@ export interface ExitResult {
   transferValueForCapitalGainsTax: number;
   /** renovationCosts x renovationImprovementShare - the "mejora" portion added to the acquisition value. 0 unless the caller substantiates a nonzero share. */
   renovationImprovementValue: number;
-  /** purchasePrice + ITP + AJD + notary + registration + legal advice + renovationImprovementValue - the acquisition costs the law lets you deduct from the capital gain. */
+  /** Sum of ProjectionYear.depreciation across the holding period - exactly what the tax layer (§4) actually deducted each year, not a separate recomputation. */
+  cumulativeDepreciation: number;
+  /** purchasePrice + ITP + AJD + notary + registration + legal advice + renovationImprovementValue - cumulativeDepreciation - the acquisition costs the law lets you deduct from the capital gain. */
   acquisitionValueForCapitalGainsTax: number;
   capitalGain: number;
   capitalGainsTax: number;

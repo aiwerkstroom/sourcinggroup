@@ -304,6 +304,7 @@ overdrachtswaarde (CGT)  = verkoopprijs − verkoopcourtage − plusvalía
                            (transmissiekosten die de VERKOPER draagt)
 aanschafwaarde voor CGT  = aankoopprijs + ITP + AJD + notaris + kadaster + juridisch
                            + (renovatiekosten × renovationImprovementShare)
+                           − cumulatieve afschrijving over de houdperiode
                            (géén makelaarscourtage aankoop, géén bankkosten)
 meerwaarde                = overdrachtswaarde (CGT) − aanschafwaarde voor CGT
 vermogenswinstbelasting  = MAX(0, meerwaarde) × 19% (vlak, niet-ingezetene)
@@ -335,6 +336,18 @@ default: 0% mejora onderschat de aftrek nooit, een verzonnen percentage
 zou hem kunnen overschatten. **[BESLISSING]** de echte verhouding moet per
 pand worden onderbouwd vanuit de renovatiefacturen/-scope; niet invullen
 zonder die onderbouwing.
+
+**Cumulatieve afschrijving in de aanschafwaarde.** De IRNR-regel voor het
+`valor de adquisición` (Agencia Tributaria, instructies Modelo 210)
+schrijft voor: het aanschafbedrag wordt verminderd met de fiscaal
+afgetrokken afschrijvingen over de bezitsperiode — dezelfde afschrijving
+mag niet zowel jaarlijks als bij verkoop worden "teruggekocht". `exit.ts`
+neemt hiervoor géén tweede berekening op basis van
+`DEFAULT_BUILDING_SHARE_OF_VALUE`; `computeExit()` krijgt de volledige
+projectiereeks (`ProjectionYear[]`) en telt letterlijk op wat §4's
+belastinglaag per jaar al heeft afgetrokken (`.depreciation`). Wijzigt de
+afschrijvingsberekening in §4 later, dan verandert deze aftrek vanzelf mee
+— er is precies één plek waar afschrijving wordt bepaald.
 
 **[BESLISSING — geen default, verplichte invoer]** Verkoopcourtage en
 plusvalía municipal hebben géén standaardwaarde in de engine.

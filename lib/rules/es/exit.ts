@@ -20,6 +20,14 @@
  * required arguments with no default (see ExitAssumptions in types.ts).
  * A caller that doesn't have real figures yet should not call this
  * function with a guess.
+ *
+ * The acquisition value is also reduced by the cumulative depreciation
+ * deducted over the holding period (valor de adquisición = coste -
+ * amortizaciones fiscalmente deducidas, Agencia Tributaria). That figure
+ * is summed directly from the projection's own per-year depreciation
+ * track (§4) - the full `years` array is passed in for exactly this, not
+ * a second, independent depreciation calculation that could drift out of
+ * sync with what the tax layer actually used.
  */
 
 import { propertyValueIndex } from "./indexation";
@@ -39,8 +47,14 @@ import type {
 
 export function computeExit(args: {
   scenario: ScenarioId;
-  /** The projection's final year: its yearNumber is the holding period, its mortgageBalance the debt to redeem at sale. */
-  finalYear: Pick<ProjectionYear, "yearNumber" | "mortgageBalance">;
+  /**
+   * The full projection, year 1..n (§4). The holding period is n
+   * (the last year's yearNumber), the debt to redeem at sale is the last
+   * year's mortgageBalance, and the cumulative depreciation deducted from
+   * the acquisition value is the sum of every year's depreciation - all
+   * read from this single array, nothing recomputed.
+   */
+  years: ReadonlyArray<Pick<ProjectionYear, "yearNumber" | "mortgageBalance" | "depreciation">>;
   purchasePrice: number;
   /** Acquisition costs the law lets you deduct from the capital gain - ITP, AJD, notary, registration, legal advice. Agency fees and the bank fee are deliberately excluded (MODEL_SPEC_FASE1B §5). */
   acquisition: Pick<
@@ -58,7 +72,11 @@ export function computeExit(args: {
    */
   renovationImprovementShare?: number;
 }): ExitResult {
-  const holdingYears = args.finalYear.yearNumber;
+  if (args.years.length === 0) {
+    throw new Error("computeExit needs at least one projection year");
+  }
+  const finalYear = args.years[args.years.length - 1]!;
+  const holdingYears = finalYear.yearNumber;
   const sellingPrice = args.purchasePrice * propertyValueIndex(args.scenario, holdingYears);
 
   const sellingCommission = sellingPrice * args.assumptions.sellingCommissionRate;
@@ -73,6 +91,10 @@ export function computeExit(args: {
     args.renovationImprovementShare ?? DEFAULT_RENOVATION_IMPROVEMENT_SHARE;
   const renovationImprovementValue = args.renovation.capex * renovationImprovementShare;
 
+  // Exactly what §4's tax layer deducted, summed from its own track - not
+  // an independent recomputation via DEPRECIATION_RATE and a share.
+  const cumulativeDepreciation = args.years.reduce((sum, y) => sum + y.depreciation, 0);
+
   const acquisitionValueForCapitalGainsTax =
     args.purchasePrice +
     args.acquisition.transferTaxITP +
@@ -80,7 +102,8 @@ export function computeExit(args: {
     args.acquisition.notaryFee +
     args.acquisition.registrationFee +
     args.acquisition.legalAdvice +
-    renovationImprovementValue;
+    renovationImprovementValue -
+    cumulativeDepreciation;
 
   const capitalGain = transferValueForCapitalGainsTax - acquisitionValueForCapitalGainsTax;
   // A loss owes no capital gains tax; it is not a deduction elsewhere, so
@@ -92,7 +115,7 @@ export function computeExit(args: {
     sellingCommission -
     args.assumptions.municipalCapitalGainsTax -
     capitalGainsTax -
-    args.finalYear.mortgageBalance;
+    finalYear.mortgageBalance;
 
   const nonResidentWithholdingAdvance = sellingPrice * NON_RESIDENT_WITHHOLDING_RATE;
 
@@ -104,10 +127,11 @@ export function computeExit(args: {
     municipalCapitalGainsTax: args.assumptions.municipalCapitalGainsTax,
     transferValueForCapitalGainsTax,
     renovationImprovementValue,
+    cumulativeDepreciation,
     acquisitionValueForCapitalGainsTax,
     capitalGain,
     capitalGainsTax,
-    mortgageBalanceAtExit: args.finalYear.mortgageBalance,
+    mortgageBalanceAtExit: finalYear.mortgageBalance,
     netSaleProceeds,
     nonResidentWithholdingAdvance,
   };
