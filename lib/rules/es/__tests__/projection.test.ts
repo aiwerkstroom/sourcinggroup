@@ -226,6 +226,20 @@ describe("multi-year cashflow after tax (reference case)", () => {
     expect(y2.propertyTaxIBI).toBeCloseTo(1349.04, 2);
   });
 
+  it("keeps indexing IBI with CPI past 2030, in years marked extrapolated in the output", () => {
+    const years = projectionFor("base");
+    // Year 6 (2031) is the first year beyond the Correction Factors series.
+    const y6 = years[5]!;
+    expect(y6.calendarYear).toBe(2031);
+    expect(y6.extrapolated).toBe(true);
+    expect(y6.propertyTaxIBI).toBeCloseTo(1461.6758931667202, 4);
+    // It keeps compounding rather than freezing at the year-5 value.
+    const y10 = years[9]!;
+    expect(y10.extrapolated).toBe(true);
+    expect(y10.propertyTaxIBI).toBeCloseTo(1582.1649942603826, 4);
+    expect(y10.propertyTaxIBI).toBeGreaterThan(y6.propertyTaxIBI);
+  });
+
   it("the mortgage is fully repaid within the 15-year term, well inside the 10-year window", () => {
     // Sanity check on the amortization wiring: with a 15y term the balance
     // must still be positive and strictly decreasing through year 10.

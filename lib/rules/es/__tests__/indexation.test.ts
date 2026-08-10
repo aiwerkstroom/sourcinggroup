@@ -88,6 +88,17 @@ describe("index series (base scenario, 10 years from 2026)", () => {
       2031, 2032, 2033, 2034, 2035,
     ]);
   });
+
+  it("keeps compounding the cost index past 2030 with the carried-forward CPI value", () => {
+    // Year 6 (2031) is the first extrapolated year: costIndex(5) x 1.02.
+    expect(series[5]!.calendarYear).toBe(2031);
+    expect(series[5]!.extrapolated).toBe(true);
+    expect(series[5]!.costInflationFactor).toBeCloseTo(1.02, 12);
+    expect(series[5]!.costIndex).toBeCloseTo(1.1073302220960002, 12);
+    // It does not freeze: year 10 keeps compounding the same carried-forward rate.
+    expect(series[9]!.costIndex).toBeCloseTo(1.1986098441366535, 12);
+    expect(series[9]!.costIndex).toBeGreaterThan(series[5]!.costIndex);
+  });
 });
 
 describe("index series per scenario", () => {
