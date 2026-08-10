@@ -4,7 +4,7 @@ import { renovationStrategyTable, selectRenovation } from "../renovation";
 import { fixedOperatingCosts, utilitiesBaseAnnual } from "../operating";
 import { referenceCase } from "./referencecase";
 
-// Golden values: corrected TSG_Model_v2.xlsx, Costs & Income!B125:D179.
+// Golden values: corrected TSG_Model_v3.xlsx, Costs & Income!B125:D179.
 describe("acquisition costs (reference case)", () => {
   const acq = acquisitionCosts({
     purchasePrice: 330000,

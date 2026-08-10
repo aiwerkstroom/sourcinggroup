@@ -4,7 +4,7 @@
 
 De rekenlaag van de **TSG Yield Engine** staat in `lib/rules/es/` (pure
 TypeScript, geen framework) en repliceert de gecorrigeerde
-`TSG_Model_v2.xlsx` exact. Specificatie: [`MODEL_SPEC.md`](MODEL_SPEC.md) —
+`TSG_Model_v3.xlsx` exact. Specificatie: [`MODEL_SPEC.md`](MODEL_SPEC.md) —
 inclusief de openstaande **[BESLISSING]**-punten die door Samuel moeten worden
 vastgesteld. Alle parameters staan met bron en datum in
 `lib/rules/es/parameters.ts`; er zitten geen hardgecodeerde getallen in de
@@ -12,7 +12,7 @@ rekenfuncties.
 
 ```bash
 npm install
-npm test          # 54 tests, incl. golden test tegen de referentiecasus
+npm test          # 55 tests, incl. golden test tegen de referentiecasus
                   # Avenida Primado Reig 19 (Excel-pariteit)
 ```
 

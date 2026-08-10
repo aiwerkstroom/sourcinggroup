@@ -1,7 +1,7 @@
 /**
  * TSG Yield Engine - Spain (ES) rule types.
  *
- * These types mirror the input sections of TSG_Model_v2.xlsx:
+ * These types mirror the input sections of TSG_Model_v3.xlsx:
  * "Property Input", the investor constraints on "Costs & Income",
  * and the selection cells that drive the model.
  */
@@ -179,6 +179,8 @@ export interface ScenarioResult {
   propertyManagement: number;
   maintenance: number;
   utilities: number;
+  /** IBI + insurance + bank account fee, included in NOI and total opex (v3). */
+  fixedCosts: number;
   noi: number;
   interestRate: number;
   annualInterestOnly: number;

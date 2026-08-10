@@ -4,6 +4,8 @@
  * - maintenance uses the maintenance-inflation multiplier (P80 fix)
  * - total opex uses the amortising debt service (L98/N98/P98 fix)
  * - DSCR divides NOI by the amortising debt service only (L108 fix)
+ * - fixed costs (IBI + insurance + bank fee) are part of NOI and total
+ *   opex (v3 fix)
  */
 
 import {
@@ -32,6 +34,8 @@ export function runScenarios(args: {
   /** Gross annual income for the selected rental strategy (L38). */
   grossAnnualIncome: number;
   utilitiesBaseAnnual: number;
+  /** Fixed annual costs excl. debt: IBI + insurance + bank account fee. */
+  fixedAnnualCosts: number;
   renovation: Pick<
     RenovationStrategyResult,
     "maintenanceFactor" | "utilitiesEfficiency"
@@ -57,8 +61,10 @@ export function runScenarios(args: {
       args.utilitiesBaseAnnual *
       args.renovation.utilitiesEfficiency *
       s.utilitiesMultiplier;
-    // L86: NOI
-    const noi = grossIncome - (propertyManagement + maintenance + utilities);
+    // L86: NOI, incl. fixed costs since v3
+    const fixedCosts = args.fixedAnnualCosts;
+    const noi =
+      grossIncome - (propertyManagement + maintenance + utilities + fixedCosts);
     // L90: selected rate + scenario delta + non-resident spread
     const interestRate =
       args.financing.interestRate + s.interestRateDelta + args.financing.nonResidentSpread;
@@ -69,8 +75,9 @@ export function runScenarios(args: {
       args.financing.loanTermYears,
       args.financing.mortgageAmount,
     );
-    // L98: income-linked opex + amortising debt service
-    const totalOpex = propertyManagement + maintenance + utilities + debtService;
+    // L98: income-linked opex + fixed costs + amortising debt service
+    const totalOpex =
+      propertyManagement + maintenance + utilities + fixedCosts + debtService;
     // L102 / L104
     const annualCashflow = grossIncome - totalOpex;
     const monthlyCashflow = annualCashflow / MONTHS_PER_YEAR;
@@ -87,6 +94,7 @@ export function runScenarios(args: {
       propertyManagement,
       maintenance,
       utilities,
+      fixedCosts,
       noi,
       interestRate,
       annualInterestOnly: interestOnly,

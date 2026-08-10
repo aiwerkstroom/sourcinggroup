@@ -1,7 +1,7 @@
 /**
  * TSG Yield Engine - orchestration.
  * Runs the full model for one property, replicating the corrected
- * TSG_Model_v2.xlsx end to end.
+ * TSG_Model_v3.xlsx end to end.
  */
 
 import { acquisitionCosts } from "./acquisition";
@@ -56,6 +56,8 @@ export function runEngine(input: EngineInput): EngineResult {
   const scenarios = runScenarios({
     grossAnnualIncome: income.selectedGrossAnnualIncome,
     utilitiesBaseAnnual: utilitiesBase,
+    fixedAnnualCosts:
+      fixedCosts.propertyTaxIBI + fixedCosts.insurance + fixedCosts.bankAccountFee,
     renovation: selectedRenovation,
     financing: selectedFinancing,
     constraints,

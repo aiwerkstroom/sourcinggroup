@@ -9,12 +9,12 @@ import {
 } from "../financing";
 import { referenceCase } from "./referencecase";
 
-// Golden values: corrected TSG_Model_v2.xlsx.
+// Golden values: corrected TSG_Model_v3.xlsx.
 describe("annuity debt service (Excel PMT parity)", () => {
   it("replicates PMT for the three scenario rates (L96/N96/P96)", () => {
     expect(annualAnnuityDebtService(0.047, 15, 247500)).toBeCloseTo(23025.0534114773, 8);
     expect(annualAnnuityDebtService(0.042, 15, 247500)).toBeCloseTo(22267.5851768972, 8);
-    expect(annualAnnuityDebtService(0.0445, 15, 247500)).toBeCloseTo(22644.4796491766, 8);
+    expect(annualAnnuityDebtService(0.0395, 15, 247500)).toBeCloseTo(21894.3888519704, 8);
   });
 
   it("handles a zero interest rate as linear repayment", () => {
@@ -24,7 +24,7 @@ describe("annuity debt service (Excel PMT parity)", () => {
   it("computes interest-only debt service (L94/N94/P94)", () => {
     expect(annualInterestOnly(0.047, 247500)).toBeCloseTo(11632.5, 9);
     expect(annualInterestOnly(0.042, 247500)).toBeCloseTo(10395, 9);
-    expect(annualInterestOnly(0.0445, 247500)).toBeCloseTo(11013.75, 9);
+    expect(annualInterestOnly(0.0395, 247500)).toBeCloseTo(9776.25, 9);
   });
 });
 

@@ -1,6 +1,6 @@
 /**
  * Reference case: Avenida Primado Reig 19, Valencia (MODEL_SPEC.md §11).
- * Inputs exactly as entered in the corrected TSG_Model_v2.xlsx.
+ * Inputs exactly as entered in the corrected TSG_Model_v3.xlsx.
  */
 
 import type { EngineInput } from "../types";

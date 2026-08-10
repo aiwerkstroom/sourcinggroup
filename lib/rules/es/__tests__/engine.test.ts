@@ -3,9 +3,10 @@ import { runEngine } from "../engine";
 import { referenceCase } from "./referencecase";
 
 /**
- * Golden test: full engine run against the corrected TSG_Model_v2.xlsx
- * for the reference case (MODEL_SPEC.md §11). Every expected value below
- * is the exact Excel output.
+ * Golden test: full engine run against the corrected TSG_Model_v3.xlsx
+ * for the reference case (MODEL_SPEC.md §11). v3 corrections: signed
+ * optimistic interest delta (-0.25%) and fixed costs (IBI + insurance +
+ * bank fee = 2450/yr) included in NOI and total opex.
  */
 describe("reference case Avenida Primado Reig 19 (Excel parity)", () => {
   const result = runEngine(referenceCase);
@@ -45,38 +46,43 @@ describe("reference case Avenida Primado Reig 19 (Excel parity)", () => {
     expect(optimistic!.utilities).toBeCloseTo(2716.525, 8);
   });
 
-  it("NOI matches (L86/N86/P86)", () => {
-    expect(conservative!.noi).toBeCloseTo(16781.540468, 7);
-    expect(base!.noi).toBeCloseTo(21883.9264, 7);
-    expect(optimistic!.noi).toBeCloseTo(27309.054122, 7);
+  it("includes the fixed costs 2450/yr in every scenario (v3)", () => {
+    expect(result.scenarios.map((s) => s.fixedCosts)).toEqual([2450, 2450, 2450]);
   });
 
-  it("scenario interest rates include delta + non-resident spread (L90/N90/P90)", () => {
+  it("NOI incl. fixed costs matches (L86/N86/P86)", () => {
+    expect(conservative!.noi).toBeCloseTo(14331.540468, 7);
+    expect(base!.noi).toBeCloseTo(19433.9264, 7);
+    expect(optimistic!.noi).toBeCloseTo(24859.054122, 7);
+  });
+
+  it("scenario interest rates include the signed delta + non-resident spread (L90/N90/P90)", () => {
     expect(conservative!.interestRate).toBeCloseTo(0.047, 12);
     expect(base!.interestRate).toBeCloseTo(0.042, 12);
-    expect(optimistic!.interestRate).toBeCloseTo(0.0445, 12);
+    expect(optimistic!.interestRate).toBeCloseTo(0.0395, 12);
   });
 
   it("debt service matches Excel PMT (L94-P96)", () => {
     expect(base!.annualInterestOnly).toBeCloseTo(10395, 8);
+    expect(optimistic!.annualInterestOnly).toBeCloseTo(9776.25, 8);
     expect(conservative!.annualDebtService).toBeCloseTo(23025.0534114773, 7);
     expect(base!.annualDebtService).toBeCloseTo(22267.5851768972, 7);
-    expect(optimistic!.annualDebtService).toBeCloseTo(22644.4796491766, 7);
+    expect(optimistic!.annualDebtService).toBeCloseTo(21894.3888519704, 7);
   });
 
-  it("total opex incl. amortising debt service matches the corrected formula (L98/N98/P98)", () => {
-    expect(conservative!.totalOpexInclDebtService).toBeCloseTo(29280.4961434773, 7);
-    expect(base!.totalOpexInclDebtService).toBeCloseTo(28824.3787768972, 7);
-    expect(optimistic!.totalOpexInclDebtService).toBeCloseTo(29748.6967271766, 7);
+  it("total opex incl. fixed costs and amortising debt service (L98/N98/P98)", () => {
+    expect(conservative!.totalOpexInclDebtService).toBeCloseTo(31730.4961434777, 7);
+    expect(base!.totalOpexInclDebtService).toBeCloseTo(31274.3787768970, 7);
+    expect(optimistic!.totalOpexInclDebtService).toBeCloseTo(31448.6059299704, 7);
   });
 
   it("annual and monthly cashflow match (L102-P104)", () => {
-    expect(conservative!.annualCashflow).toBeCloseTo(-6243.51294347732, 7);
-    expect(base!.annualCashflow).toBeCloseTo(-383.658776897228, 7);
-    expect(optimistic!.annualCashflow).toBeCloseTo(4664.57447282344, 7);
-    expect(conservative!.monthlyCashflow).toBeCloseTo(-520.292745289777, 8);
-    expect(base!.monthlyCashflow).toBeCloseTo(-31.9715647414356, 8);
-    expect(optimistic!.monthlyCashflow).toBeCloseTo(388.714539401954, 8);
+    expect(conservative!.annualCashflow).toBeCloseTo(-8693.51294347771, 7);
+    expect(base!.annualCashflow).toBeCloseTo(-2833.65877689696, 7);
+    expect(optimistic!.annualCashflow).toBeCloseTo(2964.66527002957, 7);
+    expect(conservative!.monthlyCashflow).toBeCloseTo(-724.459411956476, 8);
+    expect(base!.monthlyCashflow).toBeCloseTo(-236.13823140808, 8);
+    expect(optimistic!.monthlyCashflow).toBeCloseTo(247.055439169131, 8);
   });
 
   it("min monthly cashflow check: No / No / No (L106-P106)", () => {
@@ -88,9 +94,9 @@ describe("reference case Avenida Primado Reig 19 (Excel parity)", () => {
   });
 
   it("DSCR matches the corrected formula NOI / annuity (L108-P108)", () => {
-    expect(conservative!.dscr).toBeCloseTo(0.728838286196326, 10);
-    expect(base!.dscr).toBeCloseTo(0.98277052613252, 10);
-    expect(optimistic!.dscr).toBeCloseTo(1.20599168296601, 10);
+    expect(conservative!.dscr).toBeCloseTo(0.622432452680258, 10);
+    expect(base!.dscr).toBeCloseTo(0.872745124611135, 10);
+    expect(optimistic!.dscr).toBeCloseTo(1.13540753706687, 10);
   });
 
   it("DSCR verdict: NO / NO / Yes (L110-P110)", () => {
@@ -124,7 +130,8 @@ describe("reference case Avenida Primado Reig 19 (Excel parity)", () => {
     const [cons, b, opt] = result.tax.scenarios;
     expect(cons!.deductibleCosts).toBeCloseTo(24637.292732, 6);
     expect(b!.deductibleCosts).toBeCloseTo(24462.2936, 6);
-    expect(opt!.deductibleCosts).toBeCloseTo(26088.242078, 6);
+    // Optimistic interest-only dropped to 9776.25 with the signed delta (v3).
+    expect(opt!.deductibleCosts).toBeCloseTo(24850.742078, 6);
     expect(result.tax.grossRentalIncomeBase).toBeCloseTo(28440.72, 8);
     expect(result.tax.taxableIncomeBase).toBeCloseTo(3978.4264, 6);
     expect(result.tax.taxDueBase).toBeCloseTo(755.901016, 6);

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { baseMonthlyRent, buildIncomeModel, hybridGrossIncome, incomeLine } from "../income";
 
-// Golden values: corrected TSG_Model_v2.xlsx, Costs & Income!J4:N38.
+// Golden values: corrected TSG_Model_v3.xlsx, Costs & Income!J4:N38.
 describe("income model (Excel golden values)", () => {
   it("computes base monthly rent LT: 17 €/m² x 133 m² = 2261 (L10)", () => {
     expect(baseMonthlyRent(17, 133)).toBe(2261);

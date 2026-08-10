@@ -1,6 +1,6 @@
 # MODEL_SPEC — rekenlogica TSG Yield Engine
 
-Herleid uit `TSG_Model_v2.xlsx` (de **gecorrigeerde** Excel, incl. Changelog-tabblad).
+Herleid uit `TSG_Model_v3.xlsx` (de **gecorrigeerde** Excel, incl. Changelog-tabblad).
 Dit is de specificatie die de TypeScript-rekenlaag in `lib/rules/es/` repliceert.
 Elke formule heeft een unit test die de Excel-uitkomst exact naspeelt
 (`npm test`, zie §11).
@@ -112,15 +112,13 @@ nutsefficiëntie renovatie × scenariomultiplier).
 |-------------------|--------------|-------|--------------|
 | Huurniveau        | 0,90         | 1,00  | 1,10         |
 | Bezetting         | 0,90         | 1,00  | 1,10         |
-| Rente-delta       | +0,50%       | 0     | +0,25%       |
+| Rente-delta       | +0,50%       | 0     | −0,25%       |
 | Nutskosten        | 1,10         | 1,00  | 0,95         |
 | Onderhoudsinflatie| 1,10         | 1,00  | 0,95         |
 
-**Let op — afwijking t.o.v. de oorspronkelijke spec-tekst:** die noemde een
-rente-delta van −0,25% in het optimistische scenario, maar de gecorrigeerde
-Excel (P66 = +0,0025, formule `=L54+P66+$D$124` per Changelog) telt +0,25% óp.
-De engine repliceert de Excel. **[BESLISSING]** teken van de optimistische
-rente-delta bevestigen.
+**[BESLIST]** (v3): de rente-delta is een ondertekende waarde; alle scenario's
+tellen op (`rente = geselecteerde rente + delta + opslag`). In v2 stond de
+optimistische delta per abuis op +0,25%; v3 corrigeert dit naar −0,25%.
 
 Waardegroei: conservatief 4% · basis 5% · optimistisch 6% per jaar (Reference
 Info, met bronvermelding). Nog niet aan een uitkomst gekoppeld (geen
@@ -129,13 +127,19 @@ meerjarenprojectie).
 ## 8. Uitkomsten
 
 ```
-NOI          = bruto inkomen − (management + onderhoud + nutskosten)
+NOI          = bruto inkomen − (management + onderhoud + nutskosten
+                                + vaste lasten)
 jaarcashflow = bruto inkomen − totale opex incl. debt service (annuïteit)
 DSCR         = NOI / debt service (annuïteit)
 toetsen      = cashflow ≥ min · DSCR > 1 · LTV binnen grenzen ·
                budget gehaald (equity ≤ totaalbudget, capex ≤ max renovatie,
                maandlast ≤ max)
 ```
+
+Vaste lasten in NOI en totale opex (sinds v3): IBI € 1.320 + verzekeringen
+€ 1.030 + bankkosten € 100 = **€ 2.450/jaar** (referentiecasus; IBI schaalt
+met de aankoopprijs). Hypotheekrente valt hier niet onder — die zit in de
+debt service.
 
 Debt service: annuïteit over hypotheek = aankoopprijs × geselecteerde LTV,
 looptijd van de geselecteerde strategie, scenariorente = geselecteerde rente +
@@ -176,10 +180,6 @@ D165.
 - **Min ROI wordt niet getoetst.** De invoer bestaat (D22) maar de Excel
   berekent geen ROI-toets; de engine repliceert dat en toetst hem dus ook
   (nog) niet.
-- **Vaste lasten zitten niet in de scenariocashflow.** IBI, verzekeringen en
-  bankkosten staan in het blok vaste exploitatiekosten maar worden in de
-  Excel niet van de scenariocashflow afgetrokken. Gerepliceerd zoals de Excel
-  het doet; kandidaat voor een modelbeslissing.
 
 ## 11. Referentiecasus (voor de tests)
 
@@ -193,21 +193,23 @@ risicotolerantie midden · dealtype licht · strategie hybride · min ROI 4% ·
 min maandcashflow € 500 · max maandlast € 1.000. Selecties: huur 17/36 €/m² ·
 financiering strategie C · niet-ingezetene, EU/EER.
 
-Verwachte uitkomsten (gecorrigeerde Excel, vastgelegd in
+Verwachte uitkomsten (gecorrigeerde Excel v3, vastgelegd in
 `lib/rules/es/__tests__/engine.test.ts`):
 
 | Grootheid | Conservatief | Basis | Optimistisch |
 |---|---|---|---|
 | Bruto inkomen | 23.036,98 | 28.440,72 | 34.413,27 |
-| NOI | 16.781,54 | 21.883,93 | 27.309,05 |
-| Rente | 4,70% | 4,20% | 4,45% |
-| Annuïteit | 23.025,05 | 22.267,59 | 22.644,48 |
-| Jaarcashflow | −6.243,51 | −383,66 | 4.664,57 |
-| Maandcashflow | −520,29 | −31,97 | 388,71 |
-| DSCR | 0,7288 | 0,9828 | 1,2060 |
+| Vaste lasten | 2.450 | 2.450 | 2.450 |
+| NOI | 14.331,54 | 19.433,93 | 24.859,05 |
+| Rente | 4,70% | 4,20% | 3,95% |
+| Annuïteit | 23.025,05 | 22.267,59 | 21.894,39 |
+| Jaarcashflow | −8.693,51 | −2.833,66 | 2.964,67 |
+| Maandcashflow | −724,46 | −236,14 | 247,06 |
+| DSCR | 0,6224 | 0,8727 | 1,1354 |
 | DSCR-toets | NO | NO | Yes |
 
 Aankoop: totaal € 445.490 · hypotheek € 247.500 · equity € 197.990 · binnen
-budget: ja · renovatie binnen budget: ja. Vaste exploitatie: € 12.845.
-Belasting (basis, EU/EER): aftrekbaar € 24.462,29 · belastbaar € 3.978,43 ·
-verschuldigd € 755,90.
+budget: ja · renovatie binnen budget: ja. Vaste exploitatie (incl.
+hypotheekrente): € 12.845. Belasting (basis, EU/EER): aftrekbaar € 24.462,29 ·
+belastbaar € 3.978,43 · verschuldigd € 755,90; aftrekbaar optimistisch
+€ 24.850,74 (rente aflossingsvrij 9.776,25 bij 3,95%).

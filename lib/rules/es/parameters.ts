@@ -3,7 +3,7 @@
  *
  * Hard rule: no hardcoded numbers in the calculation layer. Every value
  * lives here, with source and date. The single source of truth is the
- * corrected Excel model TSG_Model_v2.xlsx (2026-08); cell references and
+ * corrected Excel model TSG_Model_v3.xlsx (2026-08); cell references and
  * the original external sources are noted per value.
  *
  * Values marked [BESLISSING] in MODEL_SPEC.md are open product decisions
@@ -16,10 +16,10 @@ import type {
   ScenarioId,
 } from "./types";
 
-/** Long-term rent price points €/m²/month. Matrices!D8:J8, TSG_Model_v2.xlsx (2026-08). */
+/** Long-term rent price points €/m²/month. Matrices!D8:J8, TSG_Model_v3.xlsx (2026-08). */
 export const RENT_MATRIX_LONG_TERM_PER_M2 = [9, 13.5, 15, 17, 21, 22.5, 25] as const;
 
-/** Short-term rent price points €/m²/month. Matrices!D21:J21, TSG_Model_v2.xlsx (2026-08). */
+/** Short-term rent price points €/m²/month. Matrices!D21:J21, TSG_Model_v3.xlsx (2026-08). */
 export const RENT_MATRIX_SHORT_TERM_PER_M2 = [15, 24, 30, 36, 40, 43, 45] as const;
 
 /**
@@ -65,13 +65,13 @@ export const NEIGHBORHOOD_RENT_SHORT_TERM: Readonly<Record<string, number>> = {
   "Other premium central": 33.5,
 };
 
-/** Base occupancy long-term. Matrices!B16 via Costs & Income!L14, TSG_Model_v2.xlsx (2026-08). */
+/** Base occupancy long-term. Matrices!B16 via Costs & Income!L14, TSG_Model_v3.xlsx (2026-08). */
 export const BASE_OCCUPANCY_LONG_TERM = 0.9;
 
-/** Base occupancy short-term. Matrices!B29 via Costs & Income!N14, TSG_Model_v2.xlsx (2026-08). */
+/** Base occupancy short-term. Matrices!B29 via Costs & Income!N14, TSG_Model_v3.xlsx (2026-08). */
 export const BASE_OCCUPANCY_SHORT_TERM = 0.6;
 
-/** Hybrid allocation. Costs & Income!L26/L28, TSG_Model_v2.xlsx (2026-08). */
+/** Hybrid allocation. Costs & Income!L26/L28, TSG_Model_v3.xlsx (2026-08). */
 export const HYBRID_SHARE_LONG_TERM = 0.6;
 export const HYBRID_SHARE_SHORT_TERM = 0.4;
 
@@ -99,7 +99,7 @@ export const PROPERTY_MANAGEMENT_FEE = 0.08;
 /** Legal advice fee, share of purchase price. Costs & Income!F44; source Idealista (2025), corrected 0.5%->1% per Changelog (2026-08). */
 export const LEGAL_ADVICE_FEE = 0.01;
 
-/** Maintenance, share of gross rent. Costs & Income!F46, TSG_Model_v2.xlsx (2026-08). */
+/** Maintenance, share of gross rent. Costs & Income!F46, TSG_Model_v3.xlsx (2026-08). */
 export const MAINTENANCE_RATE = 0.05;
 
 /** Utilities base €/m²/year. Costs & Income!H54:H58; sources CNMC/Eurostat (2024), Globexs (2025), IDAE/Eurostat. */
@@ -132,14 +132,14 @@ export const ACQUISITION_RATES = {
   agencyFee: 0.05,
 } as const;
 
-/** Bank fee, € one-time / annual account fee. Costs & Income!D64, TSG_Model_v2.xlsx (2026-08). */
+/** Bank fee, € one-time / annual account fee. Costs & Income!D64, TSG_Model_v3.xlsx (2026-08). */
 export const BANK_FEE = 100;
 
 /** Property tax IBI, share of purchase price per year. Costs & Income!D60; source Investropa (2025), corrected 0.7%->0.4% per Changelog (2026-08). */
 export const PROPERTY_TAX_IBI_RATE = 0.004;
 
 /**
- * Renovation strategies. Costs & Income!D68:H84, TSG_Model_v2.xlsx (2026-08).
+ * Renovation strategies. Costs & Income!D68:H84, TSG_Model_v3.xlsx (2026-08).
  * [BESLISSING] CapEx is absolute per strategy; making it a function of
  * area / construction year / energy label is an open decision (MODEL_SPEC.md).
  */
@@ -183,7 +183,7 @@ export const RENOVATION_STRATEGIES: Readonly<
 };
 
 /**
- * Financing strategies. Costs & Income!D101:H110, TSG_Model_v2.xlsx (2026-08).
+ * Financing strategies. Costs & Income!D101:H110, TSG_Model_v3.xlsx (2026-08).
  * Rates are resident rates; non-residents pay the spread below on top.
  * Reference: Banco Santander (2025), Valencia Property (2023),
  * Traverse Int. Finance (2025).
@@ -232,10 +232,9 @@ export const FINANCING_STRATEGIES: Readonly<
 export const NON_RESIDENT_INTEREST_SPREAD = 0.01;
 
 /**
- * Scenario layer multipliers. Costs & Income!L62:P70, TSG_Model_v2.xlsx (2026-08).
- * Note: the Excel stores the optimistic interest delta as +0.25% (P66);
- * the model spec text mentions -0.25%. The Excel value is replicated here
- * and the discrepancy is flagged in MODEL_SPEC.md.
+ * Scenario layer multipliers. Costs & Income!L62:P70, TSG_Model_v3.xlsx (2026-08).
+ * The interest delta is a signed value; every scenario adds it to the
+ * selected rate (v3 fixed the optimistic delta to -0.25%).
  */
 export const SCENARIOS: Readonly<
   Record<
@@ -266,7 +265,7 @@ export const SCENARIOS: Readonly<
   optimistic: {
     rentLevelMultiplier: 1.1,
     occupancyMultiplier: 1.1,
-    interestRateDelta: 0.0025,
+    interestRateDelta: -0.0025,
     utilitiesMultiplier: 0.95,
     maintenanceInflationMultiplier: 0.95,
   },
