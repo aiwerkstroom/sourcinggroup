@@ -294,16 +294,30 @@ gewoon voor het hele jaar door — het pand kost evenveel om aan te houden
 tijdens de renovatie, het levert alleen nog geen (volledige) huur op.
 Vanaf jaar 2 is de aanloopperiode voorbij en telt het volledige jaar.
 
-**Exit** (`lib/rules/es/exit.ts`):
+**Exit** (`lib/rules/es/exit.ts`), gecorrigeerd naar de daadwerkelijke
+IRNR-berekening voor niet-ingezetenen (bron: Agencia Tributaria,
+"Ganancias patrimoniales — Impuesto sobre la Renta de no Residentes",
+instructies Modelo 210):
 ```
-verkoopprijs           = aankoopprijs × waardegroei^houdperiode (per scenario)
-aanschafwaarde voor CGT = aankoopprijs + ITP + AJD + notaris + kadaster + juridisch
-                          (géén makelaarscourtage aankoop, géén bankkosten)
-meerwaarde              = verkoopprijs − aanschafwaarde voor CGT
-vermogenswinstbelasting = MAX(0, meerwaarde) × 19% (vlak, niet-ingezetene)
-netto verkoopopbrengst  = verkoopprijs − verkoopcourtage − plusvalía
-                          − vermogenswinstbelasting − restschuld
+verkoopprijs             = aankoopprijs × waardegroei^houdperiode (per scenario)
+overdrachtswaarde (CGT)  = verkoopprijs − verkoopcourtage − plusvalía
+                           (transmissiekosten die de VERKOPER draagt)
+aanschafwaarde voor CGT  = aankoopprijs + ITP + AJD + notaris + kadaster + juridisch
+                           (géén makelaarscourtage aankoop, géén bankkosten)
+meerwaarde                = overdrachtswaarde (CGT) − aanschafwaarde voor CGT
+vermogenswinstbelasting  = MAX(0, meerwaarde) × 19% (vlak, niet-ingezetene)
+netto verkoopopbrengst   = verkoopprijs − verkoopcourtage − plusvalía
+                           − vermogenswinstbelasting − restschuld
 ```
+**Correctie — geen dubbeltelling.** Verkoopcourtage en plusvalía komen op
+twee plekken voor: ze verlagen de overdrachtswaarde (en dus de
+belastinggrondslag, art. IRNR: "el valor de transmisión ... se minorará en
+el importe de los gastos y tributos inherentes a la transmisión que hayan
+sido satisfechos por el transmitente") én ze worden apart van de
+verkoopprijs afgetrokken in de netto verkoopopbrengst. Dat zijn twee
+verschillende grootheden — belastbare winst versus daadwerkelijk ontvangen
+kasgeld — die toevallig dezelfde twee posten aftrekken; geen dubbeltelling.
+
 Restschuld komt uit hetzelfde aflossingsschema als de jaarlijkse cashflow
 (§4) — geen aparte berekening. De houdperiode is het jaartal van het
 laatste projectiejaar; de verkoopprijs gebruikt dezelfde

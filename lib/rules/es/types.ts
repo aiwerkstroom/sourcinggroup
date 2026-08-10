@@ -281,7 +281,7 @@ export interface ExitAssumptions {
   municipalCapitalGainsTax: number;
 }
 
-/** Exit outcome for one scenario at the end of the holding period (MODEL_SPEC_FASE1B §5). */
+/** Exit outcome for one scenario at the end of the holding period (MODEL_SPEC_FASE1B §5, IRNR-corrected). */
 export interface ExitResult {
   scenario: ScenarioId;
   holdingYears: number;
@@ -289,6 +289,15 @@ export interface ExitResult {
   sellingPrice: number;
   sellingCommission: number;
   municipalCapitalGainsTax: number;
+  /**
+   * "Valor de transmisión" (IRNR): sellingPrice minus the transfer costs
+   * the seller bears (commission, plusvalía). This is the basis the
+   * capital gain is computed from, distinct from sellingPrice itself -
+   * those same two costs are also subtracted again in netSaleProceeds,
+   * which is a different quantity (actual cash received), not a double
+   * count of the same deduction.
+   */
+  transferValueForCapitalGainsTax: number;
   /** purchasePrice + ITP + AJD + notary + registration + legal advice - the acquisition costs the law lets you deduct from the capital gain. */
   acquisitionValueForCapitalGainsTax: number;
   capitalGain: number;

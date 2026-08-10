@@ -55,6 +55,7 @@ describe("exit (reference case, 10-year holding period)", () => {
     {
       sellingPrice: number;
       sellingCommission: number;
+      transferValueForCapitalGainsTax: number;
       capitalGain: number;
       capitalGainsTax: number;
       mortgageBalanceAtExit: number;
@@ -65,28 +66,31 @@ describe("exit (reference case, 10-year holding period)", () => {
     conservative: {
       sellingPrice: 488480.61402305367,
       sellingCommission: 19539.224560922146,
-      capitalGain: 114590.61402305367,
-      capitalGainsTax: 21772.216664380197,
+      transferValueForCapitalGainsTax: 465441.38946213154,
+      capitalGain: 91551.38946213154,
+      capitalGainsTax: 17394.763997804992,
       mortgageBalanceAtExit: 102420.428129,
-      netSaleProceeds: 341248.7446687513,
+      netSaleProceeds: 345626.1973353265,
       nonResidentWithholdingAdvance: 14654.418420691609,
     },
     base: {
       sellingPrice: 537535.2268365559,
       sellingCommission: 21501.409073462237,
-      capitalGain: 163645.22683655587,
-      capitalGainsTax: 31092.593098945617,
+      transferValueForCapitalGainsTax: 512533.8177630936,
+      capitalGain: 138643.81776309363,
+      capitalGainsTax: 26342.325374987788,
       mortgageBalanceAtExit: 100266.961333,
-      netSaleProceeds: 381174.263331148,
+      netSaleProceeds: 385924.53105510585,
       nonResidentWithholdingAdvance: 16126.056805096676,
     },
     optimistic: {
       sellingPrice: 590979.739859142,
       sellingCommission: 23639.189594365682,
-      capitalGain: 217089.739859142,
-      capitalGainsTax: 41247.05057323698,
+      transferValueForCapitalGainsTax: 563840.5502647763,
+      capitalGain: 189950.55026477634,
+      capitalGainsTax: 36090.60455030751,
       mortgageBalanceAtExit: 99191.89344,
-      netSaleProceeds: 423401.6062515393,
+      netSaleProceeds: 428558.0522744688,
       nonResidentWithholdingAdvance: 17729.39219577426,
     },
   };
@@ -98,6 +102,10 @@ describe("exit (reference case, 10-year holding period)", () => {
       expect(result.holdingYears).toBe(10);
       expect(result.sellingPrice).toBeCloseTo(expected.sellingPrice, 4);
       expect(result.sellingCommission).toBeCloseTo(expected.sellingCommission, 4);
+      expect(result.transferValueForCapitalGainsTax).toBeCloseTo(
+        expected.transferValueForCapitalGainsTax,
+        4,
+      );
       expect(result.capitalGain).toBeCloseTo(expected.capitalGain, 4);
       expect(result.capitalGainsTax).toBeCloseTo(expected.capitalGainsTax, 4);
       expect(result.mortgageBalanceAtExit).toBeCloseTo(expected.mortgageBalanceAtExit, 4);
