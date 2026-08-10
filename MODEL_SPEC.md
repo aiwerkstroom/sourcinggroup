@@ -364,6 +364,34 @@ staat apart in de uitkomst (ter informatie voor het rapport — het pand zet
 tijdelijk een deel van de opbrengst vast) en telt niet mee in de netto
 verkoopopbrengst.
 
+**IRR op eigen vermogen** (`lib/rules/es/irr.ts`):
+```
+jaar 0   = −(eigen inbreng + renovatie)  =  −AcquisitionCosts.equityRequired
+jaar 1..n = netto cashflow na belasting (§4, ProjectionYear.cashflowAfterTax)
+jaar n    += netto verkoopopbrengst (§5, ExitResult.netSaleProceeds)
+IRR       = bisectie op NPV(r) = 0, r ≥ 0
+```
+`eigen inbreng + renovatie` is exact `AcquisitionCosts.equityRequired`
+(Excel-geverifieerd, §11: D153 = € 197.990) — dat bedrag bevat de
+renovatiekosten al, dus die twee termen apart optellen zou dubbeltellen of
+een tweede berekening van dezelfde waarde vereisen.
+
+Bisectie is gekozen boven Newton-Raphson: geen afgeleide nodig en
+gegarandeerde convergentie zodra een geldige bracket is gevonden. Als
+NPV(0%) niet positief is — het nominale (ongedisconteerde) totaalrendement
+haalt de inleg niet — bestaat er geen niet-negatieve rente die de NPV op
+nul brengt (disconteren maakt latere cashflows alleen maar kleiner); de
+functie geeft dan expliciet `{ defined: false, reason: ... }` terug in
+plaats van een getal.
+
+**Referentiecasus — alle drie scenario's hebben een gedefinieerde IRR.**
+De ongedisconteerde som van jaar 1–10 (incl. verkoopopbrengst) overtreft in
+alle drie scenario's de inleg van € 197.990, ook in het conservatieve
+scenario (€ 262.973,93 tegenover € 197.990 inleg, NPV(0%) = € 64.983,93 >
+0). IRR: conservatief 2,49% · basis 5,84% · optimistisch 8,93%. Dit wijkt
+af van de eerdere verwachting dat het conservatieve scenario geen oplossing
+zou hebben; die verwachting is met deze doorrekening niet bevestigd.
+
 Golden tests: onafhankelijke Python-doorrekening (er is geen Excel-
 tegenhanger voor fase 1b), vastgelegd in
-`lib/rules/es/__tests__/{indexation,financing,projection,exit}.test.ts`.
+`lib/rules/es/__tests__/{indexation,financing,projection,exit,irr}.test.ts`.

@@ -317,6 +317,17 @@ export interface ExitResult {
   nonResidentWithholdingAdvance: number;
 }
 
+/**
+ * IRR outcome (MODEL_SPEC_FASE1B §6). Not every cashflow series has a
+ * defined internal rate of return - when the investment never nominally
+ * recoups its cost (NPV at 0% is not positive), no non-negative rate makes
+ * the NPV zero, and `defined` is false. The app must show that plainly
+ * ("no solution"), never a fabricated or clamped number.
+ */
+export type IrrResult =
+  | { defined: true; irr: number; iterations: number }
+  | { defined: false; reason: string };
+
 export interface EngineResult {
   income: IncomeModel;
   renovationStrategies: RenovationStrategyResult[];

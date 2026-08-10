@@ -8,6 +8,7 @@ export * from "./operating";
 export * from "./indexation";
 export * from "./projection";
 export * from "./exit";
+export * from "./irr";
 export * from "./scenarios";
 export * from "./tax";
 export * from "./validation";
