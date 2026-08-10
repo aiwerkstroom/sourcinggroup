@@ -258,6 +258,52 @@ export interface ProjectionYear {
   cashflowAfterTax: number;
 }
 
+/**
+ * Exit assumptions the app cannot derive or estimate on its own
+ * (MODEL_SPEC_FASE1B §5). No defaults exist for these anywhere in the
+ * engine - a report must not silently guess a selling commission or a
+ * municipal capital gains tax.
+ */
+export interface ExitAssumptions {
+  /**
+   * Selling agency commission as a fraction of the sale price (typically
+   * all-in, incl. IVA). TODO [BESLISSING]: MODEL_SPEC_FASE1B §5 gives a
+   * 3-5% + IVA range but leaves the exact figure open; must be set
+   * per deal, not defaulted.
+   */
+  sellingCommissionRate: number;
+  /**
+   * Municipal capital gains tax (plusvalía municipal) for this specific
+   * sale, in euros. TODO [BESLISSING]: municipality-specific (depends on
+   * the cadastral land value and the holding period); requires a real
+   * Valencia figure, not an estimate.
+   */
+  municipalCapitalGainsTax: number;
+}
+
+/** Exit outcome for one scenario at the end of the holding period (MODEL_SPEC_FASE1B §5). */
+export interface ExitResult {
+  scenario: ScenarioId;
+  holdingYears: number;
+  /** purchasePrice x waardegroei^holdingYears. */
+  sellingPrice: number;
+  sellingCommission: number;
+  municipalCapitalGainsTax: number;
+  /** purchasePrice + ITP + AJD + notary + registration + legal advice - the acquisition costs the law lets you deduct from the capital gain. */
+  acquisitionValueForCapitalGainsTax: number;
+  capitalGain: number;
+  capitalGainsTax: number;
+  mortgageBalanceAtExit: number;
+  netSaleProceeds: number;
+  /**
+   * Non-resident 3% withholding on the sale price (Modelo 211). Purely
+   * informational: an advance on the capital gains tax, settled via
+   * Modelo 210, not an additional cost - so it is NOT subtracted in
+   * netSaleProceeds.
+   */
+  nonResidentWithholdingAdvance: number;
+}
+
 export interface EngineResult {
   income: IncomeModel;
   renovationStrategies: RenovationStrategyResult[];

@@ -87,6 +87,17 @@ export function isExtrapolated(calendarYear: number): boolean {
 }
 
 /**
+ * Property value index after holding a property for `years` years:
+ * growth^years, compounded from the scenario's annual value growth rate
+ * (MODEL_SPEC_FASE1B §5). Shared by buildIndexSeries (year-by-year) and
+ * the exit price (a single lookup at the holding period) so both use the
+ * exact same compounding, not two hand-copied `** ` expressions.
+ */
+export function propertyValueIndex(scenario: ScenarioId, years: number): number {
+  return VALUE_GROWTH_ANNUAL[scenario] ** years;
+}
+
+/**
  * Builds the index series for a projection.
  *
  * Year 1 is the base year: its rent and cost index are 1, so the phase-1
@@ -102,7 +113,6 @@ export function buildIndexSeries(args: {
   if (!Number.isInteger(args.years) || args.years < 1) {
     throw new Error(`Projection needs at least 1 year, got ${args.years}`);
   }
-  const valueGrowth = VALUE_GROWTH_ANNUAL[args.scenario];
 
   const series: YearIndex[] = [];
   let rentIndex = 1;
@@ -124,7 +134,7 @@ export function buildIndexSeries(args: {
       costInflationFactor: cost,
       rentIndex,
       costIndex,
-      propertyValueIndex: valueGrowth ** yearNumber,
+      propertyValueIndex: propertyValueIndex(args.scenario, yearNumber),
       extrapolated: isExtrapolated(calendarYear),
     });
   }

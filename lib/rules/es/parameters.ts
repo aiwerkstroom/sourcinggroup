@@ -284,6 +284,22 @@ export const SCENARIO_ORDER: readonly ScenarioId[] = [
 export const RENTAL_INCOME_TAX_RATE_EU = 0.19;
 export const RENTAL_INCOME_TAX_RATE_NON_EU = 0.24;
 
+/**
+ * Capital gains tax (vermogenswinstbelasting) on the sale of Spanish
+ * property by a non-resident: a flat 19% on the net gain, regardless of
+ * EU/non-EU status - unlike the rental income tax above, which splits
+ * 19%/24%. MODEL_SPEC_FASE1B §5; source Agencia Tributaria / IRNR.
+ */
+export const CAPITAL_GAINS_TAX_RATE_NON_RESIDENT = 0.19;
+
+/**
+ * Non-resident withholding on the sale price (Modelo 211), retained by the
+ * buyer at completion. An advance on the capital gains tax above, settled
+ * via the seller's Modelo 210 filing - not an additional cost.
+ * MODEL_SPEC_FASE1B §5; source Agencia Tributaria.
+ */
+export const NON_RESIDENT_WITHHOLDING_RATE = 0.03;
+
 /** Average deductible-cost share used in the Matrices tax matrix. Matrices!P5; source Agencia Tributaria (2025). */
 export const AVERAGE_DEDUCTIBLE_COST_SHARE = 0.23;
 

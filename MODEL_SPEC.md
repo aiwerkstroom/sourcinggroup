@@ -294,6 +294,36 @@ gewoon voor het hele jaar door — het pand kost evenveel om aan te houden
 tijdens de renovatie, het levert alleen nog geen (volledige) huur op.
 Vanaf jaar 2 is de aanloopperiode voorbij en telt het volledige jaar.
 
+**Exit** (`lib/rules/es/exit.ts`):
+```
+verkoopprijs           = aankoopprijs × waardegroei^houdperiode (per scenario)
+aanschafwaarde voor CGT = aankoopprijs + ITP + AJD + notaris + kadaster + juridisch
+                          (géén makelaarscourtage aankoop, géén bankkosten)
+meerwaarde              = verkoopprijs − aanschafwaarde voor CGT
+vermogenswinstbelasting = MAX(0, meerwaarde) × 19% (vlak, niet-ingezetene)
+netto verkoopopbrengst  = verkoopprijs − verkoopcourtage − plusvalía
+                          − vermogenswinstbelasting − restschuld
+```
+Restschuld komt uit hetzelfde aflossingsschema als de jaarlijkse cashflow
+(§4) — geen aparte berekening. De houdperiode is het jaartal van het
+laatste projectiejaar; de verkoopprijs gebruikt dezelfde
+`propertyValueIndex` als in §3, nu voor het eerst daadwerkelijk gebruikt.
+
+**[BESLISSING — geen default, verplichte invoer]** Verkoopcourtage en
+plusvalía municipal hebben géén standaardwaarde in de engine.
+`ExitAssumptions.sellingCommissionRate` (spec: 3–5% + IVA) en
+`.municipalCapitalGainsTax` (gemeentelijk, afhankelijk van kadastrale
+grondwaarde en houdperiode) zijn verplichte parameters van `computeExit()`
+— een aanroep zonder deze cijfers compileert niet. De golden tests
+gebruiken testwaarden (4% courtage, € 3.500 plusvalía) die uitsluitend de
+formule testen en geen aanbeveling zijn.
+
+De 3%-inhouding (Modelo 211) is een voorschot op de vermogenswinstbelasting
+dat via Modelo 210 wordt verrekend, geen kostenpost. `nonResidentWithholdingAdvance`
+staat apart in de uitkomst (ter informatie voor het rapport — het pand zet
+tijdelijk een deel van de opbrengst vast) en telt niet mee in de netto
+verkoopopbrengst.
+
 Golden tests: onafhankelijke Python-doorrekening (er is geen Excel-
 tegenhanger voor fase 1b), vastgelegd in
-`lib/rules/es/__tests__/{indexation,financing,projection}.test.ts`.
+`lib/rules/es/__tests__/{indexation,financing,projection,exit}.test.ts`.
