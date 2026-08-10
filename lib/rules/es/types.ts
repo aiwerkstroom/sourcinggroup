@@ -223,11 +223,15 @@ export interface TaxResult {
 }
 
 /**
- * One projected year of after-tax cashflow (MODEL_SPEC_FASE1B §4).
+ * One projected year of after-tax cashflow (MODEL_SPEC_FASE1B §4, revised).
  * Costs that scale with rent (property management) use the rent index;
- * CPI-indexed cost lines (maintenance, utilities, insurance, bank fee) use
- * the cost index; IBI uses its own start-of-year value index; depreciation
- * stays flat (tied to the original acquisition cost, not indexed).
+ * CPI-indexed cost lines (maintenance, utilities, insurance, bank fee, and
+ * IBI - levied on the cadastral value, approximated with CPI absent a
+ * cadastral-value series) use the cost index; depreciation stays flat
+ * (tied to the original acquisition cost, not indexed). Year 1's rent (and
+ * the property management fee riding on it) is additionally prorated for
+ * the renovation's lease-up vacancy; every other cost line and the full
+ * annuity run for the whole year regardless.
  */
 export interface ProjectionYear {
   yearNumber: number;

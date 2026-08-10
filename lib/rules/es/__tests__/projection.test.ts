@@ -25,6 +25,7 @@ describe("multi-year cashflow after tax (reference case)", () => {
       financing: engineResult.selectedFinancing,
       fixedCosts: engineResult.fixedOperatingCosts,
       euResident: true,
+      renovation: engineResult.selectedRenovation,
     });
   }
 
@@ -37,17 +38,50 @@ describe("multi-year cashflow after tax (reference case)", () => {
     expect(years.slice(5).every((y) => y.extrapolated)).toBe(true);
   });
 
-  it("year 1 reproduces the phase-1 scenario outcome (base year, no growth yet)", () => {
+  it("year 1's occupancy-independent costs reproduce the phase-1 scenario outcome unchanged", () => {
+    // Base year (rentIndex/costIndex = 1): maintenance, utilities and the
+    // fixed costs run regardless of whether the property is let yet, so
+    // they equal the phase-1 figures exactly.
     const years = projectionFor("base");
     const y1 = years[0]!;
-    expect(y1.grossIncome).toBeCloseTo(28440.72, 6);
-    expect(y1.propertyManagement).toBeCloseTo(2275.2576, 6);
     expect(y1.maintenance).toBeCloseTo(1422.036, 6);
     expect(y1.utilities).toBeCloseTo(2859.5, 6);
     expect(y1.propertyTaxIBI).toBeCloseTo(1320, 6);
     expect(y1.insurance).toBeCloseTo(1030, 6);
     expect(y1.bankAccountFee).toBeCloseTo(100, 6);
-    expect(y1.noi).toBeCloseTo(19433.9264, 4);
+  });
+
+  it("year 1's rent is prorated for the renovation's lease-up vacancy (light: 2 months)", () => {
+    // 28440.72 (phase-1, full 12 months) x 10/12 = 23700.60.
+    const y1 = projectionFor("base")[0]!;
+    expect(y1.grossIncome).toBeCloseTo(23700.6, 6);
+    // Property management is 8% of that already-prorated rent, so it
+    // scales down with it automatically: 23700.6 x 0.08 = 1896.048.
+    expect(y1.propertyManagement).toBeCloseTo(1896.048, 6);
+    expect(y1.noi).toBeCloseTo(15073.016, 4);
+  });
+
+  it("does not prorate any other year: full rent from year 2 onwards", () => {
+    const years = projectionFor("base");
+    // Year 2 = phase-1 gross x rentIndex(year 2), no lease-up factor.
+    expect(years[1]!.grossIncome).toBeCloseTo(28440.72 * 1.05, 6);
+  });
+
+  it("prorates by the renovation strategy's own timeToRentMonths (minimal: 1, heavy: 3)", () => {
+    const scenarioResult = engineResult.scenarios.find((s) => s.id === "base")!;
+    const common = {
+      years: 1,
+      scenario: "base" as const,
+      scenarioResult,
+      purchasePrice: referenceCase.property.purchasePrice,
+      financing: engineResult.selectedFinancing,
+      fixedCosts: engineResult.fixedOperatingCosts,
+      euResident: true,
+    };
+    const minimal = buildProjectionYears({ ...common, renovation: { timeToRentMonths: 1 } });
+    const heavy = buildProjectionYears({ ...common, renovation: { timeToRentMonths: 3 } });
+    expect(minimal[0]!.grossIncome).toBeCloseTo(28440.72 * (11 / 12), 6);
+    expect(heavy[0]!.grossIncome).toBeCloseTo(28440.72 * (9 / 12), 6);
   });
 
   it("year 1 uses actual amortization interest, not the flat interest-only figure", () => {
@@ -66,14 +100,14 @@ describe("multi-year cashflow after tax (reference case)", () => {
   > = {
     conservative: {
       1: {
-        grossIncome: 23036.9832,
-        noi: 14331.5405,
+        grossIncome: 19197.486,
+        noi: 10799.203044,
         interestPaid: 11383.852975,
         principalPaid: 11641.200437,
         mortgageBalance: 235858.799563,
-        preTaxCashflow: -8693.512943,
+        preTaxCashflow: -12225.850367,
         taxDue: 0,
-        cashflowAfterTax: -8693.512943,
+        cashflowAfterTax: -12225.850367,
       },
       2: {
         grossIncome: 24188.8324,
@@ -108,14 +142,14 @@ describe("multi-year cashflow after tax (reference case)", () => {
     },
     base: {
       1: {
-        grossIncome: 28440.72,
-        noi: 19433.9264,
+        grossIncome: 23700.6,
+        noi: 15073.016,
         interestPaid: 10163.765235,
         principalPaid: 12103.819942,
         mortgageBalance: 235396.180058,
-        preTaxCashflow: -2833.658777,
-        taxDue: 987.935621,
-        cashflowAfterTax: -3821.594398,
+        preTaxCashflow: -7194.569177,
+        taxDue: 159.362645,
+        cashflowAfterTax: -7353.931822,
       },
       2: {
         grossIncome: 29862.756,
@@ -150,14 +184,14 @@ describe("multi-year cashflow after tax (reference case)", () => {
     },
     optimistic: {
       1: {
-        grossIncome: 34413.2712,
-        noi: 24859.0541,
+        grossIncome: 28677.726,
+        noi: 19582.352538,
         interestPaid: 9554.436089,
         principalPaid: 12339.952763,
         mortgageBalance: 235160.047237,
-        preTaxCashflow: 2964.66527,
-        taxDue: 2054.649176,
-        cashflowAfterTax: 910.016094,
+        preTaxCashflow: -2312.036314,
+        taxDue: 1052.075875,
+        cashflowAfterTax: -3364.112189,
       },
       2: {
         grossIncome: 36133.9348,
@@ -237,6 +271,7 @@ describe("multi-year cashflow after tax (reference case)", () => {
       financing: engineResult.selectedFinancing,
       fixedCosts: engineResult.fixedOperatingCosts,
       euResident: true,
+      renovation: engineResult.selectedRenovation,
       buildingShareOfValue: 0.85,
     });
     // 330000 x 3% x 0.85 x 1.00 = 8415, higher than the 0.70 default (6930).

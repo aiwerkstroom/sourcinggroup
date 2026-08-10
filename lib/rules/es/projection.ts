@@ -14,6 +14,17 @@
  * share of a purchase price is property-specific (cadastral suelo /
  * construcción split), not a universal constant, so this module takes it
  * as an explicit, overridable parameter (DEFAULT_BUILDING_SHARE_OF_VALUE).
+ *
+ * Year 1 also carries the renovation's lease-up vacancy: `timeToRentMonths`
+ * (1/2/3 months per renovation strategy) sits unused on
+ * RenovationStrategyResult in phase 1 - the Excel doesn't model it either,
+ * so phase-1 parity is unaffected - but a multi-year projection cannot
+ * show a full 12 months of rent in the year the property is being
+ * renovated and isn't let yet. Only year 1's rent (and the property
+ * management fee, which is a percentage of that rent) is prorated; every
+ * cost that runs regardless of occupancy - maintenance, utilities, IBI,
+ * insurance, the bank fee, and the full annuity - is unaffected. From year
+ * 2 the lease-up is over and the full year counts.
  */
 
 import { amortizationSchedule } from "./financing";
@@ -29,10 +40,13 @@ import {
 import type {
   FixedOperatingCosts,
   ProjectionYear,
+  RenovationStrategyResult,
   ScenarioId,
   ScenarioResult,
   SelectedFinancing,
 } from "./types";
+
+const MONTHS_PER_YEAR = 12;
 
 export function buildProjectionYears(args: {
   years: number;
@@ -45,6 +59,8 @@ export function buildProjectionYears(args: {
   /** Phase-1 fixed cost breakdown (IBI/insurance/bank fee), the year-1 base each is indexed from. */
   fixedCosts: Pick<FixedOperatingCosts, "propertyTaxIBI" | "insurance" | "bankAccountFee">;
   euResident: boolean;
+  /** The selected renovation strategy; its timeToRentMonths prorates year 1's rent. */
+  renovation: Pick<RenovationStrategyResult, "timeToRentMonths">;
   /**
    * Building share of the purchase value used for depreciation (3% per
    * year applies to this share, not the full price). Defaults to
@@ -78,10 +94,18 @@ export function buildProjectionYears(args: {
     ? RENTAL_INCOME_TAX_RATE_EU
     : RENTAL_INCOME_TAX_RATE_NON_EU;
 
+  // Year 1 only: the property isn't let while it's being renovated, so its
+  // rent (and the property management fee, a % of that rent) is prorated
+  // to the months actually rented. Every other cost line and the full
+  // annuity run for the complete year regardless.
+  const monthsRentedYear1 = MONTHS_PER_YEAR - args.renovation.timeToRentMonths;
+  const year1RentProration = monthsRentedYear1 / MONTHS_PER_YEAR;
+
   return indexSeries.map((idx, i): ProjectionYear => {
     const amort = amortization[i]!;
 
-    const grossIncome = args.scenarioResult.grossIncome * idx.rentIndex;
+    const rentProration = idx.yearNumber === 1 ? year1RentProration : 1;
+    const grossIncome = args.scenarioResult.grossIncome * idx.rentIndex * rentProration;
     // Property management is always a fixed % of that year's rent, so it
     // tracks the rent index directly rather than CPI.
     const propertyManagement = grossIncome * PROPERTY_MANAGEMENT_FEE;

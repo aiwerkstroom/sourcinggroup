@@ -282,6 +282,18 @@ waarde. **De echte waarde moet uit de kadastrale waardesplitsing van het
 specifieke pand komen** (Catastro: valor catastral desglosado in suelo /
 construcción) voordat een rapport voor een concreet pand wordt uitgebracht.
 
+**Aanloopvertraging tot verhuur, jaar 1.** De renovatiestrategieën kennen
+een `timeToRentMonths` (1/2/3 maanden voor minimaal/licht/zwaar) die in
+fase 1 nergens meerekent — de Excel modelleert dit niet, dus de
+fase-1-Excel-pariteit blijft ongewijzigd. In de meerjarige projectie telt
+jaar 1 wél naar rato minder huurmaanden: bij strategie licht (2 maanden)
+dus 10 van de 12 maanden. Alleen de huur en de daaraan gekoppelde property
+management fee (percentage van de huur) schalen mee; onderhoud,
+nutskosten, IBI, verzekeringen, bankkosten en de volledige annuïteit lopen
+gewoon voor het hele jaar door — het pand kost evenveel om aan te houden
+tijdens de renovatie, het levert alleen nog geen (volledige) huur op.
+Vanaf jaar 2 is de aanloopperiode voorbij en telt het volledige jaar.
+
 Golden tests: onafhankelijke Python-doorrekening (er is geen Excel-
 tegenhanger voor fase 1b), vastgelegd in
 `lib/rules/es/__tests__/{indexation,financing,projection}.test.ts`.
