@@ -12,10 +12,19 @@
  *
  * Base-year convention: year 1 is the phase-1 single-year outcome, so its
  * rent and cost index are exactly 1 and growth starts to bite in year 2.
- * The property value index does NOT share that convention: the exit price is
- * `purchase price x growth^n` (MODEL_SPEC_FASE1B §5), so year 1 already
- * carries one year of growth. The two are deliberately different; keeping
- * them in one place is what makes that visible.
+ *
+ * Two different value-growth indices exist side by side, and mixing them up
+ * is the easy mistake to make here:
+ * - `ibiValueIndex` is a start-of-year index (1 in year 1, growth^(n-1) in
+ *   year n) - the same convention as rent/cost - because IBI in year 1 must
+ *   equal the phase-1 IBI, not that value already grown by a year.
+ * - `propertyValueIndex` is an end-of-holding-period index (growth^n),
+ *   because the exit price after holding n years is
+ *   `purchase price x growth^n` (MODEL_SPEC_FASE1B §5). Year 1 already
+ *   carries one year of growth here.
+ * `ibiValueIndex(year) === propertyValueIndex(year - 1)` for year >= 2 by
+ * construction; they are kept as separate fields so a caller never has to
+ * do that off-by-one arithmetic themselves.
  */
 
 import {
@@ -43,8 +52,10 @@ export interface YearIndex {
   rentIndex: number;
   /** Cumulative cost index relative to year 1 (year 1 = 1). */
   costIndex: number;
-  /** Property value index: growth^yearNumber (year 1 already grown once). */
+  /** Property value index: growth^yearNumber (year 1 already grown once); use for exit price. */
   propertyValueIndex: number;
+  /** IBI index: growth^(yearNumber-1), 1 in year 1; use to recompute IBI per year. */
+  ibiValueIndex: number;
   /** True when the year falls beyond the source series and was carried forward. */
   extrapolated: boolean;
 }
@@ -120,6 +131,7 @@ export function buildIndexSeries(args: {
       rentIndex,
       costIndex,
       propertyValueIndex: valueGrowth ** yearNumber,
+      ibiValueIndex: valueGrowth ** (yearNumber - 1),
       extrapolated: isExtrapolated(calendarYear),
     });
   }

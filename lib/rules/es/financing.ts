@@ -8,6 +8,7 @@ import {
   NON_RESIDENT_INTEREST_SPREAD,
 } from "./parameters";
 import type {
+  AmortizationYear,
   FinancingStrategyId,
   FinancingStrategyResult,
   InvestorConstraints,
@@ -85,6 +86,60 @@ export function financingStrategyTable(
       monthlyDebtWithinLimit: monthly <= constraints.maxMonthlyDebt,
     };
   });
+}
+
+/**
+ * Yearly interest/principal split of a fixed-rate annuity, computed from
+ * the underlying monthly schedule and aggregated to calendar years
+ * (MODEL_SPEC_FASE1B §4: "rente en aflossing moeten per jaar gesplitst
+ * worden, niet als één annuïteitsbedrag behandeld" - because only the
+ * interest portion is deductible and it declines every year).
+ *
+ * The monthly payment is constant for the loan's life; once `yearsToProject`
+ * exceeds the loan term the balance is 0 and later years carry no interest
+ * or principal (the loan is paid off, not extended).
+ */
+export function amortizationSchedule(args: {
+  annualRate: number;
+  termYears: number;
+  principal: number;
+  yearsToProject: number;
+}): AmortizationYear[] {
+  const r = args.annualRate / MONTHS_PER_YEAR;
+  const totalMonths = args.termYears * MONTHS_PER_YEAR;
+  const monthlyPayment =
+    r === 0
+      ? args.principal / totalMonths
+      : (args.principal * r) / (1 - (1 + r) ** -totalMonths);
+
+  const years: AmortizationYear[] = [];
+  let balance = args.principal;
+  for (let yearNumber = 1; yearNumber <= args.yearsToProject; yearNumber++) {
+    const openingBalance = balance;
+    let interestPaid = 0;
+    let principalPaid = 0;
+    for (let m = 0; m < MONTHS_PER_YEAR; m++) {
+      const monthIndex = (yearNumber - 1) * MONTHS_PER_YEAR + m;
+      if (monthIndex >= totalMonths || balance <= 0) break;
+      const interest = balance * r;
+      const principal = monthlyPayment - interest;
+      balance = Math.max(0, balance - principal);
+      // The PMT-derived payment zeroes the balance exactly in theory; clear
+      // sub-cent floating point residue so a paid-off loan reads as 0, not
+      // as a lingering fraction of a euro-cent.
+      if (balance < 1e-6) balance = 0;
+      interestPaid += interest;
+      principalPaid += principal;
+    }
+    years.push({
+      yearNumber,
+      openingBalance,
+      interestPaid,
+      principalPaid,
+      closingBalance: balance,
+    });
+  }
+  return years;
 }
 
 export function selectFinancing(args: {

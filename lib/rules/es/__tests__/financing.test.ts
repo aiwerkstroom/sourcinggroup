@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  amortizationSchedule,
   annualAnnuityDebtService,
   annualInterestOnly,
   clampLtv,
@@ -25,6 +26,69 @@ describe("annuity debt service (Excel PMT parity)", () => {
     expect(annualInterestOnly(0.047, 247500)).toBeCloseTo(11632.5, 9);
     expect(annualInterestOnly(0.042, 247500)).toBeCloseTo(10395, 9);
     expect(annualInterestOnly(0.0395, 247500)).toBeCloseTo(9776.25, 9);
+  });
+});
+
+// Golden values: independent recomputation of the monthly amortization
+// schedule (MODEL_SPEC_FASE1B §4/§8 - no Excel counterpart for phase 1b).
+describe("amortization schedule (interest/principal split per year)", () => {
+  it("splits year 1/2/10 for the base scenario (4.2%, 15y, 247500)", () => {
+    const years = amortizationSchedule({
+      annualRate: 0.042,
+      termYears: 15,
+      principal: 247500,
+      yearsToProject: 10,
+    });
+    expect(years).toHaveLength(10);
+    expect(years[0]!.openingBalance).toBe(247500);
+    expect(years[0]!.interestPaid).toBeCloseTo(10163.765235, 5);
+    expect(years[0]!.principalPaid).toBeCloseTo(12103.819942, 5);
+    expect(years[0]!.closingBalance).toBeCloseTo(235396.180058, 4);
+    expect(years[1]!.interestPaid).toBeCloseTo(9645.503785, 5);
+    expect(years[1]!.principalPaid).toBeCloseTo(12622.081392, 5);
+    expect(years[9]!.interestPaid).toBeCloseTo(4615.372495, 5);
+    expect(years[9]!.principalPaid).toBeCloseTo(17652.212682, 5);
+    expect(years[9]!.closingBalance).toBeCloseTo(100266.961333, 4);
+  });
+
+  it("declines every year: interest down, principal up (annuity is flat)", () => {
+    const years = amortizationSchedule({
+      annualRate: 0.042,
+      termYears: 15,
+      principal: 247500,
+      yearsToProject: 10,
+    });
+    for (let i = 1; i < years.length; i++) {
+      expect(years[i]!.interestPaid).toBeLessThan(years[i - 1]!.interestPaid);
+      expect(years[i]!.principalPaid).toBeGreaterThan(years[i - 1]!.principalPaid);
+      expect(years[i]!.openingBalance).toBeCloseTo(years[i - 1]!.closingBalance, 6);
+    }
+  });
+
+  it("pays the loan off at the end of the term and carries zero after that", () => {
+    const years = amortizationSchedule({
+      annualRate: 0.042,
+      termYears: 15,
+      principal: 247500,
+      yearsToProject: 16,
+    });
+    expect(years[14]!.closingBalance).toBeCloseTo(0, 6);
+    expect(years[15]!.interestPaid).toBe(0);
+    expect(years[15]!.principalPaid).toBe(0);
+    expect(years[15]!.closingBalance).toBe(0);
+  });
+
+  it("sums interest+principal back to the annuity payment while the loan is active", () => {
+    const years = amortizationSchedule({
+      annualRate: 0.042,
+      termYears: 15,
+      principal: 247500,
+      yearsToProject: 5,
+    });
+    const annuity = annualAnnuityDebtService(0.042, 15, 247500);
+    for (const y of years) {
+      expect(y.interestPaid + y.principalPaid).toBeCloseTo(annuity, 6);
+    }
   });
 });
 

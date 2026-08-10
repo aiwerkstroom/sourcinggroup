@@ -142,6 +142,19 @@ export interface SelectedFinancing {
   mortgageAmount: number;
 }
 
+/**
+ * One year of the amortization schedule (MODEL_SPEC_FASE1B §4): the
+ * interest/principal split of that year's annuity payments, needed because
+ * only the interest portion is tax-deductible and it shrinks every year.
+ */
+export interface AmortizationYear {
+  yearNumber: number;
+  openingBalance: number;
+  interestPaid: number;
+  principalPaid: number;
+  closingBalance: number;
+}
+
 export interface AcquisitionCosts {
   purchasePrice: number;
   renovationCosts: number;
@@ -207,6 +220,38 @@ export interface TaxResult {
   taxableIncomeBase: number;
   taxRate: number;
   taxDueBase: number;
+}
+
+/**
+ * One projected year of after-tax cashflow (MODEL_SPEC_FASE1B §4).
+ * Costs that scale with rent (property management) use the rent index;
+ * CPI-indexed cost lines (maintenance, utilities, insurance, bank fee) use
+ * the cost index; IBI uses its own start-of-year value index; depreciation
+ * stays flat (tied to the original acquisition cost, not indexed).
+ */
+export interface ProjectionYear {
+  yearNumber: number;
+  calendarYear: number;
+  extrapolated: boolean;
+  grossIncome: number;
+  propertyManagement: number;
+  maintenance: number;
+  utilities: number;
+  propertyTaxIBI: number;
+  insurance: number;
+  bankAccountFee: number;
+  fixedCosts: number;
+  noi: number;
+  interestPaid: number;
+  principalPaid: number;
+  debtService: number;
+  mortgageBalance: number;
+  preTaxCashflow: number;
+  depreciation: number;
+  deductibleCosts: number;
+  taxableIncome: number;
+  taxDue: number;
+  cashflowAfterTax: number;
 }
 
 export interface EngineResult {
