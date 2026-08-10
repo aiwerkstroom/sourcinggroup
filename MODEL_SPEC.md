@@ -181,9 +181,10 @@ D165.
   enkele formule gebruikt ze. **[BESLISSING]** scenariodriver, aparte
   risicoscore, of contextpagina.
 - **Er is geen score.** Voor het rapport optioneel, voor de crawl noodzakelijk.
-- **Min ROI wordt niet getoetst.** De invoer bestaat (D22) maar de Excel
-  berekent geen ROI-toets; de engine repliceert dat en toetst hem dus ook
-  (nog) niet.
+- ~~Min ROI wordt niet getoetst.~~ **Opgelost in fase 1b §12/§7:**
+  `InvestorConstraints.minRoiTarget` wordt nu getoetst tegen de IRR
+  (`ReturnRequirementCheck`), niet tegen de eenjarige fase-1-cashflow — de
+  Excel had er toch geen formule voor.
 
 ## 11. Referentiecasus (voor de tests)
 
@@ -405,6 +406,48 @@ deal als deze af terwijl de IRR hem misschien rechtvaardigt — dit is een
 punt voor de vergelijkingsmaatstaf in de UI-spec (§5), niet iets dat de
 rekenlaag zelf oplost.
 
+**Wat dit oplevert per scenario** (`lib/rules/es/outcome.ts`), de
+datastructuur waar resultaatpagina en PDF op gebouwd worden. Zelf geen
+nieuwe rekenlogica: composeert de projectie (§4), de exit (§5) en de IRR
+(§6), en voegt de twee ontbrekende toetsen toe:
+```
+jaarreeks per jaar         : cashflow na belasting, cumulatieve cashflow
+                              (alléén operationeel, exclusief verkoop),
+                              pandwaarde, restschuld, opgebouwd eigen
+                              vermogen (pandwaarde − restschuld)
+totaal rendement            = (som cashflow na belasting + netto
+                              verkoopopbrengst − eigen inbreng) / eigen
+                              inbreng  (niet-geannualiseerd, complementair
+                              aan de IRR)
+terugverdientijd             = eerste jaar waarin de cumulatieve
+                              operationele cashflow de eigen inbreng
+                              evenaart; anders null
+```
+**Eigen-vermogentoets (nieuw).** Past de benodigde eigen inbreng
+(`AcquisitionCosts.equityRequired`) binnen het beschikbare eigen vermogen
+van de belegger (`PropertyInput.ownMoney`)? Ontbrak volledig; in de
+referentiecasus faalt deze toets in alle drie scenario's (€ 197.990 nodig
+tegen € 115.000 beschikbaar — de benodigde inleg hangt niet van het
+scenario af). `null` (niet `false`) wanneer `ownMoney` niet is opgegeven.
+
+**Rendementseistoets (nieuw).** Zet de IRR af tegen
+`InvestorConstraints.minRoiTarget`; valt terug op
+`DEFAULT_MIN_REQUIRED_RETURN = 0` in `parameters.ts` wanneer de belegger
+geen eis heeft opgegeven — een 0%-drempel is de zwakst mogelijke grens (elke
+niet-negatieve IRR haalt hem) en kan dus nooit een slag die een echte eis
+niet zou halen, ten onrechte laten slagen. In de referentiecasus (eis 4%)
+haalt alleen het conservatieve scenario (2,49%) de eis niet; basis (5,84%)
+en optimistisch (8,93%) wel. `null` wanneer de IRR zelf niet gedefinieerd
+is.
+
+**Terugverdientijd is `null` in alle drie scenario's van de
+referentiecasus** — ook optimistisch (cumulatieve operationele cashflow na
+10 jaar: € 40.419,61, nog altijd ver onder de inleg van € 197.990). Deze
+deal verdient zichzelf uitsluitend terug via de verkoop, nooit via tien
+jaar huur alleen — precies het patroon dat aanleiding gaf tot de
+IRR-correctie hierboven, nu als apart, herleidbaar getal in plaats van als
+observatie.
+
 Golden tests: onafhankelijke Python-doorrekening (er is geen Excel-
 tegenhanger voor fase 1b), vastgelegd in
-`lib/rules/es/__tests__/{indexation,financing,projection,exit,irr}.test.ts`.
+`lib/rules/es/__tests__/{indexation,financing,projection,exit,irr,outcome}.test.ts`.

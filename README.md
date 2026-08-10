@@ -1,10 +1,12 @@
 # Sourcing Group — Rentabiliteitsplatform
 
-## TSG Yield Engine — Fase 1: de motor (actueel)
+## TSG Yield Engine — Fase 1 + 1b: de motor (actueel)
 
 De rekenlaag van de **TSG Yield Engine** staat in `lib/rules/es/` (pure
-TypeScript, geen framework) en repliceert de gecorrigeerde
-`TSG_Model_v3.xlsx` exact. Specificatie: [`MODEL_SPEC.md`](MODEL_SPEC.md) —
+TypeScript, geen framework). Fase 1 repliceert de gecorrigeerde
+`TSG_Model_v3.xlsx` exact (Excel-pariteit); fase 1b bouwt daarop voort met
+een meerjarige projectie, cashflow na belasting, exit en IRR
+(`MODEL_SPEC_FASE1B.md`). Specificatie: [`MODEL_SPEC.md`](MODEL_SPEC.md) —
 inclusief de openstaande **[BESLISSING]**-punten die door Samuel moeten worden
 vastgesteld. Alle parameters staan met bron en datum in
 `lib/rules/es/parameters.ts`; er zitten geen hardgecodeerde getallen in de
@@ -12,14 +14,16 @@ rekenfuncties.
 
 ```bash
 npm install
-npm test          # 55 tests, incl. golden test tegen de referentiecasus
-                  # Avenida Primado Reig 19 (Excel-pariteit)
+npm test          # 143 tests: golden tests tegen de referentiecasus
+                  # (Excel-pariteit fase 1, onafhankelijke Python-
+                  # doorrekening fase 1b)
 ```
 
-Fasering (zie projectspecificatie): 1 motor → 2 invoer & resultaat (Next.js)
-→ 3 PDF-rapport → 4 account & betaling → 5 crawl. Fase 1 is af zodra
-`npm test` groen is en de uitkomsten met het model overeenkomen — dat is nu
-het geval.
+Fasering (zie projectspecificatie): 1 motor → 1b meerjarige projectie/exit/IRR
+→ 2 invoer & resultaat (Next.js) → 3 PDF-rapport → 4 account & betaling
+→ 5 crawl. Fase 1 en 1b zijn af zodra `npm test` groen is en de uitkomsten
+met het model/de onafhankelijke doorrekening overeenkomen — dat is nu het
+geval.
 
 ---
 

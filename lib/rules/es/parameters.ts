@@ -317,6 +317,21 @@ export const NON_RESIDENT_WITHHOLDING_RATE = 0.03;
  */
 export const DEFAULT_RENOVATION_IMPROVEMENT_SHARE = 0;
 
+/**
+ * Default minimum required IRR used to judge a scenario's return
+ * (MODEL_SPEC_FASE1B §7). This is the investor's hurdle rate / opportunity
+ * cost - what they could earn elsewhere - and has no universal value.
+ *
+ * Default 0: a 0% hurdle is the weakest possible bar (any non-negative
+ * IRR passes), chosen for the same reason as
+ * DEFAULT_RENOVATION_IMPROVEMENT_SHARE above - it cannot manufacture a
+ * pass that a real hurdle rate would fail. TODO [BESLISSING]: the real
+ * figure should come from InvestorConstraints.minRoiTarget when the
+ * investor has stated one; this constant is only the fallback when they
+ * have not.
+ */
+export const DEFAULT_MIN_REQUIRED_RETURN = 0;
+
 /** Average deductible-cost share used in the Matrices tax matrix. Matrices!P5; source Agencia Tributaria (2025). */
 export const AVERAGE_DEDUCTIBLE_COST_SHARE = 0.23;
 

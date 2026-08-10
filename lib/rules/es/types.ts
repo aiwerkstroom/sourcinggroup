@@ -319,14 +319,76 @@ export interface ExitResult {
 
 /**
  * IRR outcome (MODEL_SPEC_FASE1B §6). Not every cashflow series has a
- * defined internal rate of return - when the investment never nominally
- * recoups its cost (NPV at 0% is not positive), no non-negative rate makes
- * the NPV zero, and `defined` is false. The app must show that plainly
- * ("no solution"), never a fabricated or clamped number.
+ * defined internal rate of return - only a series that never changes sign
+ * (all outflows, or all inflows) has none, since no rate can zero an NPV
+ * where every term shares the same sign. `irr.irr` can be negative: that is
+ * a real answer ("the investment lost value"), not a failure. The app must
+ * show `defined: false` plainly ("no solution"), never a fabricated or
+ * clamped number.
  */
 export type IrrResult =
   | { defined: true; irr: number; iterations: number }
   | { defined: false; reason: string };
+
+/** One year of the assembled scenario outcome (MODEL_SPEC_FASE1B §7). */
+export interface ScenarioProjectionYear {
+  yearNumber: number;
+  calendarYear: number;
+  cashflowAfterTax: number;
+  /** Running sum of cashflowAfterTax through this year - operating cashflow only, the sale is not included. */
+  cumulativeCashflow: number;
+  /** purchasePrice x propertyValueIndex(scenario, yearNumber) - the same index used for the exit price. */
+  propertyValue: number;
+  mortgageBalance: number;
+  /** propertyValue - mortgageBalance: the investor's equity stake in the property at this point, distinct from cash received. */
+  equityBuilt: number;
+}
+
+/**
+ * Whether the equity the deal requires fits the investor's available
+ * equity (MODEL_SPEC_FASE1B §7, added per correction - this check did not
+ * exist before). `equityAvailable` is the investor's own stated capital
+ * (PropertyInput.ownMoney); when it is not provided the check cannot run.
+ */
+export interface EquityFitCheck {
+  equityRequired: number;
+  equityAvailable: number | undefined;
+  /** null when equityAvailable is unknown. */
+  fitsWithinAvailableEquity: boolean | null;
+}
+
+/**
+ * Whether the scenario's IRR meets the investor's hurdle rate
+ * (MODEL_SPEC_FASE1B §7, added per correction). `minRequiredReturn`
+ * should come from InvestorConstraints.minRoiTarget when the investor has
+ * stated one; DEFAULT_MIN_REQUIRED_RETURN (0) is only the fallback.
+ */
+export interface ReturnRequirementCheck {
+  minRequiredReturn: number;
+  /** null when the IRR itself is not defined. */
+  meetsMinRequiredReturn: boolean | null;
+}
+
+/**
+ * The full per-scenario outcome (MODEL_SPEC_FASE1B §7): what the
+ * resultaatpagina and the PDF are built on. A judgment based only on
+ * cashflow or DSCR thresholds can reject a deal the IRR would justify -
+ * this structure carries both the threshold checks (§1-§4: cashflow, DSCR,
+ * LTV, budget) via `years`/`exit`, and the return-based view (IRR, total
+ * return, payback) side by side, rather than collapsing to one verdict.
+ */
+export interface ScenarioOutcome {
+  scenario: ScenarioId;
+  years: ScenarioProjectionYear[];
+  exit: ExitResult;
+  irr: IrrResult;
+  /** (operating cashflow total + net sale proceeds - equity invested) / equity invested - a total return, not annualized like the IRR. */
+  totalReturn: number;
+  /** First year the cumulative OPERATING cashflow (excl. the sale) recoups the equity invested; null if it never does within the horizon. */
+  paybackYear: number | null;
+  equityFit: EquityFitCheck;
+  returnRequirement: ReturnRequirementCheck;
+}
 
 export interface EngineResult {
   income: IncomeModel;
