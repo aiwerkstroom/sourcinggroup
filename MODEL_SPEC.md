@@ -366,10 +366,10 @@ verkoopopbrengst.
 
 **IRR op eigen vermogen** (`lib/rules/es/irr.ts`):
 ```
-jaar 0   = −(eigen inbreng + renovatie)  =  −AcquisitionCosts.equityRequired
+jaar 0    = −(eigen inbreng + renovatie)  =  −AcquisitionCosts.equityRequired
 jaar 1..n = netto cashflow na belasting (§4, ProjectionYear.cashflowAfterTax)
 jaar n    += netto verkoopopbrengst (§5, ExitResult.netSaleProceeds)
-IRR       = bisectie op NPV(r) = 0, r ≥ 0
+IRR       = bisectie op NPV(r) = 0, r ∈ [−99%, 10.000%]
 ```
 `eigen inbreng + renovatie` is exact `AcquisitionCosts.equityRequired`
 (Excel-geverifieerd, §11: D153 = € 197.990) — dat bedrag bevat de
@@ -377,20 +377,33 @@ renovatiekosten al, dus die twee termen apart optellen zou dubbeltellen of
 een tweede berekening van dezelfde waarde vereisen.
 
 Bisectie is gekozen boven Newton-Raphson: geen afgeleide nodig en
-gegarandeerde convergentie zodra een geldige bracket is gevonden. Als
-NPV(0%) niet positief is — het nominale (ongedisconteerde) totaalrendement
-haalt de inleg niet — bestaat er geen niet-negatieve rente die de NPV op
-nul brengt (disconteren maakt latere cashflows alleen maar kleiner); de
-functie geeft dan expliciet `{ defined: false, reason: ... }` terug in
-plaats van een getal.
+gegarandeerde convergentie zodra een geldige bracket is gevonden.
 
-**Referentiecasus — alle drie scenario's hebben een gedefinieerde IRR.**
-De ongedisconteerde som van jaar 1–10 (incl. verkoopopbrengst) overtreft in
-alle drie scenario's de inleg van € 197.990, ook in het conservatieve
-scenario (€ 262.973,93 tegenover € 197.990 inleg, NPV(0%) = € 64.983,93 >
-0). IRR: conservatief 2,49% · basis 5,84% · optimistisch 8,93%. Dit wijkt
-af van de eerdere verwachting dat het conservatieve scenario geen oplossing
-zou hebben; die verwachting is met deze doorrekening niet bevestigd.
+**Correctie — het zoekbereik omvat negatieve rentevoeten.** Een reeks met
+precies één tekenwisseling (het gangbare patroon hier: een eigen-
+vermogeninleg, dan een reeks die bij verkoop definitief positief wordt) is
+"conventioneel": NPV(r) is strikt monotoon op (−1, ∞), dus er bestaat altijd
+een nulpunt — positief, nul, of negatief. Een negatieve IRR is een
+informatief antwoord ("het rendement was negatief"), geen storing.
+`{ defined: false, reason }` is gereserveerd voor het geval waarin de
+cashflowreeks helemaal geen teken wisselt (alleen uitgaven, of alleen
+ontvangsten) — daar bestaat wiskundig gegarandeerd geen enkele rente die de
+NPV op nul brengt, ongeacht het teken.
+
+**Referentiecasus — alle drie scenario's hebben een gedefinieerde,
+positieve IRR.** De ongedisconteerde som van jaar 1–10 (incl.
+verkoopopbrengst) overtreft in alle drie scenario's de inleg van
+€ 197.990, ook in het conservatieve scenario (€ 262.973,93 tegenover
+€ 197.990 inleg). IRR: conservatief 2,49% · basis 5,84% · optimistisch
+8,93%. Dit wijkt af van de eerdere verwachting dat het conservatieve
+scenario geen oplossing zou hebben; die verwachting is met deze
+doorrekening niet bevestigd — de cashflow is negatief en de DSCR onder 1
+in de vroege jaren, maar het rendement zit in de aflossing en de
+waardegroei die bij verkoop vrijkomen, niet in de lopende cashflow. Een
+oordeel dat uitsluitend op cashflow- of DSCR-drempels afgaat, wijst een
+deal als deze af terwijl de IRR hem misschien rechtvaardigt — dit is een
+punt voor de vergelijkingsmaatstaf in de UI-spec (§5), niet iets dat de
+rekenlaag zelf oplost.
 
 Golden tests: onafhankelijke Python-doorrekening (er is geen Excel-
 tegenhanger voor fase 1b), vastgelegd in

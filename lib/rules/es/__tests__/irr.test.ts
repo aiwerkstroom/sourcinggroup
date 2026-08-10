@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { computeExit } from "../exit";
 import { runEngine } from "../engine";
-import { buildEquityCashflows, computeIrr, computeScenarioIrr, npv } from "../irr";
+import {
+  buildEquityCashflows,
+  computeIrr,
+  computeScenarioIrr,
+  countSignChanges,
+  npv,
+} from "../irr";
 import { buildProjectionYears } from "../projection";
 import type { ExitAssumptions, ScenarioId } from "../types";
 import { referenceCase } from "./referencecase";
@@ -39,23 +45,62 @@ describe("computeIrr() - closed-form and synthetic cases", () => {
     }
   });
 
-  it("returns not defined when the nominal total return does not exceed the investment", () => {
-    // -100000 invested, 0 for 9 years, +50000 in year 10: never recoups the outlay.
+  it("finds a NEGATIVE irr when the nominal total return does not exceed the investment", () => {
+    // -100000 invested, 0 for 9 years, +50000 in year 10: one sign change,
+    // so a root exists even though it never nominally recoups the outlay.
+    // Closed form: -100000 + 50000/(1+r)^10 = 0 => r = 0.5^0.1 - 1.
     const cashflows = [-100000, 0, 0, 0, 0, 0, 0, 0, 0, 0, 50000];
     const result = computeIrr(cashflows);
-    expect(result.defined).toBe(false);
-    if (!result.defined) expect(result.reason).toMatch(/does not exceed/);
+    expect(result.defined).toBe(true);
+    if (result.defined) {
+      expect(result.irr).toBeCloseTo(-0.06696700846319259, 6);
+      expect(result.irr).toBeLessThan(0);
+    }
   });
 
-  it("returns not defined when nominal proceeds exactly equal the investment (break-even, no positive rate solves it)", () => {
+  it("finds IRR = 0% exactly at nominal break-even", () => {
+    // -100000 -> +100000 after 2 years: NPV(0%) = 0 exactly, so IRR = 0%,
+    // not "no solution" - the investment merely returned its cost with no
+    // gain or loss.
     const cashflows = [-100000, 0, 100000];
     const result = computeIrr(cashflows);
-    expect(result.defined).toBe(false);
+    expect(result.defined).toBe(true);
+    if (result.defined) expect(result.irr).toBeCloseTo(0, 6);
+  });
+
+  it("returns not defined for a cashflow series that never changes sign", () => {
+    // All outflows, no returns at all: no rate, positive or negative,
+    // can zero an NPV where every term shares the same sign.
+    const cashflows = [-100000, -1000, -1000, -1000];
+    const result = countSignChanges(cashflows);
+    expect(result).toBe(0);
+    const irrResult = computeIrr(cashflows);
+    expect(irrResult.defined).toBe(false);
+    if (!irrResult.defined) expect(irrResult.reason).toMatch(/never changes sign/);
   });
 
   it("rejects a series shorter than two cashflows", () => {
     const result = computeIrr([-100]);
     expect(result.defined).toBe(false);
+  });
+});
+
+describe("countSignChanges()", () => {
+  it("counts zero for an all-negative or all-positive series", () => {
+    expect(countSignChanges([-100, -50, -30])).toBe(0);
+    expect(countSignChanges([100, 50, 30])).toBe(0);
+  });
+
+  it("counts one for the conventional invest-then-return shape", () => {
+    expect(countSignChanges([-100, 20, 20, 90])).toBe(1);
+  });
+
+  it("ignores zero-valued entries", () => {
+    expect(countSignChanges([-100, 0, 0, 0, 150])).toBe(1);
+  });
+
+  it("counts two for a series that turns negative again", () => {
+    expect(countSignChanges([-100, 50, -20])).toBe(2);
   });
 });
 
