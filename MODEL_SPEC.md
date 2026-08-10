@@ -141,6 +141,10 @@ Vaste lasten in NOI en totale opex (sinds v3): IBI € 1.320 + verzekeringen
 met de aankoopprijs). Hypotheekrente valt hier niet onder — die zit in de
 debt service.
 
+Deze posten lopen bewust **niet** door de scenariomultipliers heen; de Excel
+annoteert dat bij L85 als "prijs- noch inkomensgedreven". Ze zijn in alle drie
+de scenario's gelijk.
+
 Debt service: annuïteit over hypotheek = aankoopprijs × geselecteerde LTV,
 looptijd van de geselecteerde strategie, scenariorente = geselecteerde rente +
 delta + niet-ingezetenenopslag.

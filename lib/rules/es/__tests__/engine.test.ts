@@ -67,22 +67,22 @@ describe("reference case Avenida Primado Reig 19 (Excel parity)", () => {
     expect(optimistic!.annualInterestOnly).toBeCloseTo(9776.25, 8);
     expect(conservative!.annualDebtService).toBeCloseTo(23025.0534114773, 7);
     expect(base!.annualDebtService).toBeCloseTo(22267.5851768972, 7);
-    expect(optimistic!.annualDebtService).toBeCloseTo(21894.3888519704, 7);
+    expect(optimistic!.annualDebtService).toBeCloseTo(21894.3888519706, 7);
   });
 
   it("total opex incl. fixed costs and amortising debt service (L98/N98/P98)", () => {
-    expect(conservative!.totalOpexInclDebtService).toBeCloseTo(31730.4961434777, 7);
-    expect(base!.totalOpexInclDebtService).toBeCloseTo(31274.3787768970, 7);
-    expect(optimistic!.totalOpexInclDebtService).toBeCloseTo(31448.6059299704, 7);
+    expect(conservative!.totalOpexInclDebtService).toBeCloseTo(31730.4961434773, 7);
+    expect(base!.totalOpexInclDebtService).toBeCloseTo(31274.3787768972, 7);
+    expect(optimistic!.totalOpexInclDebtService).toBeCloseTo(31448.6059299706, 7);
   });
 
   it("annual and monthly cashflow match (L102-P104)", () => {
-    expect(conservative!.annualCashflow).toBeCloseTo(-8693.51294347771, 7);
-    expect(base!.annualCashflow).toBeCloseTo(-2833.65877689696, 7);
-    expect(optimistic!.annualCashflow).toBeCloseTo(2964.66527002957, 7);
-    expect(conservative!.monthlyCashflow).toBeCloseTo(-724.459411956476, 8);
-    expect(base!.monthlyCashflow).toBeCloseTo(-236.13823140808, 8);
-    expect(optimistic!.monthlyCashflow).toBeCloseTo(247.055439169131, 8);
+    expect(conservative!.annualCashflow).toBeCloseTo(-8693.51294347732, 7);
+    expect(base!.annualCashflow).toBeCloseTo(-2833.65877689723, 7);
+    expect(optimistic!.annualCashflow).toBeCloseTo(2964.66527002944, 7);
+    expect(conservative!.monthlyCashflow).toBeCloseTo(-724.459411956443, 8);
+    expect(base!.monthlyCashflow).toBeCloseTo(-236.138231408102, 8);
+    expect(optimistic!.monthlyCashflow).toBeCloseTo(247.05543916912, 8);
   });
 
   it("min monthly cashflow check: No / No / No (L106-P106)", () => {
@@ -94,9 +94,9 @@ describe("reference case Avenida Primado Reig 19 (Excel parity)", () => {
   });
 
   it("DSCR matches the corrected formula NOI / annuity (L108-P108)", () => {
-    expect(conservative!.dscr).toBeCloseTo(0.622432452680258, 10);
-    expect(base!.dscr).toBeCloseTo(0.872745124611135, 10);
-    expect(optimistic!.dscr).toBeCloseTo(1.13540753706687, 10);
+    expect(conservative!.dscr).toBeCloseTo(0.622432452680268, 10);
+    expect(base!.dscr).toBeCloseTo(0.872745124611125, 10);
+    expect(optimistic!.dscr).toBeCloseTo(1.13540753706686, 10);
   });
 
   it("DSCR verdict: NO / NO / Yes (L110-P110)", () => {

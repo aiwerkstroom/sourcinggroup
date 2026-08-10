@@ -14,7 +14,7 @@ describe("annuity debt service (Excel PMT parity)", () => {
   it("replicates PMT for the three scenario rates (L96/N96/P96)", () => {
     expect(annualAnnuityDebtService(0.047, 15, 247500)).toBeCloseTo(23025.0534114773, 8);
     expect(annualAnnuityDebtService(0.042, 15, 247500)).toBeCloseTo(22267.5851768972, 8);
-    expect(annualAnnuityDebtService(0.0395, 15, 247500)).toBeCloseTo(21894.3888519704, 8);
+    expect(annualAnnuityDebtService(0.0395, 15, 247500)).toBeCloseTo(21894.3888519706, 8);
   });
 
   it("handles a zero interest rate as linear repayment", () => {
