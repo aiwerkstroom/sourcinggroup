@@ -1,5 +1,30 @@
 # Sourcing Group — Rentabiliteitsplatform
 
+## TSG Yield Engine — Fase 1: de motor (actueel)
+
+De rekenlaag van de **TSG Yield Engine** staat in `lib/rules/es/` (pure
+TypeScript, geen framework) en repliceert de gecorrigeerde
+`TSG_Model_v2.xlsx` exact. Specificatie: [`MODEL_SPEC.md`](MODEL_SPEC.md) —
+inclusief de openstaande **[BESLISSING]**-punten die door Samuel moeten worden
+vastgesteld. Alle parameters staan met bron en datum in
+`lib/rules/es/parameters.ts`; er zitten geen hardgecodeerde getallen in de
+rekenfuncties.
+
+```bash
+npm install
+npm test          # 54 tests, incl. golden test tegen de referentiecasus
+                  # Avenida Primado Reig 19 (Excel-pariteit)
+```
+
+Fasering (zie projectspecificatie): 1 motor → 2 invoer & resultaat (Next.js)
+→ 3 PDF-rapport → 4 account & betaling → 5 crawl. Fase 1 is af zodra
+`npm test` groen is en de uitkomsten met het model overeenkomen — dat is nu
+het geval.
+
+---
+
+## Eerdere Python-opzet (werkstromen)
+
 Van Excel-model naar geautomatiseerd beoordelingsplatform voor investeringspanden.
 Twee werkstromen op één rekenkern:
 

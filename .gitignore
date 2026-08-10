@@ -6,3 +6,4 @@ venv/
 # Broer-bestanden van extract_excel.py mogen wél mee; ruwe klantdata niet standaard
 data/*.xlsx
 !data/voorbeeld*.xlsx
+node_modules
