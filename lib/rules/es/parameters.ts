@@ -290,9 +290,31 @@ export const AVERAGE_DEDUCTIBLE_COST_SHARE = 0.23;
 /**
  * Depreciation: 3% of 80% of the purchase value per year.
  * Reference Info H58; source Agencia Tributaria / IberianTax (2025).
+ * This is phase 1's single-year Excel-parity figure only - do not reuse
+ * DEPRECIATION_BUILDING_SHARE for the phase 1b multi-year projection, which
+ * uses DEFAULT_BUILDING_SHARE_OF_VALUE below instead.
  */
 export const DEPRECIATION_RATE = 0.03;
 export const DEPRECIATION_BUILDING_SHARE = 0.8;
+
+/**
+ * Default building share of the purchase value, for the phase 1b
+ * multi-year depreciation base (MODEL_SPEC_FASE1B §5, correction 2).
+ *
+ * Spanish tax law depreciates 3% per year on the higher of the cadastral
+ * building value or the building portion of the acquisition cost,
+ * excluding land - not a fixed percentage of the purchase price. Phase 1's
+ * 80% (DEPRECIATION_BUILDING_SHARE, above) is the Excel's own fixed
+ * convention and is left untouched for Excel parity; it is not a claim
+ * about the real building share of this or any property.
+ *
+ * TODO [BESLISSING]: 0.70 is a generic placeholder, not sourced per
+ * property. The real building share must come from that property's valor
+ * catastral desglosado (Catastro: the cadastral value split into suelo /
+ * construcción) - replace this default with that figure before a report
+ * ships for a specific property.
+ */
+export const DEFAULT_BUILDING_SHARE_OF_VALUE = 0.7;
 
 /**
  * Per-scenario depreciation factors used by the deductible-costs table.

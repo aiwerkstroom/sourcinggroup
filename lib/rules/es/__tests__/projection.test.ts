@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { runEngine } from "../engine";
+import { DEFAULT_BUILDING_SHARE_OF_VALUE } from "../parameters";
 import { buildProjectionYears } from "../projection";
 import type { ScenarioId } from "../types";
 import { referenceCase } from "./referencecase";
@@ -81,8 +82,8 @@ describe("multi-year cashflow after tax (reference case)", () => {
         principalPaid: 12200.278328,
         mortgageBalance: 223658.521236,
         preTaxCashflow: -7784.786366,
-        taxDue: 35.214954,
-        cashflowAfterTax: -7820.00132,
+        taxDue: 212.028954,
+        cashflowAfterTax: -7996.81532,
       },
       5: {
         grossIncome: 26817.9649,
@@ -91,8 +92,8 @@ describe("multi-year cashflow after tax (reference case)", () => {
         principalPaid: 14043.832889,
         mortgageBalance: 183428.207879,
         preTaxCashflow: -5802.560989,
-        taxDue: 800.133436,
-        cashflowAfterTax: -6602.694425,
+        taxDue: 976.947436,
+        cashflowAfterTax: -6779.508425,
       },
       10: {
         grossIncome: 31089.3715,
@@ -101,8 +102,8 @@ describe("multi-year cashflow after tax (reference case)", () => {
         principalPaid: 17756.015305,
         mortgageBalance: 102420.428129,
         preTaxCashflow: -2648.272632,
-        taxDue: 2172.290901,
-        cashflowAfterTax: -4820.563533,
+        taxDue: 2349.104901,
+        cashflowAfterTax: -4997.377533,
       },
     },
     base: {
@@ -113,8 +114,8 @@ describe("multi-year cashflow after tax (reference case)", () => {
         principalPaid: 12103.819942,
         mortgageBalance: 235396.180058,
         preTaxCashflow: -2833.658777,
-        taxDue: 799.835621,
-        cashflowAfterTax: -3633.494398,
+        taxDue: 987.935621,
+        cashflowAfterTax: -3821.594398,
       },
       2: {
         grossIncome: 29862.756,
@@ -123,8 +124,8 @@ describe("multi-year cashflow after tax (reference case)", () => {
         principalPaid: 12622.081392,
         mortgageBalance: 222774.098666,
         preTaxCashflow: -1673.479449,
-        taxDue: 1130.692079,
-        cashflowAfterTax: -2804.171528,
+        taxDue: 1318.792079,
+        cashflowAfterTax: -2992.271528,
       },
       5: {
         grossIncome: 33108.5987,
@@ -133,8 +134,8 @@ describe("multi-year cashflow after tax (reference case)", () => {
         principalPaid: 14313.852643,
         mortgageBalance: 181571.585031,
         preTaxCashflow: 884.449865,
-        taxDue: 1972.699091,
-        cashflowAfterTax: -1088.249226,
+        taxDue: 2160.799091,
+        cashflowAfterTax: -1276.349226,
       },
       10: {
         grossIncome: 38381.9401,
@@ -143,8 +144,8 @@ describe("multi-year cashflow after tax (reference case)", () => {
         principalPaid: 17652.212682,
         mortgageBalance: 100266.961333,
         preTaxCashflow: 4975.314381,
-        taxDue: 3445.640863,
-        cashflowAfterTax: 1529.673518,
+        taxDue: 3633.740863,
+        cashflowAfterTax: 1341.573518,
       },
     },
     optimistic: {
@@ -155,8 +156,8 @@ describe("multi-year cashflow after tax (reference case)", () => {
         principalPaid: 12339.952763,
         mortgageBalance: 235160.047237,
         preTaxCashflow: 2964.66527,
-        taxDue: 1859.025176,
-        cashflowAfterTax: 1105.640094,
+        taxDue: 2054.649176,
+        cashflowAfterTax: 910.016094,
       },
       2: {
         grossIncome: 36133.9348,
@@ -165,8 +166,8 @@ describe("multi-year cashflow after tax (reference case)", () => {
         principalPaid: 12836.302922,
         mortgageBalance: 222323.744315,
         preTaxCashflow: 4398.050327,
-        taxDue: 2237.029942,
-        cashflowAfterTax: 2161.020385,
+        taxDue: 2432.653942,
+        cashflowAfterTax: 1965.396385,
       },
       5: {
         grossIncome: 40061.4044,
@@ -175,8 +176,8 @@ describe("multi-year cashflow after tax (reference case)", () => {
         principalPaid: 14448.386076,
         mortgageBalance: 180633.040069,
         preTaxCashflow: 7578.647409,
-        taxDue: 3180.474895,
-        cashflowAfterTax: 4398.172514,
+        taxDue: 3376.098895,
+        cashflowAfterTax: 4202.548514,
       },
       10: {
         grossIncome: 46442.1475,
@@ -185,8 +186,8 @@ describe("multi-year cashflow after tax (reference case)", () => {
         principalPaid: 17597.526942,
         mortgageBalance: 99191.89344,
         preTaxCashflow: 12680.455053,
-        taxDue: 4806.474764,
-        cashflowAfterTax: 7873.980289,
+        taxDue: 5002.098764,
+        cashflowAfterTax: 7678.356289,
       },
     },
   };
@@ -210,6 +211,36 @@ describe("multi-year cashflow after tax (reference case)", () => {
         });
       });
     });
+  });
+
+  it("defaults the depreciation base to DEFAULT_BUILDING_SHARE_OF_VALUE (0.70), not phase 1's fixed 80%", () => {
+    // Base scenario: 330000 x 3% x 0.70 x factor 1.00 = 6930, every year
+    // (depreciation is flat, tied to the acquisition cost, not indexed).
+    expect(DEFAULT_BUILDING_SHARE_OF_VALUE).toBe(0.7);
+    const years = projectionFor("base");
+    expect(years[0]!.depreciation).toBeCloseTo(6930, 6);
+    expect(years[9]!.depreciation).toBeCloseTo(6930, 6);
+  });
+
+  it("applies the scenario depreciation factor on top of the building share (conservative 0.94, optimistic 1.04)", () => {
+    expect(projectionFor("conservative")[0]!.depreciation).toBeCloseTo(6514.2, 6);
+    expect(projectionFor("optimistic")[0]!.depreciation).toBeCloseTo(7207.2, 6);
+  });
+
+  it("accepts an explicit buildingShareOfValue override, e.g. from a property's cadastral split", () => {
+    const scenarioResult = engineResult.scenarios.find((s) => s.id === "base")!;
+    const years = buildProjectionYears({
+      years: 3,
+      scenario: "base",
+      scenarioResult,
+      purchasePrice: referenceCase.property.purchasePrice,
+      financing: engineResult.selectedFinancing,
+      fixedCosts: engineResult.fixedOperatingCosts,
+      euResident: true,
+      buildingShareOfValue: 0.85,
+    });
+    // 330000 x 3% x 0.85 x 1.00 = 8415, higher than the 0.70 default (6930).
+    expect(years[0]!.depreciation).toBeCloseTo(8415, 6);
   });
 
   it("clamps tax at zero instead of reporting a refund on negative taxable income", () => {

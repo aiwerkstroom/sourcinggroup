@@ -8,17 +8,24 @@
  * not the flat "interest-only" figure phase 1 used for its single-year tax
  * estimate. That is why this module builds its own amortization schedule
  * per scenario instead of reusing the annual debt service total.
+ *
+ * Depreciation also gets its own building-share input here rather than
+ * reusing phase 1's fixed 80% (tax.ts, Excel parity): the real building
+ * share of a purchase price is property-specific (cadastral suelo /
+ * construcción split), not a universal constant, so this module takes it
+ * as an explicit, overridable parameter (DEFAULT_BUILDING_SHARE_OF_VALUE).
  */
 
 import { amortizationSchedule } from "./financing";
 import { buildIndexSeries } from "./indexation";
 import {
+  DEFAULT_BUILDING_SHARE_OF_VALUE,
+  DEPRECIATION_RATE,
   DEPRECIATION_SCENARIO_FACTORS,
   PROPERTY_MANAGEMENT_FEE,
   RENTAL_INCOME_TAX_RATE_EU,
   RENTAL_INCOME_TAX_RATE_NON_EU,
 } from "./parameters";
-import { depreciationBase } from "./tax";
 import type {
   FixedOperatingCosts,
   ProjectionYear,
@@ -38,6 +45,13 @@ export function buildProjectionYears(args: {
   /** Phase-1 fixed cost breakdown (IBI/insurance/bank fee), the year-1 base each is indexed from. */
   fixedCosts: Pick<FixedOperatingCosts, "propertyTaxIBI" | "insurance" | "bankAccountFee">;
   euResident: boolean;
+  /**
+   * Building share of the purchase value used for depreciation (3% per
+   * year applies to this share, not the full price). Defaults to
+   * DEFAULT_BUILDING_SHARE_OF_VALUE - a generic placeholder, not sourced
+   * per property; see the TODO on that constant.
+   */
+  buildingShareOfValue?: number;
 }): ProjectionYear[] {
   const indexSeries = buildIndexSeries({
     years: args.years,
@@ -54,8 +68,12 @@ export function buildProjectionYears(args: {
     yearsToProject: args.years,
   });
 
+  const buildingShareOfValue = args.buildingShareOfValue ?? DEFAULT_BUILDING_SHARE_OF_VALUE;
   const depreciationYear1 =
-    depreciationBase(args.purchasePrice) * DEPRECIATION_SCENARIO_FACTORS[args.scenario];
+    args.purchasePrice *
+    DEPRECIATION_RATE *
+    buildingShareOfValue *
+    DEPRECIATION_SCENARIO_FACTORS[args.scenario];
   const taxRate = args.euResident
     ? RENTAL_INCOME_TAX_RATE_EU
     : RENTAL_INCOME_TAX_RATE_NON_EU;

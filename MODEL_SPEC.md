@@ -265,6 +265,23 @@ Spaanse IRNR-heffing voor niet-ingezetenen is een periodieke aangifte, geen
 jaarlijkse verrekening met terugbetaling; de belasting is daarom geklemd op
 € 0 in plaats van negatief getoond.
 
+**Afschrijvingsgrondslag — [BESLISSING], opstalpercentage per pand nodig.**
+Fase 1 rekent (voor de eenjarige, Excel-parity belastingschatting) met een
+vaste 80% opstalaandeel — dat is de conventie van de Excel zelf (Reference
+Info H58) en blijft ongewijzigd staan in `tax.ts` voor de fase-1-parity-
+tests. De Spaanse afschrijvingsregel is echter 3% per jaar over de hoogste
+van de kadastrale opstalwaarde of het opstalgedeelte van de aanschafkosten,
+exclusief grond — geen vast percentage van de aankoopprijs. 80% is dus geen
+brongegeven maar een aanname over het grondaandeel.
+
+Voor de meerjarige projectie (`lib/rules/es/projection.ts`) is het
+opstalpercentage losgetrokken tot een expliciete, overschrijfbare parameter:
+`DEFAULT_BUILDING_SHARE_OF_VALUE = 0,70` in `parameters.ts`, met een
+TODO-commentaar erbij. Dit is een generieke placeholder, geen per-pand
+waarde. **De echte waarde moet uit de kadastrale waardesplitsing van het
+specifieke pand komen** (Catastro: valor catastral desglosado in suelo /
+construcción) voordat een rapport voor een concreet pand wordt uitgebracht.
+
 Golden tests: onafhankelijke Python-doorrekening (er is geen Excel-
 tegenhanger voor fase 1b), vastgelegd in
 `lib/rules/es/__tests__/{indexation,financing,projection}.test.ts`.
