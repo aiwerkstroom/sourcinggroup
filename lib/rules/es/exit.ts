@@ -25,6 +25,7 @@
 import { propertyValueIndex } from "./indexation";
 import {
   CAPITAL_GAINS_TAX_RATE_NON_RESIDENT,
+  DEFAULT_RENOVATION_IMPROVEMENT_SHARE,
   NON_RESIDENT_WITHHOLDING_RATE,
 } from "./parameters";
 import type {
@@ -32,6 +33,7 @@ import type {
   ExitAssumptions,
   ExitResult,
   ProjectionYear,
+  RenovationStrategyResult,
   ScenarioId,
 } from "./types";
 
@@ -45,7 +47,16 @@ export function computeExit(args: {
     AcquisitionCosts,
     "transferTaxITP" | "stampDutyAJD" | "notaryFee" | "registrationFee" | "legalAdvice"
   >;
+  /** The selected renovation strategy's CapEx; only renovationImprovementShare of this counts toward the acquisition value. */
+  renovation: Pick<RenovationStrategyResult, "capex">;
   assumptions: ExitAssumptions;
+  /**
+   * Share of the renovation CapEx that qualifies as "mejora" and raises
+   * the acquisition value. Defaults to DEFAULT_RENOVATION_IMPROVEMENT_SHARE
+   * (0) - see the TODO on that constant; do not pass a nonzero share
+   * without a documented basis.
+   */
+  renovationImprovementShare?: number;
 }): ExitResult {
   const holdingYears = args.finalYear.yearNumber;
   const sellingPrice = args.purchasePrice * propertyValueIndex(args.scenario, holdingYears);
@@ -58,13 +69,18 @@ export function computeExit(args: {
   const transferValueForCapitalGainsTax =
     sellingPrice - sellingCommission - args.assumptions.municipalCapitalGainsTax;
 
+  const renovationImprovementShare =
+    args.renovationImprovementShare ?? DEFAULT_RENOVATION_IMPROVEMENT_SHARE;
+  const renovationImprovementValue = args.renovation.capex * renovationImprovementShare;
+
   const acquisitionValueForCapitalGainsTax =
     args.purchasePrice +
     args.acquisition.transferTaxITP +
     args.acquisition.stampDutyAJD +
     args.acquisition.notaryFee +
     args.acquisition.registrationFee +
-    args.acquisition.legalAdvice;
+    args.acquisition.legalAdvice +
+    renovationImprovementValue;
 
   const capitalGain = transferValueForCapitalGainsTax - acquisitionValueForCapitalGainsTax;
   // A loss owes no capital gains tax; it is not a deduction elsewhere, so
@@ -87,6 +103,7 @@ export function computeExit(args: {
     sellingCommission,
     municipalCapitalGainsTax: args.assumptions.municipalCapitalGainsTax,
     transferValueForCapitalGainsTax,
+    renovationImprovementValue,
     acquisitionValueForCapitalGainsTax,
     capitalGain,
     capitalGainsTax,

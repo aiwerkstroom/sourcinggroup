@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { runEngine } from "../engine";
 import { computeExit } from "../exit";
+import { DEFAULT_RENOVATION_IMPROVEMENT_SHARE } from "../parameters";
 import { buildProjectionYears } from "../projection";
 import type { ExitAssumptions, ScenarioId } from "../types";
 import { referenceCase } from "./referencecase";
@@ -40,14 +41,50 @@ describe("exit (reference case, 10-year holding period)", () => {
       finalYear: years[years.length - 1]!,
       purchasePrice: referenceCase.property.purchasePrice,
       acquisition: engineResult.acquisition,
+      renovation: engineResult.selectedRenovation,
       assumptions: testAssumptions,
     });
   }
 
   it("computes the acquisition value for CGT from ITP/AJD/notary/registration/legal only (not agency fees or bank fee)", () => {
-    // 330000 + 33000 + 4950 + 1650 + 990 + 3300 = 373890.
+    // 330000 + 33000 + 4950 + 1650 + 990 + 3300 = 373890, +0 mejora (default share 0).
     const result = exitFor("base");
     expect(result.acquisitionValueForCapitalGainsTax).toBeCloseTo(373890, 6);
+    expect(result.renovationImprovementValue).toBe(0);
+  });
+
+  it("defaults renovationImprovementShare to 0: no renovation cost raises the acquisition value without justification", () => {
+    expect(DEFAULT_RENOVATION_IMPROVEMENT_SHARE).toBe(0);
+  });
+
+  it("accepts an explicit renovationImprovementShare, raising the acquisition value and lowering the taxable gain", () => {
+    const scenarioResult = engineResult.scenarios.find((s) => s.id === "base")!;
+    const years = buildProjectionYears({
+      years: 10,
+      scenario: "base",
+      scenarioResult,
+      purchasePrice: referenceCase.property.purchasePrice,
+      financing: engineResult.selectedFinancing,
+      fixedCosts: engineResult.fixedOperatingCosts,
+      euResident: true,
+      renovation: engineResult.selectedRenovation,
+    });
+    const result = computeExit({
+      scenario: "base",
+      finalYear: years[years.length - 1]!,
+      purchasePrice: referenceCase.property.purchasePrice,
+      acquisition: engineResult.acquisition,
+      renovation: engineResult.selectedRenovation,
+      assumptions: testAssumptions,
+      renovationImprovementShare: 0.5,
+    });
+    // 55000 (light strategy capex) x 0.5 = 27500.
+    expect(result.renovationImprovementValue).toBeCloseTo(27500, 6);
+    expect(result.acquisitionValueForCapitalGainsTax).toBeCloseTo(401390, 6);
+    expect(result.transferValueForCapitalGainsTax).toBeCloseTo(512533.8177630936, 4);
+    expect(result.capitalGain).toBeCloseTo(111143.81776309363, 4);
+    expect(result.capitalGainsTax).toBeCloseTo(21117.325374987788, 4);
+    expect(result.netSaleProceeds).toBeCloseTo(391149.53105510585, 4);
   });
 
   const golden: Record<
@@ -164,6 +201,7 @@ describe("exit (reference case, 10-year holding period)", () => {
       finalYear: years[0]!,
       purchasePrice: referenceCase.property.purchasePrice,
       acquisition: { ...engineResult.acquisition, legalAdvice: 250000 },
+      renovation: engineResult.selectedRenovation,
       assumptions: testAssumptions,
     });
     expect(result.capitalGain).toBeLessThan(0);

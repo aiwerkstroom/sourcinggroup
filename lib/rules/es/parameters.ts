@@ -300,6 +300,23 @@ export const CAPITAL_GAINS_TAX_RATE_NON_RESIDENT = 0.19;
  */
 export const NON_RESIDENT_WITHHOLDING_RATE = 0.03;
 
+/**
+ * Default share of renovation CapEx treated as "mejora" (capital
+ * improvement) for the acquisition value used in the capital gains tax
+ * calculation. Under Spanish non-resident tax rules (IRNR; Agencia
+ * Tributaria, "valor de adquisición ... se incrementará en el importe de
+ * las inversiones y mejoras efectuadas"), only genuine improvements raise
+ * the acquisition value - routine repairs and maintenance do not.
+ *
+ * Default 0: without a documented split between "mejora" and repair for
+ * the actual renovation work, the conservative assumption is that none of
+ * it qualifies (a false 0% cannot overstate the deduction the way a
+ * guessed nonzero share could). TODO [BESLISSING]: the real share must be
+ * substantiated per property from the renovation invoices/scope, not
+ * assumed - do not fill in a nonzero default here.
+ */
+export const DEFAULT_RENOVATION_IMPROVEMENT_SHARE = 0;
+
 /** Average deductible-cost share used in the Matrices tax matrix. Matrices!P5; source Agencia Tributaria (2025). */
 export const AVERAGE_DEDUCTIBLE_COST_SHARE = 0.23;
 

@@ -298,7 +298,9 @@ export interface ExitResult {
    * count of the same deduction.
    */
   transferValueForCapitalGainsTax: number;
-  /** purchasePrice + ITP + AJD + notary + registration + legal advice - the acquisition costs the law lets you deduct from the capital gain. */
+  /** renovationCosts x renovationImprovementShare - the "mejora" portion added to the acquisition value. 0 unless the caller substantiates a nonzero share. */
+  renovationImprovementValue: number;
+  /** purchasePrice + ITP + AJD + notary + registration + legal advice + renovationImprovementValue - the acquisition costs the law lets you deduct from the capital gain. */
   acquisitionValueForCapitalGainsTax: number;
   capitalGain: number;
   capitalGainsTax: number;

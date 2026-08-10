@@ -303,6 +303,7 @@ verkoopprijs             = aankoopprijs × waardegroei^houdperiode (per scenario
 overdrachtswaarde (CGT)  = verkoopprijs − verkoopcourtage − plusvalía
                            (transmissiekosten die de VERKOPER draagt)
 aanschafwaarde voor CGT  = aankoopprijs + ITP + AJD + notaris + kadaster + juridisch
+                           + (renovatiekosten × renovationImprovementShare)
                            (géén makelaarscourtage aankoop, géén bankkosten)
 meerwaarde                = overdrachtswaarde (CGT) − aanschafwaarde voor CGT
 vermogenswinstbelasting  = MAX(0, meerwaarde) × 19% (vlak, niet-ingezetene)
@@ -322,6 +323,18 @@ Restschuld komt uit hetzelfde aflossingsschema als de jaarlijkse cashflow
 (§4) — geen aparte berekening. De houdperiode is het jaartal van het
 laatste projectiejaar; de verkoopprijs gebruikt dezelfde
 `propertyValueIndex` als in §3, nu voor het eerst daadwerkelijk gebruikt.
+
+**Mejora — renovatiekosten in de aanschafwaarde.** De IRNR-regel verhoogt
+de aanschafwaarde met "inversiones y mejoras efectuadas" (art. valor de
+adquisición, Agencia Tributaria): alléén echte verbeteringen, geen
+onderhoud/reparatie. Welk deel van de renovatie (CapEx uit de gekozen
+strategie) als mejora kwalificeert is niet uit dit model af te leiden.
+`renovationImprovementShare` (default `DEFAULT_RENOVATION_IMPROVEMENT_SHARE
+= 0` in `parameters.ts`) is daarom een optionele parameter met een veilige
+default: 0% mejora onderschat de aftrek nooit, een verzonnen percentage
+zou hem kunnen overschatten. **[BESLISSING]** de echte verhouding moet per
+pand worden onderbouwd vanuit de renovatiefacturen/-scope; niet invullen
+zonder die onderbouwing.
 
 **[BESLISSING — geen default, verplichte invoer]** Verkoopcourtage en
 plusvalía municipal hebben géén standaardwaarde in de engine.
