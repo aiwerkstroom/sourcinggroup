@@ -1,11 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { buildSyntheticEngineInput, generateReferenceDistribution } from "../distribution/generate";
+import { runEngine } from "../engine";
+import {
+  buildSyntheticEngineInput,
+  deriveSyntheticEquitySupply,
+  generateReferenceDistribution,
+} from "../distribution/generate";
 import {
   NEIGHBORHOOD_RENT_LONG_TERM,
   NEIGHBORHOOD_RENT_SHORT_TERM,
   TSG_SCORE_DISTRIBUTION_AREA_RANGE_M2,
   TSG_SCORE_DISTRIBUTION_COMMUNITY_FEES_RANGE,
-  TSG_SCORE_DISTRIBUTION_EQUITY_TO_PRICE_RATIO_RANGE,
+  TSG_SCORE_DISTRIBUTION_EQUITY_COVERAGE_RANGE,
   TSG_SCORE_DISTRIBUTION_PRICE_TO_RENT_MULTIPLIER_RANGE,
   TSG_SCORE_DISTRIBUTION_RENTAL_STRATEGY_SHARES,
 } from "../parameters";
@@ -39,11 +44,11 @@ function createRng(seed: number): () => number {
 }
 
 /**
- * The three corrections to the original independent-sampling design,
- * verified directly against buildSyntheticEngineInput()'s own derived
- * figures rather than only indirectly through a final score.
+ * The corrections to the generator's sampling design, verified directly
+ * against buildSyntheticEngineInput()'s and deriveSyntheticEquitySupply()'s
+ * own derived figures rather than only indirectly through a final score.
  */
-describe("the three corrections to the generator", () => {
+describe("corrections to the generator's sampling design", () => {
   it("1. purchase price is derived from area x the neighborhood's own rent, not drawn independently of it", () => {
     const rng = createRng(1);
     for (let i = 0; i < 200; i++) {
@@ -62,20 +67,7 @@ describe("the three corrections to the generator", () => {
     }
   });
 
-  it("2. available equity (and totalBudget) is a share of purchase price, not of equityRequired - and totalBudget equals equityAvailable exactly", () => {
-    const rng = createRng(2);
-    const range = TSG_SCORE_DISTRIBUTION_EQUITY_TO_PRICE_RATIO_RANGE.value;
-    for (let i = 0; i < 200; i++) {
-      const { input, derived } = buildSyntheticEngineInput(rng);
-      expect(derived.equityAvailable).toBeCloseTo(derived.purchasePrice * derived.equityToPriceRatio, 6);
-      expect(derived.equityToPriceRatio).toBeGreaterThanOrEqual(range.min);
-      expect(derived.equityToPriceRatio).toBeLessThanOrEqual(range.max);
-      // "totalBudget mag hetzelfde percentage volgen": identical to equityAvailable.
-      expect(input.constraints.totalBudget).toBe(derived.equityAvailable);
-    }
-  });
-
-  it("3. gastos de comunidad varies per case within the configured range, not fixed at € 900", () => {
+  it("2. gastos de comunidad varies per case within the configured range, not fixed at € 900", () => {
     const rng = createRng(3);
     const range = TSG_SCORE_DISTRIBUTION_COMMUNITY_FEES_RANGE.value;
     const seen = new Set<number>();
@@ -90,7 +82,7 @@ describe("the three corrections to the generator", () => {
     expect(seen.size).toBeGreaterThan(100);
   });
 
-  it("the area range itself is unchanged by the three corrections: still SCORE_SPEC.md §5's 30-200 m², uniform", () => {
+  it("the area range itself is unchanged by the corrections: still SCORE_SPEC.md §5's 30-200 m², uniform", () => {
     const rng = createRng(4);
     const range = TSG_SCORE_DISTRIBUTION_AREA_RANGE_M2.value;
     for (let i = 0; i < 100; i++) {
@@ -98,6 +90,44 @@ describe("the three corrections to the generator", () => {
       expect(derived.builtAreaM2).toBeGreaterThanOrEqual(range.min);
       expect(derived.builtAreaM2).toBeLessThanOrEqual(range.max);
     }
+  });
+
+  it("3. available equity (and totalBudget) is a coverage factor on THIS case's own equityRequired, not a share of purchase price", () => {
+    const rng = createRng(5);
+    const range = TSG_SCORE_DISTRIBUTION_EQUITY_COVERAGE_RANGE.value;
+    for (let i = 0; i < 50; i++) {
+      const { input } = buildSyntheticEngineInput(rng);
+      const engineResult = runEngine(input);
+      const equity = deriveSyntheticEquitySupply(rng, engineResult.acquisition.equityRequired);
+
+      expect(equity.equityRequired).toBe(engineResult.acquisition.equityRequired);
+      expect(equity.equityAvailable).toBeCloseTo(equity.equityRequired * equity.equityCoverage, 6);
+      expect(equity.equityCoverage).toBeGreaterThanOrEqual(range.min);
+      expect(equity.equityCoverage).toBeLessThanOrEqual(range.max);
+
+      // A coverage factor of exactly 1.0 must mean exactly enough equity -
+      // the whole point of anchoring to equityRequired instead of price.
+      const exactCoverage = deriveSyntheticEquitySupply(() => 0.5, equity.equityRequired);
+      const midpoint = (range.min + range.max) / 2;
+      expect(exactCoverage.equityCoverage).toBeCloseTo(midpoint, 10);
+    }
+  });
+
+  it("deriveSyntheticEquitySupply() can straddle both sides of equityRequired: some cases under-covered, some over-covered", () => {
+    // rng() = 0 draws the minimum coverage (under-prepared); rng() = 1
+    // (unreachable in practice, but the boundary) draws the maximum
+    // (over-prepared). Confirms the range genuinely spans both sides of
+    // 1.0, not just a band that happens to average out near it.
+    const range = TSG_SCORE_DISTRIBUTION_EQUITY_COVERAGE_RANGE.value;
+    expect(range.min).toBeLessThan(1);
+    expect(range.max).toBeGreaterThan(1);
+
+    const under = deriveSyntheticEquitySupply(() => 0, 100_000);
+    expect(under.equityAvailable).toBeLessThan(100_000);
+    expect(under.equityCoverage).toBeCloseTo(range.min, 10);
+
+    const over = deriveSyntheticEquitySupply(() => 0.999999, 100_000);
+    expect(over.equityAvailable).toBeGreaterThan(100_000);
   });
 });
 
@@ -206,47 +236,79 @@ describe("the default (1.000-case, default-seed) reference distribution", () => 
     // SCORE_SPEC.md §5's "verversing" rule applies and this value is
     // expected to move; it is not expected to move on its own.
     //
-    // 99, not the 78 the independent-sampling generator produced before
-    // the three corrections (price/area coupling, equity as a share of
-    // price, a varying community fee) - see the "shape of the corrected
-    // distribution" block below for why: linking equity/totalBudget to
-    // 25%-45% of purchase price left most generated cases unable to cover
-    // their own equityRequired (financing shortfall + ~17% acquisition
-    // costs + renovation), so the whole distribution's floor dropped
-    // further than the reference case's own score did, and 3.8 - once a
-    // middling result - is now unusually high by comparison.
-    expect(computePercentile(distribution, 3.8)).toBe(99);
+    // 98 - barely moved from the 99 the price-based equity draw produced,
+    // and both are still far above the 78 the original independent-price-
+    // sampling generator gave. Anchoring the coverage factor to
+    // equityRequired fixed the systematic ~50%-of-cases-fail-on-principle
+    // problem (see the feasibility pass-rate test below - now a realistic
+    // ~50/50 split), but the OTHER three dimensions (cashflow,
+    // debtResilience, returnVsRequirement) are still computed from
+    // properties priced at a realistic market yield (13-24x annual rent)
+    // and highly leveraged (60-75% LTV, amortising) - which keeps most
+    // synthetic deals' operating cashflow and DSCR weak regardless of how
+    // much equity the investor happens to have on hand. Equity coverage
+    // only ever touches ONE of the five dimensions' worth of weight (0.20).
+    expect(computePercentile(distribution, 3.8)).toBe(98);
   });
 
   it("presentation sentence renders as SCORE_SPEC.md §5 specifies", () => {
     const percentile = computePercentile(distribution, 3.8);
     const sentence = `Deze investering scoort in het ${percentile}ste percentiel van ons modelbereik.`;
-    expect(sentence).toBe("Deze investering scoort in het 99ste percentiel van ons modelbereik.");
+    expect(sentence).toBe("Deze investering scoort in het 98ste percentiel van ons modelbereik.");
+  });
+
+  it("the feasibility check now passes for a realistic share of cases - roughly half, not almost none", () => {
+    // The equity-coverage range (0.6-1.4) is centered on exactly 1.0
+    // (coverage == equityRequired), so a case's equity check should pass
+    // roughly as often as it fails - unlike the price-based draw, which
+    // failed it for ~100% of a 300-case sample because it undershot
+    // equityRequired systematically rather than spreading around it.
+    const rng = createRng(99);
+    let pass = 0;
+    const n = 400;
+    for (let i = 0; i < n; i++) {
+      const { input } = buildSyntheticEngineInput(rng);
+      const engineResult = runEngine(input);
+      const equity = deriveSyntheticEquitySupply(rng, engineResult.acquisition.equityRequired);
+      if (equity.equityAvailable >= equity.equityRequired) pass++;
+    }
+    const passRate = pass / n;
+    expect(passRate).toBeGreaterThan(0.4);
+    expect(passRate).toBeLessThan(0.6);
   });
 });
 
 /**
  * The corrected generator's overall shape - reported explicitly per the
  * instruction to state whether the left-skew was resolved or only
- * reduced. It was neither: it got MORE pronounced. Golden values below are
- * for the default (1.000-case, default-seed) distribution; independently
- * cross-checked by hand against the sorted array percentiles they name.
+ * reduced. It was reduced, not resolved: the equity-coverage fix pulled
+ * the median and max back up somewhat (1.3 -> 1.8, 4.5 -> 4.6) versus the
+ * price-based equity draw, but both remain well below the ORIGINAL
+ * independent-price-sampling generator's 1.9 median and 8.3 max. Golden
+ * values below are for the default (1.000-case, default-seed)
+ * distribution.
  */
-describe("shape of the corrected distribution (left-skew: worsened, not resolved)", () => {
+describe("shape of the corrected distribution (left-skew: reduced, not resolved)", () => {
   const distribution = generateReferenceDistribution();
   const s = distribution.scores;
 
-  it("min/median/max moved down and compressed: 0.4 / 1.3 / 4.5 (previously 0.4 / 1.9 / 8.3)", () => {
+  it("min/median/max: 0.4 / 1.8 / 4.6 (price-based equity draw gave 0.4 / 1.3 / 4.5; the original generator gave 0.4 / 1.9 / 8.3)", () => {
     expect(s[0]).toBe(0.4);
-    expect(s[500]).toBe(1.3);
-    expect(s[999]).toBe(4.5);
+    expect(s[500]).toBe(1.8);
+    expect(s[999]).toBe(4.6);
   });
 
-  it("the top of the range fell by nearly half (8.3 -> 4.5): no generated case scores anywhere near \"good\" anymore", () => {
+  it("the median recovered most of the way to the original 1.9, but the top of the range did not recover at all", () => {
+    // Median: 1.8 is close to the original 1.9 - fixing the
+    // near-universal feasibility failure did most of the work here.
+    expect(s[500]).toBeGreaterThan(1.3);
+    expect(s[500]).toBeLessThanOrEqual(1.9);
+    // Max: still capped near 4.6, nowhere close to the original 8.3 - the
+    // price-to-rent coupling (a market-consistent yield, then leveraged at
+    // 60-75% LTV with an amortising loan) keeps cashflow/DSCR/return weak
+    // for nearly every synthetic case regardless of how much equity the
+    // investor has, and equity coverage cannot fix that: it only touches
+    // the feasibility dimension's 0.20 weight, not the other 0.80.
     expect(Math.max(...s)).toBeLessThan(5);
-  });
-
-  it("the median fell (1.9 -> 1.3): the corrected universe is not just capped lower, it is shifted lower throughout", () => {
-    expect(s[500]).toBeLessThan(1.9);
   });
 });

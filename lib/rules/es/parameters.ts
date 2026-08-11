@@ -1225,28 +1225,35 @@ export const TSG_SCORE_DISTRIBUTION_PRICE_TO_RENT_MULTIPLIER_RANGE: EstimatePara
 };
 
 /**
- * Available equity (and, via the same draw, totalBudget) as a fraction of
- * that case's own purchase price - not, as before, a fraction of the
- * deal's computed equityRequired, which made every generated case
- * near-tautologically feasible by construction (equityAvailable was
- * defined relative to the very number it was being compared against).
- * An investor typically knows their own capital as a share of what they
- * can buy, not as a share of a not-yet-computed equity requirement.
- * 25%-45% spans both thinly and comfortably capitalised synthetic
- * investors; a real Spanish acquisition's costs and fees alone run to
- * roughly 13% of the purchase price on top of any down payment, so
- * anything markedly below 25% would rarely clear even the transaction
- * costs before financing is considered.
+ * Available equity (and, via the same draw, totalBudget) as a COVERAGE
+ * FACTOR applied to that specific case's own computed equityRequired - not,
+ * as in the previous correction, a fraction of purchase price. That
+ * price-based version undershot systematically: equityRequired includes
+ * the financing shortfall, ~17% of price in acquisition taxes/fees, and a
+ * flat, size-independent renovation cost, which together typically run to
+ * roughly 60-75% of price - well above the 25%-45%-of-price range that was
+ * supplying it, so nearly every generated case failed the feasibility
+ * check regardless of how well- or under-capitalised the synthetic
+ * investor actually was relative to what THIS deal needed.
+ *
+ * Anchoring to equityRequired instead removes that systematic mismatch:
+ * 1.0 means an investor with exactly enough capital for this specific
+ * deal. A coverage factor of 0.6-1.4 simulates a spread from
+ * under-prepared investors (60% of what this deal needs - short by a
+ * real, not negligible, margin) to comfortably over-prepared ones (140%,
+ * meaningful headroom beyond the requirement), rather than assuming every
+ * synthetic investor sized their capital to the same fraction of price
+ * regardless of what a given deal's leverage and costs actually demand.
  */
-export const TSG_SCORE_DISTRIBUTION_EQUITY_TO_PRICE_RATIO_RANGE: EstimateParameter<{
+export const TSG_SCORE_DISTRIBUTION_EQUITY_COVERAGE_RANGE: EstimateParameter<{
   min: number;
   max: number;
 }> = {
-  name: "TSG_SCORE_DISTRIBUTION_EQUITY_TO_PRICE_RATIO_RANGE",
-  value: { min: 0.25, max: 0.45 },
+  name: "TSG_SCORE_DISTRIBUTION_EQUITY_COVERAGE_RANGE",
+  value: { min: 0.6, max: 1.4 },
   provenance: "ESTIMATE",
   reasoning:
-    "Available equity and totalBudget as a fraction of purchase price, not of the deal's own computed equityRequired (which made feasibility near-tautological). 25%-45% spans thin and comfortable capitalisation; Spanish acquisition costs alone run to roughly 13% of the purchase price, so materially less than 25% would rarely even clear the transaction costs.",
+    "Available equity (and totalBudget) as a coverage factor on equityRequired, the figure the engine already computes for this specific case, rather than a fraction of purchase price - the latter ignored how much a deal's own leverage, acquisition costs and renovation actually demand. 0.6-1.4 simulates a spread from under-prepared to well-prepared investors relative to what this deal needs, not relative to an unrelated price-based estimate.",
 };
 
 /** Rental strategy mix for generated cases, SCORE_SPEC.md §5: "langetermijn (70%) en hybride (30%)". "shortTerm" is not generated. */
@@ -1301,14 +1308,13 @@ export const TSG_SCORE_DISTRIBUTION_EXIT_ASSUMPTIONS: EstimateParameter<{
 
 /**
  * Investor constraints ("budgetten") applied to every generated case,
- * excluding totalBudget - that field now tracks each case's own generated
- * purchase price (via TSG_SCORE_DISTRIBUTION_EQUITY_TO_PRICE_RATIO_RANGE,
- * "totalBudget mag hetzelfde percentage volgen"), since totalBudget is
- * compared directly against equityRequired in acquisitionCosts() and so
- * conceptually measures the same thing "beschikbaar eigen vermogen" does -
- * they were previously drawn from unrelated distributions, which is what
- * this correction fixes. The remaining fields here have no natural link to
- * purchase price and stay fixed, reusing referencecase.ts's TEST FIXTURE
+ * excluding totalBudget - that field tracks each case's own computed
+ * equityRequired (via TSG_SCORE_DISTRIBUTION_EQUITY_COVERAGE_RANGE,
+ * "totalBudget volgt dezelfde logica"), since totalBudget is compared
+ * directly against equityRequired in acquisitionCosts() and so
+ * conceptually measures the same thing "beschikbaar eigen vermogen" does.
+ * The remaining fields here have no natural link to a specific case's
+ * equityRequired and stay fixed, reusing referencecase.ts's TEST FIXTURE
  * values for consistency with the rest of the golden-test suite.
  */
 export const TSG_SCORE_DISTRIBUTION_CONSTRAINTS: EstimateParameter<{
@@ -1330,7 +1336,7 @@ export const TSG_SCORE_DISTRIBUTION_CONSTRAINTS: EstimateParameter<{
   },
   provenance: "ESTIMATE",
   reasoning:
-    "SCORE_SPEC.md §5's 'overige invoer: de defaults uit parameters.ts', applied to the InvestorConstraints fields that do not scale with purchase price (totalBudget does now - see TSG_SCORE_DISTRIBUTION_EQUITY_TO_PRICE_RATIO_RANGE). Reuses referencecase.ts's TEST FIXTURE constraints for consistency with the rest of the golden-test suite.",
+    "SCORE_SPEC.md §5's 'overige invoer: de defaults uit parameters.ts', applied to the InvestorConstraints fields that do not scale with equityRequired (totalBudget does now - see TSG_SCORE_DISTRIBUTION_EQUITY_COVERAGE_RANGE). Reuses referencecase.ts's TEST FIXTURE constraints for consistency with the rest of the golden-test suite.",
 };
 
 /** All parameters in this file, for provenance tooling (e.g. collecting every PLACEHOLDER). */
@@ -1400,7 +1406,7 @@ export const ALL_PARAMETERS: ReadonlyArray<Parameter<unknown>> = [
   TSG_SCORE_DISTRIBUTION_SEED,
   TSG_SCORE_DISTRIBUTION_AREA_RANGE_M2,
   TSG_SCORE_DISTRIBUTION_PRICE_TO_RENT_MULTIPLIER_RANGE,
-  TSG_SCORE_DISTRIBUTION_EQUITY_TO_PRICE_RATIO_RANGE,
+  TSG_SCORE_DISTRIBUTION_EQUITY_COVERAGE_RANGE,
   TSG_SCORE_DISTRIBUTION_RENTAL_STRATEGY_SHARES,
   TSG_SCORE_DISTRIBUTION_COMMUNITY_FEES_RANGE,
   TSG_SCORE_DISTRIBUTION_EXIT_ASSUMPTIONS,

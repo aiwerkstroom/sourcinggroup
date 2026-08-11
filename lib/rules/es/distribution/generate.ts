@@ -38,7 +38,7 @@ import {
   TSG_SCORE_DISTRIBUTION_AREA_RANGE_M2,
   TSG_SCORE_DISTRIBUTION_COMMUNITY_FEES_RANGE,
   TSG_SCORE_DISTRIBUTION_CONSTRAINTS,
-  TSG_SCORE_DISTRIBUTION_EQUITY_TO_PRICE_RATIO_RANGE,
+  TSG_SCORE_DISTRIBUTION_EQUITY_COVERAGE_RANGE,
   TSG_SCORE_DISTRIBUTION_EXIT_ASSUMPTIONS,
   TSG_SCORE_DISTRIBUTION_PRICE_TO_RENT_MULTIPLIER_RANGE,
   TSG_SCORE_DISTRIBUTION_RENTAL_STRATEGY_SHARES,
@@ -90,27 +90,34 @@ export interface SyntheticCaseDerivedFigures {
   neighborhood: string;
   priceToRentMultiplier: number;
   purchasePrice: number;
-  equityToPriceRatio: number;
-  equityAvailable: number;
   communityFeesAnnual: number;
 }
 
 /**
  * Builds one synthetic EngineInput (SCORE_SPEC.md §5's bullet list,
- * corrected per Samuel's review of the first draft):
+ * corrected per Samuel's review of the first two drafts):
  *
  * 1. Purchase price is no longer drawn independently of floor area - it is
  *    derived from the neighborhood's own rent table (price = annual rent
  *    per m² x a price-to-rent multiplier x builtAreaM2), so a case's price
  *    and area are no longer free to combine into an implausible pairing
  *    (a huge cheap unit, a tiny expensive one).
- * 2. Available equity (and totalBudget, which tracks the same draw) is a
- *    fraction of THIS case's purchase price, not of its own computed
- *    equityRequired - the previous design made feasibility
- *    near-tautological by comparing equityRequired to a fraction of
- *    itself.
- * 3. Gastos de comunidad is drawn from a range per case, not fixed at
+ * 2. Gastos de comunidad is drawn from a range per case, not fixed at
  *    € 900 for every one regardless of the building.
+ *
+ * A third correction - available equity (and totalBudget) - is deliberately
+ * NOT made here: it depends on equityRequired, which this function's own
+ * output does not yet contain (the engine has not run). See
+ * deriveSyntheticEquitySupply() below, applied by the caller once
+ * runEngine() has produced this case's actual equityRequired.
+ *
+ * `constraints.totalBudget` here is therefore PROVISIONAL: any positive
+ * number would do, because totalBudget feeds exactly one thing downstream
+ * (AcquisitionCosts.withinTotalBudget, a diagnostic flag this generator
+ * never reads - not equityRequired, not any score dimension) and nothing
+ * else in the engine's calculation chain depends on it. purchasePrice is
+ * used as that placeholder only because it is guaranteed positive, not
+ * because it carries any meaning here.
  *
  * Every generated case still sets hasTouristRentalLicense: true. §5's
  * rental mix includes a 30% "hybrid" share, which MODEL_SPEC.md §18
@@ -121,9 +128,9 @@ export interface SyntheticCaseDerivedFigures {
  * the remaining constraints.
  *
  * Separated from scoreOneCase() so the sampling/derivation logic itself -
- * the part the three corrections above changed - can be unit-tested
- * directly against the figures it derived, not only indirectly through a
- * final score.
+ * the part the corrections above changed - can be unit-tested directly
+ * against the figures it derived, not only indirectly through a final
+ * score.
  */
 export function buildSyntheticEngineInput(rng: () => number): {
   input: EngineInput;
@@ -143,13 +150,6 @@ export function buildSyntheticEngineInput(rng: () => number): {
   const multiplierRange = TSG_SCORE_DISTRIBUTION_PRICE_TO_RENT_MULTIPLIER_RANGE.value;
   const priceToRentMultiplier = uniform(rng, multiplierRange.min, multiplierRange.max);
   const purchasePrice = rentPerM2LongTerm * 12 * priceToRentMultiplier * builtAreaM2;
-
-  // Available equity - and, via the same draw, totalBudget - as a share of
-  // THIS case's own purchase price, known before the engine even runs.
-  const equityRatioRange = TSG_SCORE_DISTRIBUTION_EQUITY_TO_PRICE_RATIO_RANGE.value;
-  const equityToPriceRatio = uniform(rng, equityRatioRange.min, equityRatioRange.max);
-  const equityAvailable = purchasePrice * equityToPriceRatio;
-  const totalBudget = equityAvailable;
 
   const communityFeesRange = TSG_SCORE_DISTRIBUTION_COMMUNITY_FEES_RANGE.value;
   const communityFeesAnnual = uniform(rng, communityFeesRange.min, communityFeesRange.max);
@@ -177,7 +177,7 @@ export function buildSyntheticEngineInput(rng: () => number): {
       hasTouristRentalLicense: true,
     },
     constraints: {
-      totalBudget,
+      totalBudget: purchasePrice, // provisional - see docstring above
       maxRenovationBudget: constraints.maxRenovationBudget,
       minLtv: constraints.minLtv,
       maxLtv: constraints.maxLtv,
@@ -198,16 +198,41 @@ export function buildSyntheticEngineInput(rng: () => number): {
 
   return {
     input,
-    derived: {
-      builtAreaM2,
-      neighborhood,
-      priceToRentMultiplier,
-      purchasePrice,
-      equityToPriceRatio,
-      equityAvailable,
-      communityFeesAnnual,
-    },
+    derived: { builtAreaM2, neighborhood, priceToRentMultiplier, purchasePrice, communityFeesAnnual },
   };
+}
+
+/** equityRequired as the engine computed it for this case, the coverage factor drawn for it, and the resulting equityAvailable (= totalBudget, conceptually - see deriveSyntheticEquitySupply()). */
+export interface SyntheticEquitySupply {
+  equityRequired: number;
+  equityCoverage: number;
+  equityAvailable: number;
+}
+
+/**
+ * Derives available equity - and, by the same logic, totalBudget - from
+ * THIS case's own equityRequired, the figure the engine has already
+ * computed for it (acquisition.equityRequired: financing shortfall +
+ * acquisition taxes/fees + renovation cost, all specific to this case).
+ *
+ * A coverage factor of 0.6-1.4 (TSG_SCORE_DISTRIBUTION_EQUITY_COVERAGE_RANGE)
+ * simulates a spread from under-prepared to well-prepared investors
+ * relative to what THIS deal needs - not, as an earlier draft had it, a
+ * fraction of purchase price, which ignored how much a given deal's own
+ * leverage and costs actually demand and left nearly every generated case
+ * short.
+ *
+ * Can only run after runEngine() has produced this case's equityRequired,
+ * which is why it is a separate step from buildSyntheticEngineInput()
+ * rather than folded into it.
+ */
+export function deriveSyntheticEquitySupply(
+  rng: () => number,
+  equityRequired: number,
+): SyntheticEquitySupply {
+  const range = TSG_SCORE_DISTRIBUTION_EQUITY_COVERAGE_RANGE.value;
+  const equityCoverage = uniform(rng, range.min, range.max);
+  return { equityRequired, equityCoverage, equityAvailable: equityRequired * equityCoverage };
 }
 
 /**
@@ -220,12 +245,16 @@ export function buildSyntheticEngineInput(rng: () => number): {
  */
 function scoreOneCase(rng: () => number): number | null {
   const { input, derived } = buildSyntheticEngineInput(rng);
-  const { purchasePrice, equityAvailable } = derived;
-  const { constraints, selections } = input;
-  const { rentalStrategy, renovationStrategy } = selections;
+  const { purchasePrice } = derived;
+  const { rentalStrategy, renovationStrategy } = input.selections;
 
   const engineResult = runEngine(input);
   const scenarioResult = engineResult.scenarios.find((s) => s.id === "base")!;
+
+  // Only knowable once the engine has computed this case's own
+  // equityRequired - see deriveSyntheticEquitySupply()'s docstring.
+  const equity = deriveSyntheticEquitySupply(rng, engineResult.acquisition.equityRequired);
+  const equityAvailable = equity.equityAvailable;
 
   const years = buildProjectionYears({
     years: PROJECTION_YEARS.value,
@@ -262,7 +291,7 @@ function scoreOneCase(rng: () => number): number | null {
     irr,
     equityRequired: engineResult.acquisition.equityRequired,
     equityAvailable,
-    minRequiredReturn: constraints.minRoiTarget,
+    minRequiredReturn: input.constraints.minRoiTarget,
     rentalStrategy,
     renovationStrategy,
   });
@@ -276,7 +305,7 @@ function scoreOneCase(rng: () => number): number | null {
     feasibility: {
       equityRequired: engineResult.acquisition.equityRequired,
       equityAvailable,
-      maxRenovationBudget: constraints.maxRenovationBudget,
+      maxRenovationBudget: input.constraints.maxRenovationBudget,
       renovationCost: engineResult.selectedRenovation.capex,
     },
   });
