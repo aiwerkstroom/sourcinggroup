@@ -1138,6 +1138,169 @@ export const TSG_SCORE_DIMENSION_WEIGHTS: EstimateParameter<Readonly<Record<TsgS
     "SCORE_SPEC.md §3, which calls the weighting 'een startpunt' open to calibration against real deals. A product definition of what matters how much, not a measurable fact.",
 };
 
+// ---------------------------------------------------------------------------
+// TSG score - synthetic reference distribution (SCORE_SPEC.md §5)
+// ---------------------------------------------------------------------------
+
+/**
+ * The parameters below shape the synthetic universe of 1.000 cases the
+ * percentile is measured against (SCORE_SPEC.md §5), not any one real
+ * property - so, like the scoring curves above, they take the reality-vs-
+ * model test to ESTIMATE, not PLACEHOLDER: "this synthetic case has a
+ * € 900/year community fee" is not a claim about a real building, it is a
+ * construction choice for the reference universe.
+ *
+ * Four of them (community fees, the two exit assumptions, and the investor
+ * constraints) deliberately reuse the exact values already fixed as TEST
+ * FIXTUREs in referencecase.ts and exit.test.ts - not because they are
+ * more correct than any other number, but so the reference distribution
+ * and the rest of the golden-test suite are computed under one consistent
+ * set of assumptions rather than two silently different ones.
+ */
+
+/** Sample size of the synthetic reference distribution, SCORE_SPEC.md §5: "een synthetische set van 1.000 casussen". */
+export const TSG_SCORE_DISTRIBUTION_SAMPLE_SIZE: EstimateParameter<number> = {
+  name: "TSG_SCORE_DISTRIBUTION_SAMPLE_SIZE",
+  value: 1000,
+  provenance: "ESTIMATE",
+  reasoning:
+    "SCORE_SPEC.md §5. The stated size of the synthetic reference set; a product definition of how large the reference universe is, not a claim about the real market.",
+};
+
+/**
+ * Deterministic seed for the reference distribution's pseudo-random
+ * generator (SCORE_SPEC.md §6: "de scoring is deterministisch"). Not a
+ * claim about anything - a fixed choice so the same 1.000 synthetic cases,
+ * and therefore the same percentile boundaries, are reproduced by every
+ * run and every golden test, until the distribution is deliberately
+ * regenerated (SCORE_SPEC.md §5, "Verversing").
+ */
+export const TSG_SCORE_DISTRIBUTION_SEED: EstimateParameter<number> = {
+  name: "TSG_SCORE_DISTRIBUTION_SEED",
+  value: 20260811,
+  provenance: "ESTIMATE",
+  reasoning:
+    "A fixed PRNG seed for reproducibility, not a market or model claim - chosen as this feature's build date (2026-08-11) purely as a memorable, arbitrary constant.",
+};
+
+/** Purchase price range for generated cases, SCORE_SPEC.md §5: "€ 80.000 tot € 600.000, uniform verdeeld in stappen van € 20.000". */
+export const TSG_SCORE_DISTRIBUTION_PURCHASE_PRICE_RANGE: EstimateParameter<{
+  min: number;
+  max: number;
+  step: number;
+}> = {
+  name: "TSG_SCORE_DISTRIBUTION_PURCHASE_PRICE_RANGE",
+  value: { min: 80_000, max: 600_000, step: 20_000 },
+  provenance: "ESTIMATE",
+  reasoning:
+    "SCORE_SPEC.md §5. Defines the price span of the synthetic universe, a product decision about what range the model should be able to place a case within.",
+};
+
+/** Floor area range for generated cases, SCORE_SPEC.md §5: "30 tot 200 m², uniform". Sampled as builtAreaM2; usableAreaM2 is left to derive via DEFAULT_USABLE_TO_BUILT_AREA_RATIO, since the spec gives one figure, not a separate pair. */
+export const TSG_SCORE_DISTRIBUTION_AREA_RANGE_M2: EstimateParameter<{
+  min: number;
+  max: number;
+}> = {
+  name: "TSG_SCORE_DISTRIBUTION_AREA_RANGE_M2",
+  value: { min: 30, max: 200 },
+  provenance: "ESTIMATE",
+  reasoning:
+    "SCORE_SPEC.md §5. Defines the floor-area span of the synthetic universe, a product decision, not a market survey result.",
+};
+
+/** Equity ratio range for generated cases, SCORE_SPEC.md §5: "80% tot 120% van equityRequired, uniform" - equityAvailable is sampled as this fraction of that specific case's own computed equityRequired. */
+export const TSG_SCORE_DISTRIBUTION_EQUITY_RATIO_RANGE: EstimateParameter<{
+  min: number;
+  max: number;
+}> = {
+  name: "TSG_SCORE_DISTRIBUTION_EQUITY_RATIO_RANGE",
+  value: { min: 0.8, max: 1.2 },
+  provenance: "ESTIMATE",
+  reasoning:
+    "SCORE_SPEC.md §5. Ensures the synthetic universe spans both equity-short and equity-sufficient cases around each case's own requirement, a product decision about coverage.",
+};
+
+/** Rental strategy mix for generated cases, SCORE_SPEC.md §5: "langetermijn (70%) en hybride (30%)". "shortTerm" is not generated. */
+export const TSG_SCORE_DISTRIBUTION_RENTAL_STRATEGY_SHARES: EstimateParameter<{
+  longTerm: number;
+  hybrid: number;
+}> = {
+  name: "TSG_SCORE_DISTRIBUTION_RENTAL_STRATEGY_SHARES",
+  value: { longTerm: 0.7, hybrid: 0.3 },
+  provenance: "ESTIMATE",
+  reasoning:
+    "SCORE_SPEC.md §5. TSG's own assumed mix of rental strategies across the synthetic universe, not a market survey of actual strategy adoption.",
+};
+
+/**
+ * Gastos de comunidad used for every generated case, SCORE_SPEC.md §5:
+ * "Overige invoer: de defaults uit parameters.ts". PropertyInput.
+ * communityFeesAnnual has no engine default (MODEL_SPEC.md §15) and no
+ * value is given by the range list in §5, so this reuses the exact
+ * TEST FIXTURE figure from referencecase.ts (€ 900/year) rather than
+ * inventing an unrelated one, per the same "not sourced for any real
+ * building" caveat that fixture already carries.
+ */
+export const TSG_SCORE_DISTRIBUTION_COMMUNITY_FEES_ANNUAL: EstimateParameter<number> = {
+  name: "TSG_SCORE_DISTRIBUTION_COMMUNITY_FEES_ANNUAL",
+  value: 900,
+  provenance: "ESTIMATE",
+  reasoning:
+    "No default exists for communityFeesAnnual and SCORE_SPEC.md §5 does not give one; reuses referencecase.ts's TEST FIXTURE value so the reference distribution and the rest of the golden-test suite share one assumption instead of two silently different ones.",
+};
+
+/**
+ * Exit assumptions used for every generated case's holding-period sale
+ * (sellingCommissionRate, municipalCapitalGainsTax). ExitAssumptions has
+ * no engine default (MODEL_SPEC_FASE1B §5) and SCORE_SPEC.md §5 does not
+ * give one; reuses exit.test.ts's exact TEST FIXTURE values.
+ */
+export const TSG_SCORE_DISTRIBUTION_EXIT_ASSUMPTIONS: EstimateParameter<{
+  sellingCommissionRate: number;
+  municipalCapitalGainsTax: number;
+}> = {
+  name: "TSG_SCORE_DISTRIBUTION_EXIT_ASSUMPTIONS",
+  value: { sellingCommissionRate: 0.04, municipalCapitalGainsTax: 3500 },
+  provenance: "ESTIMATE",
+  reasoning:
+    "No default exists for either exit assumption and SCORE_SPEC.md §5 does not give one; reuses exit.test.ts's TEST FIXTURE values (sellingCommissionRate 0.04, municipalCapitalGainsTax 3500) for the same reason as the community fees figure.",
+};
+
+/**
+ * Investor constraints ("budgetten") applied to every generated case,
+ * independent of that case's own generated purchase price - the literal
+ * reading of SCORE_SPEC.md §5's "overige invoer: de defaults uit
+ * parameters.ts" is that these stay fixed, not that they scale with the
+ * price. Reuses referencecase.ts's exact constraint values. A generated
+ * case with a high purchase price and this fixed, comparatively low
+ * totalBudget can legitimately fail the budget check - that is not a bug
+ * in the generator, it is the feasibility dimension doing its job across
+ * a universe that spans both affordable and unaffordable cases.
+ */
+export const TSG_SCORE_DISTRIBUTION_CONSTRAINTS: EstimateParameter<{
+  totalBudget: number;
+  maxRenovationBudget: number;
+  minLtv: number;
+  maxLtv: number;
+  minRoiTarget: number;
+  minMonthlyCashflow: number;
+  maxMonthlyDebt: number;
+}> = {
+  name: "TSG_SCORE_DISTRIBUTION_CONSTRAINTS",
+  value: {
+    totalBudget: 450_000,
+    maxRenovationBudget: 60_000,
+    minLtv: 0.6,
+    maxLtv: 0.75,
+    minRoiTarget: 0.04,
+    minMonthlyCashflow: 500,
+    maxMonthlyDebt: 1_000,
+  },
+  provenance: "ESTIMATE",
+  reasoning:
+    "SCORE_SPEC.md §5's 'overige invoer: de defaults uit parameters.ts', applied to the InvestorConstraints fields the §5 list does not itself vary. Reuses referencecase.ts's TEST FIXTURE constraints for consistency with the rest of the golden-test suite.",
+};
+
 /** All parameters in this file, for provenance tooling (e.g. collecting every PLACEHOLDER). */
 export const ALL_PARAMETERS: ReadonlyArray<Parameter<unknown>> = [
   RENT_MATRIX_LONG_TERM_PER_M2,
@@ -1201,4 +1364,13 @@ export const ALL_PARAMETERS: ReadonlyArray<Parameter<unknown>> = [
   TSG_SCORE_FEASIBILITY_LEVELS,
   TSG_SCORE_FEASIBILITY_MARGIN_THRESHOLD,
   TSG_SCORE_DIMENSION_WEIGHTS,
+  TSG_SCORE_DISTRIBUTION_SAMPLE_SIZE,
+  TSG_SCORE_DISTRIBUTION_SEED,
+  TSG_SCORE_DISTRIBUTION_PURCHASE_PRICE_RANGE,
+  TSG_SCORE_DISTRIBUTION_AREA_RANGE_M2,
+  TSG_SCORE_DISTRIBUTION_EQUITY_RATIO_RANGE,
+  TSG_SCORE_DISTRIBUTION_RENTAL_STRATEGY_SHARES,
+  TSG_SCORE_DISTRIBUTION_COMMUNITY_FEES_ANNUAL,
+  TSG_SCORE_DISTRIBUTION_EXIT_ASSUMPTIONS,
+  TSG_SCORE_DISTRIBUTION_CONSTRAINTS,
 ];

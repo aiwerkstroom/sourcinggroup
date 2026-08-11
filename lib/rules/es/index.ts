@@ -15,3 +15,5 @@ export * from "./tax";
 export * from "./validation";
 export { runEngine } from "./engine";
 export * from "./score";
+export * from "./percentile";
+export * from "./distribution/generate";

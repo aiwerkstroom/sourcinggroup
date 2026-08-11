@@ -655,6 +655,22 @@ export interface TsgScore {
   total: number;
 }
 
+/**
+ * The synthetic reference distribution a TSG total score is measured
+ * against (SCORE_SPEC.md §5): 1.000 total scores from independently
+ * generated synthetic cases, ascending. `generatedAt` records when the set
+ * was produced, per §5's "leg het tijdstip van generatie vast in de
+ * verdeling zelf" - the field that answers "is this distribution stale?"
+ * when the scoring curves or parameters.ts have since changed.
+ */
+export interface ScoreDistribution {
+  /** Ascending, length === size. */
+  scores: readonly number[];
+  size: number;
+  generatedAt: string;
+  seed: number;
+}
+
 export interface EngineResult {
   income: IncomeModel;
   renovationStrategies: RenovationStrategyResult[];

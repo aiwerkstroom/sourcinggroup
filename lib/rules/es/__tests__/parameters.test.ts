@@ -81,22 +81,23 @@ describe("parameter provenance audit", () => {
     expect(placeholders).toContain("RENOVATION_STRATEGIES.light.capex");
   });
 
-  it("distribution: 25 SOURCED / 34 ESTIMATE / 30 PLACEHOLDER (SCORE_SPEC.md adds seven scoring ESTIMATEs)", () => {
+  it("distribution: 25 SOURCED / 43 ESTIMATE / 30 PLACEHOLDER (SCORE_SPEC.md adds 7 scoring-curve + 9 distribution-generation ESTIMATEs)", () => {
     const counts = { SOURCED: 0, ESTIMATE: 0, PLACEHOLDER: 0 };
     for (const p of ALL_PARAMETERS) counts[p.provenance]++;
-    expect(counts).toEqual({ SOURCED: 25, ESTIMATE: 34, PLACEHOLDER: 30 });
+    expect(counts).toEqual({ SOURCED: 25, ESTIMATE: 43, PLACEHOLDER: 30 });
     expect(counts.SOURCED + counts.ESTIMATE + counts.PLACEHOLDER).toBe(ALL_PARAMETERS.length);
   });
 
-  it("the scoring curves and weights are ESTIMATE: model definitions, not claims about the world", () => {
+  it("the scoring curves/weights and the distribution-generation ranges are ESTIMATE: model definitions, not claims about the world", () => {
     // SCORE_SPEC.md's curves say where TSG chose to put "a 5" and how much
-    // each dimension counts. No external body publishes those thresholds
-    // (so not SOURCED), and no future market data could verify them (so
-    // not PLACEHOLDER, which is a reality claim awaiting verification) -
-    // only a product decision can settle them. Same category as what
+    // each dimension counts; its §5 ranges say what universe of synthetic
+    // cases the percentile is measured against. No external body publishes
+    // either (so not SOURCED), and no future market data could verify them
+    // (so not PLACEHOLDER, which is a reality claim awaiting verification)
+    // - only a product decision can settle them. Same category as what
     // "conservative" means as a scenario.
     const scoreParameters = ALL_PARAMETERS.filter((p) => p.name.startsWith("TSG_SCORE_"));
-    expect(scoreParameters).toHaveLength(7);
+    expect(scoreParameters).toHaveLength(16);
     for (const p of scoreParameters) {
       expect(p.provenance, `${p.name} should be ESTIMATE`).toBe("ESTIMATE");
     }

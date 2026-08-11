@@ -118,15 +118,17 @@ Avenida Primado Reig 19, basisscenario, met de huidige engine-uitkomsten:
 
 | Dimensie | Invoer | Score |
 |---|---|---|
-| Cashflow | −€ 236/maand | 3,1 |
+| Cashflow | −€ 236/maand | 2,1 |
 | Schuldbestendigheid | DSCR 0,87 | 3,7 |
 | Rendement | IRR 5,84% − 4% eis = +1,84% | 6,8 |
 | Haalbaarheid | EV tekort (197.990 vs 115.000) | 3,0 |
-| Datazekerheid | 12 placeholders | 3,6 |
+| Datazekerheid | 12 placeholders | 3,2 |
 
-**Totaalscore** = 0,20×3,1 + 0,15×3,7 + 0,30×6,8 + 0,20×3,0 + 0,15×3,6 = 0,62 + 0,555 + 2,04 + 0,60 + 0,54 = **4,4**
+**Totaalscore** = 0,20×2,1 + 0,15×3,7 + 0,30×6,8 + 0,20×3,0 + 0,15×3,2 = 0,42 + 0,555 + 2,04 + 0,60 + 0,48 = **4,1**
 
 Dat is een zwak-voldoende: het rendement is er, maar de deal is niet haalbaar met het beschikbare eigen vermogen, de cashflow is negatief, en een derde van de berekening rust op onbevestigde aannames. Dat is precies wat de score moet zeggen.
+
+> **Voetnoot:** de cashflow- en datazekerheidsscore hierboven zijn herrekend via de curves in §2, die leidend zijn — de eerder gepubliceerde versie van deze tabel gaf 3,1 en 3,6 (totaal 4,4), wat niet uit §2 volgde. Verder zijn dit de waarden ten tijde van het schrijven van deze spec, vóór de correctie in MODEL_SPEC.md §15 die gastos de comunidad als verplichte, niet-standaard last toevoegde. Sindsdien liggen de engine-uitkomsten voor deze referentiecasus lager (−€ 311/maand, DSCR 0,832, IRR +1,54% surplus, 13 placeholders); de live testuitkomst komt daarmee op een totaalscore van 3,8, niet 4,1. Zie `lib/rules/es/__tests__/score.test.ts`.
 
 ## 5. Percentiel
 
