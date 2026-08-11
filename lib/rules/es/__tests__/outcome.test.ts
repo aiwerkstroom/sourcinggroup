@@ -773,6 +773,11 @@ describe("scenario outcome (reference case, 10-year holding period)", () => {
       // dataCertainty 2.8 -> 2.4), while the 0% fallback hurdle turns the
       // 5.544% IRR into a +5.544pp surplus (returnVsRequirement 6.5 ->
       // 9.1). Net: total 3.8 -> 4.5, percentile 70 -> 83.
+      // That the total still rises here is a coincidence of this
+      // property's own numbers (the return swing outweighs the
+      // data-certainty drop for THIS deal) - the two dimensions move in
+      // opposite directions on principle, but nothing guarantees which one
+      // wins, and a different case could easily net the other way.
       const scenarioResult = engineResult.scenarios.find((s) => s.id === "base")!;
       const years = buildProjectionYears({
         years: 10,

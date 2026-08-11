@@ -60,4 +60,18 @@ export const referenceCase: EngineInput = {
     residency: "nonResident", // Dutch buyer (Changelog D124)
     euResident: true,
   },
+  // TEST FIXTURE, matching outcome.test.ts's own local `testAssumptions` +
+  // its hardcoded `years: 10` exactly, so runEngine(referenceCase) and
+  // outcome.test.ts's hand-assembled outcomeFor() build the identical
+  // ScenarioOutcome for each scenario (engine.test.ts's golden test checks
+  // this). Neither figure is sourced for this specific sale - selling
+  // commission and plusvalía have no default anywhere in the engine
+  // (MODEL_SPEC_FASE1B §5) and must be supplied per deal.
+  exitPlanning: {
+    assumptions: {
+      sellingCommissionRate: 0.04,
+      municipalCapitalGainsTax: 3500,
+    },
+    holdingYears: 10,
+  },
 };

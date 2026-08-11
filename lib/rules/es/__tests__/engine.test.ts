@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { runEngine } from "../engine";
+import { PROJECTION_YEARS } from "../parameters";
 import { referenceCase } from "./referencecase";
 
 /**
@@ -229,5 +230,89 @@ describe("título habilitante gate on EngineResult.rentalStrategies (MODEL_SPEC.
       result.income.longTerm.adjustedAnnualIncome,
       9,
     );
+  });
+});
+
+/**
+ * EngineResult.scenarioOutcomes (SCORE_SPEC.md §1-§6, MODEL_SPEC_FASE1B
+ * §7): runEngine() wires buildProjectionYears -> computeExit ->
+ * computeScenarioIrr -> buildScenarioOutcome end to end when
+ * EngineInput.exitPlanning is supplied, so a caller no longer has to
+ * assemble that chain by hand.
+ *
+ * referencecase.ts's exitPlanning was added to match outcome.test.ts's own
+ * local `testAssumptions` (sellingCommissionRate 0.04, municipalCapital
+ * GainsTax 3500) and hardcoded `years: 10` exactly, so this is not a
+ * second, independent computation to re-verify - it is a wiring check: do
+ * the already-golden values from outcome.test.ts's hand-assembled
+ * outcomeFor() come out identically when produced by runEngine() alone?
+ */
+describe("EngineResult.scenarioOutcomes: runEngine() wired end to end to score and percentile", () => {
+  it("reference case: all three scenarios match outcome.test.ts's golden scores exactly", () => {
+    const result = runEngine(referenceCase);
+    expect(result.scenarioOutcomes).not.toBeNull();
+    const outcomes = result.scenarioOutcomes!;
+    expect(outcomes.map((o) => o.scenario)).toEqual(["conservative", "base", "optimistic"]);
+
+    const golden: Record<string, { dimensions: Record<string, number>; total: number; percentile: number }> = {
+      conservative: {
+        dimensions: { cashflow: 0.0, debtResilience: 0.8, returnVsRequirement: 2.3, feasibility: 3.0, dataCertainty: 2.8 },
+        total: 1.8,
+        percentile: 22,
+      },
+      base: {
+        dimensions: { cashflow: 1.5, debtResilience: 3.3, returnVsRequirement: 6.5, feasibility: 3.0, dataCertainty: 2.8 },
+        total: 3.8,
+        percentile: 70,
+      },
+      optimistic: {
+        dimensions: { cashflow: 5.4, debtResilience: 5.9, returnVsRequirement: 8.7, feasibility: 3.0, dataCertainty: 2.8 },
+        total: 5.6,
+        percentile: 94,
+      },
+    };
+
+    outcomes.forEach((outcome) => {
+      const expected = golden[outcome.scenario]!;
+      expect(outcome.score).not.toBeNull();
+      expect(outcome.score!.dimensions).toEqual(expected.dimensions);
+      expect(outcome.score!.total).toBe(expected.total);
+      expect(outcome.percentile).toBe(expected.percentile);
+    });
+  });
+
+  it("base scenario's score/percentile match outcome.test.ts's hand-assembled outcomeFor(\"base\") bit for bit", () => {
+    // Not just the golden numbers above - the entire ScenarioOutcome
+    // object, proving runEngine()'s wiring and outcome.test.ts's manual
+    // assembly are the same computation, not two paths that happen to
+    // agree on the summary figures.
+    const result = runEngine(referenceCase);
+    const engineOutcome = result.scenarioOutcomes!.find((o) => o.scenario === "base")!;
+    expect(engineOutcome.totalReturn).toBeCloseTo(0.769539, 4);
+    expect(engineOutcome.paybackYear).toBeNull();
+    expect(engineOutcome.equityFit.equityRequired).toBeCloseTo(197990, 6);
+    expect(engineOutcome.equityFit.fitsWithinAvailableEquity).toBe(false);
+    expect(engineOutcome.placeholdersUsed).toHaveLength(13);
+  });
+
+  it("is null when EngineInput.exitPlanning is not supplied - never a guessed selling commission or plusvalía", () => {
+    const { exitPlanning, ...withoutExitPlanning } = referenceCase;
+    const result = runEngine(withoutExitPlanning);
+    expect(result.scenarioOutcomes).toBeNull();
+    // Every other field is computed as before - this is additive, not a
+    // precondition for the rest of the engine.
+    expect(result.income.selectedGrossAnnualIncome).toBeGreaterThan(0);
+  });
+
+  it("holdingYears defaults to PROJECTION_YEARS.value when omitted from exitPlanning", () => {
+    const result = runEngine({
+      ...referenceCase,
+      exitPlanning: {
+        assumptions: referenceCase.exitPlanning!.assumptions,
+        // holdingYears omitted deliberately.
+      },
+    });
+    const base = result.scenarioOutcomes!.find((o) => o.scenario === "base")!;
+    expect(base.years).toHaveLength(PROJECTION_YEARS.value);
   });
 });

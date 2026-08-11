@@ -234,10 +234,31 @@ export interface ModelSelections {
   euResident?: boolean;
 }
 
+/**
+ * Inputs needed to build a per-scenario ScenarioOutcome (MODEL_SPEC_FASE1B
+ * §7) inside runEngine() - a holding period and the two exit assumptions
+ * ExitAssumptions has no default for (MODEL_SPEC_FASE1B §5: selling
+ * commission, municipal capital gains tax). Both must come from the
+ * caller; nothing here may be guessed.
+ */
+export interface ExitPlanningInput {
+  assumptions: ExitAssumptions;
+  /** Holding period in years. Defaults to PROJECTION_YEARS.value (10, MODEL_SPEC_FASE1B §2's own recommendation) when omitted. */
+  holdingYears?: number;
+}
+
 export interface EngineInput {
   property: PropertyInput;
   constraints: InvestorConstraints;
   selections: ModelSelections;
+  /**
+   * Optional: when omitted, runEngine() returns
+   * EngineResult.scenarioOutcomes as null rather than fabricating exit
+   * assumptions to produce one. Provide this to get a full per-scenario
+   * ScenarioOutcome (years, exit, IRR, TSG score, percentile) without a
+   * separate manual call to buildScenarioOutcome() and its prerequisites.
+   */
+  exitPlanning?: ExitPlanningInput;
 }
 
 /** One row of the income model (long-term or short-term). */
@@ -705,4 +726,13 @@ export interface EngineResult {
   scenarios: ScenarioResult[];
   tax: TaxResult;
   rentalStrategies: RentalStrategyAvailability;
+  /**
+   * One ScenarioOutcome per scenario (conservative/base/optimistic, in
+   * that order - SCENARIO_ORDER), each carrying its own TSG score and
+   * percentile (SCORE_SPEC.md §1-§6). `null` when EngineInput.exitPlanning
+   * was not supplied - MODEL_SPEC_FASE1B §5's exit assumptions have no
+   * default, so without them there is nothing to build an exit, an IRR, or
+   * a score from, and none of those may be guessed.
+   */
+  scenarioOutcomes: ScenarioOutcome[] | null;
 }

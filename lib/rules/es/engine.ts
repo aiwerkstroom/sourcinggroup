@@ -2,19 +2,32 @@
  * TSG Yield Engine - orchestration.
  * Runs the full model for one property, replicating the corrected
  * TSG_Model_v3.xlsx end to end.
+ *
+ * With EngineInput.exitPlanning supplied, this also assembles a complete
+ * per-scenario ScenarioOutcome for each of conservative/base/optimistic
+ * (EngineResult.scenarioOutcomes) - the same buildProjectionYears ->
+ * computeExit -> computeScenarioIrr -> buildScenarioOutcome chain a caller
+ * would otherwise have to wire up by hand, TSG score and percentile
+ * included. No new logic: every step here is an existing function from
+ * projection.ts/exit.ts/irr.ts/outcome.ts, called with the same arguments
+ * a manual caller already passes them.
  */
 
 import { acquisitionCosts } from "./acquisition";
+import { computeExit } from "./exit";
 import { financingStrategyTable, selectFinancing } from "./financing";
+import { computeScenarioIrr } from "./irr";
 import { buildIncomeModel } from "./income";
 import { rentalStrategyAvailability } from "./licensing";
+import { buildScenarioOutcome } from "./outcome";
 import { fixedOperatingCosts, utilitiesBaseAnnual } from "./operating";
-import { DEFAULT_USABLE_TO_BUILT_AREA_RATIO } from "./parameters";
+import { DEFAULT_USABLE_TO_BUILT_AREA_RATIO, PROJECTION_YEARS, SCENARIO_ORDER } from "./parameters";
+import { buildProjectionYears } from "./projection";
 import { renovationStrategyTable, selectRenovation } from "./renovation";
 import { runScenarios } from "./scenarios";
 import { taxCalculator } from "./tax";
 import { assertValidEngineInput } from "./validation";
-import type { EngineInput, EngineResult } from "./types";
+import type { EngineInput, EngineResult, ScenarioOutcome } from "./types";
 
 export function runEngine(input: EngineInput): EngineResult {
   assertValidEngineInput(input);
@@ -84,6 +97,67 @@ export function runEngine(input: EngineInput): EngineResult {
     euResident: selections.euResident ?? true,
   });
 
+  // MODEL_SPEC_FASE1B §7 / SCORE_SPEC.md §1-§6: a full per-scenario outcome
+  // (projection years, exit, IRR, TSG score, percentile), the same
+  // buildProjectionYears -> computeExit -> computeScenarioIrr ->
+  // buildScenarioOutcome chain a caller would otherwise have to assemble
+  // by hand. Only possible when exit assumptions were supplied - they have
+  // no default (MODEL_SPEC_FASE1B §5) - so this stays null otherwise
+  // rather than guessing a selling commission or a plusvalía.
+  const scenarioOutcomes: ScenarioOutcome[] | null = input.exitPlanning
+    ? SCENARIO_ORDER.map((scenarioId) => {
+        const scenarioResult = scenarios.find((s) => s.id === scenarioId)!;
+        const years = buildProjectionYears({
+          years: input.exitPlanning!.holdingYears ?? PROJECTION_YEARS.value,
+          scenario: scenarioId,
+          scenarioResult,
+          purchasePrice: property.purchasePrice,
+          financing: selectedFinancing,
+          fixedCosts,
+          euResident: selections.euResident ?? true,
+          renovation: selectedRenovation,
+          cadastralValue: property.cadastralValue,
+        });
+        const exit = computeExit({
+          scenario: scenarioId,
+          years,
+          purchasePrice: property.purchasePrice,
+          acquisition,
+          renovation: selectedRenovation,
+          assumptions: input.exitPlanning!.assumptions,
+        });
+        const irr = computeScenarioIrr({
+          equityInvested: acquisition.equityRequired,
+          years,
+          exit,
+        });
+        return buildScenarioOutcome({
+          scenario: scenarioId,
+          purchasePrice: property.purchasePrice,
+          years,
+          exit,
+          irr,
+          equityRequired: acquisition.equityRequired,
+          equityAvailable: property.ownMoney,
+          minRequiredReturn: constraints.minRoiTarget,
+          rentalStrategy: selections.rentalStrategy,
+          renovationStrategy: selections.renovationStrategy,
+          usableAreaM2Provided: property.usableAreaM2 !== undefined,
+          cadastralValueProvided: property.cadastralValue !== undefined,
+          // cadastralValue, when given, also replaces the building-share
+          // default (projection.ts: "takes priority over
+          // buildingShareOfValue") - the same override, so the same flag.
+          buildingShareOfValueProvided: property.cadastralValue !== undefined,
+          scenarioCashflow: {
+            monthlyCashflow: scenarioResult.monthlyCashflow,
+            dscr: scenarioResult.dscr,
+          },
+          maxRenovationBudget: constraints.maxRenovationBudget,
+          renovationCost: selectedRenovation.capex,
+        });
+      })
+    : null;
+
   return {
     income,
     renovationStrategies,
@@ -96,5 +170,6 @@ export function runEngine(input: EngineInput): EngineResult {
     scenarios,
     tax,
     rentalStrategies,
+    scenarioOutcomes,
   };
 }
