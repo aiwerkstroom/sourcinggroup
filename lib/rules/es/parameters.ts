@@ -1183,19 +1183,6 @@ export const TSG_SCORE_DISTRIBUTION_SEED: EstimateParameter<number> = {
     "A fixed PRNG seed for reproducibility, not a market or model claim - chosen as this feature's build date (2026-08-11) purely as a memorable, arbitrary constant.",
 };
 
-/** Purchase price range for generated cases, SCORE_SPEC.md §5: "€ 80.000 tot € 600.000, uniform verdeeld in stappen van € 20.000". */
-export const TSG_SCORE_DISTRIBUTION_PURCHASE_PRICE_RANGE: EstimateParameter<{
-  min: number;
-  max: number;
-  step: number;
-}> = {
-  name: "TSG_SCORE_DISTRIBUTION_PURCHASE_PRICE_RANGE",
-  value: { min: 80_000, max: 600_000, step: 20_000 },
-  provenance: "ESTIMATE",
-  reasoning:
-    "SCORE_SPEC.md §5. Defines the price span of the synthetic universe, a product decision about what range the model should be able to place a case within.",
-};
-
 /** Floor area range for generated cases, SCORE_SPEC.md §5: "30 tot 200 m², uniform". Sampled as builtAreaM2; usableAreaM2 is left to derive via DEFAULT_USABLE_TO_BUILT_AREA_RATIO, since the spec gives one figure, not a separate pair. */
 export const TSG_SCORE_DISTRIBUTION_AREA_RANGE_M2: EstimateParameter<{
   min: number;
@@ -1208,16 +1195,58 @@ export const TSG_SCORE_DISTRIBUTION_AREA_RANGE_M2: EstimateParameter<{
     "SCORE_SPEC.md §5. Defines the floor-area span of the synthetic universe, a product decision, not a market survey result.",
 };
 
-/** Equity ratio range for generated cases, SCORE_SPEC.md §5: "80% tot 120% van equityRequired, uniform" - equityAvailable is sampled as this fraction of that specific case's own computed equityRequired. */
-export const TSG_SCORE_DISTRIBUTION_EQUITY_RATIO_RANGE: EstimateParameter<{
+/**
+ * Purchase price is no longer drawn independently of area (that produced
+ * unrealistic combinations - a large cheap unit or a tiny expensive one -
+ * and skewed the whole distribution toward the score floor). Instead it is
+ * DERIVED per generated case: purchasePrice = neighborhood's long-term
+ * rent per m² x 12 (annual rent per m²) x this multiplier x builtAreaM2.
+ *
+ * The multiplier is a price-to-annual-rent ratio, i.e. the inverse of a
+ * gross rental yield. A range of 13-24 corresponds to gross yields of
+ * roughly 4.2%-7.7%, the broad band commonly associated with Spanish
+ * residential buy-to-let property - reasonable as a construction choice
+ * for the synthetic universe's price/rent relationship, not a claim
+ * sourced for any specific transaction (hence ESTIMATE, not SOURCED).
+ * Drawing a fresh multiplier per case (rather than one fixed value) is the
+ * "spreiding eromheen" the price should have around what the neighborhood
+ * table implies: two otherwise-identical cases in the same neighborhood
+ * still get different prices, the way two real listings would.
+ */
+export const TSG_SCORE_DISTRIBUTION_PRICE_TO_RENT_MULTIPLIER_RANGE: EstimateParameter<{
   min: number;
   max: number;
 }> = {
-  name: "TSG_SCORE_DISTRIBUTION_EQUITY_RATIO_RANGE",
-  value: { min: 0.8, max: 1.2 },
+  name: "TSG_SCORE_DISTRIBUTION_PRICE_TO_RENT_MULTIPLIER_RANGE",
+  value: { min: 13, max: 24 },
   provenance: "ESTIMATE",
   reasoning:
-    "SCORE_SPEC.md §5. Ensures the synthetic universe spans both equity-short and equity-sufficient cases around each case's own requirement, a product decision about coverage.",
+    "Purchase price per m² is derived from the neighborhood's rent table via price = annual rent x multiplier. 13-24 implies a gross rental yield of roughly 4.2%-7.7%, the broad band commonly associated with Spanish residential buy-to-let - a reasonable construction choice for how price should track rent in the synthetic universe, not a cited market statistic for any real transaction.",
+};
+
+/**
+ * Available equity (and, via the same draw, totalBudget) as a fraction of
+ * that case's own purchase price - not, as before, a fraction of the
+ * deal's computed equityRequired, which made every generated case
+ * near-tautologically feasible by construction (equityAvailable was
+ * defined relative to the very number it was being compared against).
+ * An investor typically knows their own capital as a share of what they
+ * can buy, not as a share of a not-yet-computed equity requirement.
+ * 25%-45% spans both thinly and comfortably capitalised synthetic
+ * investors; a real Spanish acquisition's costs and fees alone run to
+ * roughly 13% of the purchase price on top of any down payment, so
+ * anything markedly below 25% would rarely clear even the transaction
+ * costs before financing is considered.
+ */
+export const TSG_SCORE_DISTRIBUTION_EQUITY_TO_PRICE_RATIO_RANGE: EstimateParameter<{
+  min: number;
+  max: number;
+}> = {
+  name: "TSG_SCORE_DISTRIBUTION_EQUITY_TO_PRICE_RATIO_RANGE",
+  value: { min: 0.25, max: 0.45 },
+  provenance: "ESTIMATE",
+  reasoning:
+    "Available equity and totalBudget as a fraction of purchase price, not of the deal's own computed equityRequired (which made feasibility near-tautological). 25%-45% spans thin and comfortable capitalisation; Spanish acquisition costs alone run to roughly 13% of the purchase price, so materially less than 25% would rarely even clear the transaction costs.",
 };
 
 /** Rental strategy mix for generated cases, SCORE_SPEC.md §5: "langetermijn (70%) en hybride (30%)". "shortTerm" is not generated. */
@@ -1233,20 +1262,24 @@ export const TSG_SCORE_DISTRIBUTION_RENTAL_STRATEGY_SHARES: EstimateParameter<{
 };
 
 /**
- * Gastos de comunidad used for every generated case, SCORE_SPEC.md §5:
- * "Overige invoer: de defaults uit parameters.ts". PropertyInput.
- * communityFeesAnnual has no engine default (MODEL_SPEC.md §15) and no
- * value is given by the range list in §5, so this reuses the exact
- * TEST FIXTURE figure from referencecase.ts (€ 900/year) rather than
- * inventing an unrelated one, per the same "not sourced for any real
- * building" caveat that fixture already carries.
+ * Gastos de comunidad range for generated cases. A single fixed figure
+ * (previously € 900/year for every case, regardless of building size or
+ * price) understated how much this cost actually varies - a small
+ * building with no elevator and a large one with a pool, staffed lobby
+ * and shared services can differ by a factor of four or more. €400-1.800
+ * is a plausible span for Valencia apartment buildings; drawn per case, not
+ * derived from purchase price or area, since community fees are set by
+ * the building's own services rather than scaling cleanly with either.
  */
-export const TSG_SCORE_DISTRIBUTION_COMMUNITY_FEES_ANNUAL: EstimateParameter<number> = {
-  name: "TSG_SCORE_DISTRIBUTION_COMMUNITY_FEES_ANNUAL",
-  value: 900,
+export const TSG_SCORE_DISTRIBUTION_COMMUNITY_FEES_RANGE: EstimateParameter<{
+  min: number;
+  max: number;
+}> = {
+  name: "TSG_SCORE_DISTRIBUTION_COMMUNITY_FEES_RANGE",
+  value: { min: 400, max: 1_800 },
   provenance: "ESTIMATE",
   reasoning:
-    "No default exists for communityFeesAnnual and SCORE_SPEC.md §5 does not give one; reuses referencecase.ts's TEST FIXTURE value so the reference distribution and the rest of the golden-test suite share one assumption instead of two silently different ones.",
+    "No default exists for communityFeesAnnual and SCORE_SPEC.md §5 does not give one. A fixed € 900 for every case understated real variation (elevator, pool, staffing, building size); € 400-1.800 is a plausible span for Valencia apartment buildings, drawn independently per case since this cost is set by the building's own services, not by its price or area.",
 };
 
 /**
@@ -1268,17 +1301,17 @@ export const TSG_SCORE_DISTRIBUTION_EXIT_ASSUMPTIONS: EstimateParameter<{
 
 /**
  * Investor constraints ("budgetten") applied to every generated case,
- * independent of that case's own generated purchase price - the literal
- * reading of SCORE_SPEC.md §5's "overige invoer: de defaults uit
- * parameters.ts" is that these stay fixed, not that they scale with the
- * price. Reuses referencecase.ts's exact constraint values. A generated
- * case with a high purchase price and this fixed, comparatively low
- * totalBudget can legitimately fail the budget check - that is not a bug
- * in the generator, it is the feasibility dimension doing its job across
- * a universe that spans both affordable and unaffordable cases.
+ * excluding totalBudget - that field now tracks each case's own generated
+ * purchase price (via TSG_SCORE_DISTRIBUTION_EQUITY_TO_PRICE_RATIO_RANGE,
+ * "totalBudget mag hetzelfde percentage volgen"), since totalBudget is
+ * compared directly against equityRequired in acquisitionCosts() and so
+ * conceptually measures the same thing "beschikbaar eigen vermogen" does -
+ * they were previously drawn from unrelated distributions, which is what
+ * this correction fixes. The remaining fields here have no natural link to
+ * purchase price and stay fixed, reusing referencecase.ts's TEST FIXTURE
+ * values for consistency with the rest of the golden-test suite.
  */
 export const TSG_SCORE_DISTRIBUTION_CONSTRAINTS: EstimateParameter<{
-  totalBudget: number;
   maxRenovationBudget: number;
   minLtv: number;
   maxLtv: number;
@@ -1288,7 +1321,6 @@ export const TSG_SCORE_DISTRIBUTION_CONSTRAINTS: EstimateParameter<{
 }> = {
   name: "TSG_SCORE_DISTRIBUTION_CONSTRAINTS",
   value: {
-    totalBudget: 450_000,
     maxRenovationBudget: 60_000,
     minLtv: 0.6,
     maxLtv: 0.75,
@@ -1298,7 +1330,7 @@ export const TSG_SCORE_DISTRIBUTION_CONSTRAINTS: EstimateParameter<{
   },
   provenance: "ESTIMATE",
   reasoning:
-    "SCORE_SPEC.md §5's 'overige invoer: de defaults uit parameters.ts', applied to the InvestorConstraints fields the §5 list does not itself vary. Reuses referencecase.ts's TEST FIXTURE constraints for consistency with the rest of the golden-test suite.",
+    "SCORE_SPEC.md §5's 'overige invoer: de defaults uit parameters.ts', applied to the InvestorConstraints fields that do not scale with purchase price (totalBudget does now - see TSG_SCORE_DISTRIBUTION_EQUITY_TO_PRICE_RATIO_RANGE). Reuses referencecase.ts's TEST FIXTURE constraints for consistency with the rest of the golden-test suite.",
 };
 
 /** All parameters in this file, for provenance tooling (e.g. collecting every PLACEHOLDER). */
@@ -1366,11 +1398,11 @@ export const ALL_PARAMETERS: ReadonlyArray<Parameter<unknown>> = [
   TSG_SCORE_DIMENSION_WEIGHTS,
   TSG_SCORE_DISTRIBUTION_SAMPLE_SIZE,
   TSG_SCORE_DISTRIBUTION_SEED,
-  TSG_SCORE_DISTRIBUTION_PURCHASE_PRICE_RANGE,
   TSG_SCORE_DISTRIBUTION_AREA_RANGE_M2,
-  TSG_SCORE_DISTRIBUTION_EQUITY_RATIO_RANGE,
+  TSG_SCORE_DISTRIBUTION_PRICE_TO_RENT_MULTIPLIER_RANGE,
+  TSG_SCORE_DISTRIBUTION_EQUITY_TO_PRICE_RATIO_RANGE,
   TSG_SCORE_DISTRIBUTION_RENTAL_STRATEGY_SHARES,
-  TSG_SCORE_DISTRIBUTION_COMMUNITY_FEES_ANNUAL,
+  TSG_SCORE_DISTRIBUTION_COMMUNITY_FEES_RANGE,
   TSG_SCORE_DISTRIBUTION_EXIT_ASSUMPTIONS,
   TSG_SCORE_DISTRIBUTION_CONSTRAINTS,
 ];

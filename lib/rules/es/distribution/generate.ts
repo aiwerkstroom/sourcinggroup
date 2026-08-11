@@ -36,11 +36,11 @@ import {
   PROJECTION_YEARS,
   RENOVATION_STRATEGIES,
   TSG_SCORE_DISTRIBUTION_AREA_RANGE_M2,
-  TSG_SCORE_DISTRIBUTION_COMMUNITY_FEES_ANNUAL,
+  TSG_SCORE_DISTRIBUTION_COMMUNITY_FEES_RANGE,
   TSG_SCORE_DISTRIBUTION_CONSTRAINTS,
-  TSG_SCORE_DISTRIBUTION_EQUITY_RATIO_RANGE,
+  TSG_SCORE_DISTRIBUTION_EQUITY_TO_PRICE_RATIO_RANGE,
   TSG_SCORE_DISTRIBUTION_EXIT_ASSUMPTIONS,
-  TSG_SCORE_DISTRIBUTION_PURCHASE_PRICE_RANGE,
+  TSG_SCORE_DISTRIBUTION_PRICE_TO_RENT_MULTIPLIER_RANGE,
   TSG_SCORE_DISTRIBUTION_RENTAL_STRATEGY_SHARES,
   TSG_SCORE_DISTRIBUTION_SAMPLE_SIZE,
   TSG_SCORE_DISTRIBUTION_SEED,
@@ -84,33 +84,75 @@ function pickRentalStrategy(rng: () => number): "longTerm" | "hybrid" {
     : "hybrid";
 }
 
-/**
- * Builds one synthetic EngineInput (SCORE_SPEC.md §5's bullet list) and
- * scores it, returning only the total (SCORE_SPEC.md §5: "reken elke
- * casus door en bewaar alleen de totaalscore").
- *
- * Every generated case sets hasTouristRentalLicense: true. §5's rental
- * mix includes a 30% "hybrid" share, which MODEL_SPEC.md §18 rejects
- * without a valid título habilitante; §5 does not vary license status, so
- * fixing it to true (rather than drawing it and then rejecting/reweighting
- * hybrid draws) is the same "defaults uit parameters.ts" treatment §5
- * already applies to community fees, exit assumptions and constraints.
- *
- * Returns null on the rare case where the ten-year cashflow series never
- * changes sign (no defined IRR) - not a plausible outcome for these
- * ranges, but resolved by omitting the case rather than fabricating a
- * score for an undefined return.
- */
-function scoreOneCase(rng: () => number): number | null {
-  const priceRange = TSG_SCORE_DISTRIBUTION_PURCHASE_PRICE_RANGE.value;
-  const priceSteps = Math.round((priceRange.max - priceRange.min) / priceRange.step) + 1;
-  const purchasePrice = priceRange.min + pickIndex(rng, priceSteps) * priceRange.step;
+/** builtAreaM2, purchasePrice and communityFeesAnnual as buildSyntheticEngineInput() derived them, exposed for tests that check the derivation itself rather than only its downstream score. */
+export interface SyntheticCaseDerivedFigures {
+  builtAreaM2: number;
+  neighborhood: string;
+  priceToRentMultiplier: number;
+  purchasePrice: number;
+  equityToPriceRatio: number;
+  equityAvailable: number;
+  communityFeesAnnual: number;
+}
 
+/**
+ * Builds one synthetic EngineInput (SCORE_SPEC.md §5's bullet list,
+ * corrected per Samuel's review of the first draft):
+ *
+ * 1. Purchase price is no longer drawn independently of floor area - it is
+ *    derived from the neighborhood's own rent table (price = annual rent
+ *    per m² x a price-to-rent multiplier x builtAreaM2), so a case's price
+ *    and area are no longer free to combine into an implausible pairing
+ *    (a huge cheap unit, a tiny expensive one).
+ * 2. Available equity (and totalBudget, which tracks the same draw) is a
+ *    fraction of THIS case's purchase price, not of its own computed
+ *    equityRequired - the previous design made feasibility
+ *    near-tautological by comparing equityRequired to a fraction of
+ *    itself.
+ * 3. Gastos de comunidad is drawn from a range per case, not fixed at
+ *    € 900 for every one regardless of the building.
+ *
+ * Every generated case still sets hasTouristRentalLicense: true. §5's
+ * rental mix includes a 30% "hybrid" share, which MODEL_SPEC.md §18
+ * rejects without a valid título habilitante; §5 does not vary license
+ * status, so fixing it to true (rather than drawing it and then
+ * rejecting/reweighting hybrid draws) is the same "defaults uit
+ * parameters.ts" treatment §5 already applies to the exit assumptions and
+ * the remaining constraints.
+ *
+ * Separated from scoreOneCase() so the sampling/derivation logic itself -
+ * the part the three corrections above changed - can be unit-tested
+ * directly against the figures it derived, not only indirectly through a
+ * final score.
+ */
+export function buildSyntheticEngineInput(rng: () => number): {
+  input: EngineInput;
+  derived: SyntheticCaseDerivedFigures;
+} {
   const areaRange = TSG_SCORE_DISTRIBUTION_AREA_RANGE_M2.value;
   const builtAreaM2 = uniform(rng, areaRange.min, areaRange.max);
 
   const neighborhoods = Object.keys(NEIGHBORHOOD_RENT_LONG_TERM.value);
   const neighborhood = pick(rng, neighborhoods);
+  const rentPerM2LongTerm = NEIGHBORHOOD_RENT_LONG_TERM.value[neighborhood]!;
+  const rentPerM2ShortTerm = NEIGHBORHOOD_RENT_SHORT_TERM.value[neighborhood]!;
+
+  // Purchase price per m² tracks the neighborhood's own rent level, with a
+  // freshly drawn multiplier per case standing in for the "spreiding
+  // eromheen" a single fixed multiplier would not have.
+  const multiplierRange = TSG_SCORE_DISTRIBUTION_PRICE_TO_RENT_MULTIPLIER_RANGE.value;
+  const priceToRentMultiplier = uniform(rng, multiplierRange.min, multiplierRange.max);
+  const purchasePrice = rentPerM2LongTerm * 12 * priceToRentMultiplier * builtAreaM2;
+
+  // Available equity - and, via the same draw, totalBudget - as a share of
+  // THIS case's own purchase price, known before the engine even runs.
+  const equityRatioRange = TSG_SCORE_DISTRIBUTION_EQUITY_TO_PRICE_RATIO_RANGE.value;
+  const equityToPriceRatio = uniform(rng, equityRatioRange.min, equityRatioRange.max);
+  const equityAvailable = purchasePrice * equityToPriceRatio;
+  const totalBudget = equityAvailable;
+
+  const communityFeesRange = TSG_SCORE_DISTRIBUTION_COMMUNITY_FEES_RANGE.value;
+  const communityFeesAnnual = uniform(rng, communityFeesRange.min, communityFeesRange.max);
 
   const financingStrategy = pick(
     rng,
@@ -131,11 +173,11 @@ function scoreOneCase(rng: () => number): number | null {
       neighborhood,
       builtAreaM2,
       purchasePrice,
-      communityFeesAnnual: TSG_SCORE_DISTRIBUTION_COMMUNITY_FEES_ANNUAL.value,
+      communityFeesAnnual,
       hasTouristRentalLicense: true,
     },
     constraints: {
-      totalBudget: constraints.totalBudget,
+      totalBudget,
       maxRenovationBudget: constraints.maxRenovationBudget,
       minLtv: constraints.minLtv,
       maxLtv: constraints.maxLtv,
@@ -144,8 +186,8 @@ function scoreOneCase(rng: () => number): number | null {
       maxMonthlyDebt: constraints.maxMonthlyDebt,
     },
     selections: {
-      rentPerM2LongTerm: NEIGHBORHOOD_RENT_LONG_TERM.value[neighborhood]!,
-      rentPerM2ShortTerm: NEIGHBORHOOD_RENT_SHORT_TERM.value[neighborhood]!,
+      rentPerM2LongTerm,
+      rentPerM2ShortTerm,
       rentalStrategy,
       renovationStrategy,
       financingStrategy,
@@ -154,13 +196,36 @@ function scoreOneCase(rng: () => number): number | null {
     },
   };
 
+  return {
+    input,
+    derived: {
+      builtAreaM2,
+      neighborhood,
+      priceToRentMultiplier,
+      purchasePrice,
+      equityToPriceRatio,
+      equityAvailable,
+      communityFeesAnnual,
+    },
+  };
+}
+
+/**
+ * Builds one synthetic case and scores it, returning only the total
+ * (SCORE_SPEC.md §5: "reken elke casus door en bewaar alleen de
+ * totaalscore"). Returns null on the rare case where the ten-year
+ * cashflow series never changes sign (no defined IRR) - not a plausible
+ * outcome for these ranges, but resolved by omitting the case rather than
+ * fabricating a score for an undefined return.
+ */
+function scoreOneCase(rng: () => number): number | null {
+  const { input, derived } = buildSyntheticEngineInput(rng);
+  const { purchasePrice, equityAvailable } = derived;
+  const { constraints, selections } = input;
+  const { rentalStrategy, renovationStrategy } = selections;
+
   const engineResult = runEngine(input);
   const scenarioResult = engineResult.scenarios.find((s) => s.id === "base")!;
-
-  const equityRatioRange = TSG_SCORE_DISTRIBUTION_EQUITY_RATIO_RANGE.value;
-  const equityAvailable =
-    engineResult.acquisition.equityRequired *
-    uniform(rng, equityRatioRange.min, equityRatioRange.max);
 
   const years = buildProjectionYears({
     years: PROJECTION_YEARS.value,
