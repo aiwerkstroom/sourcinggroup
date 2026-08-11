@@ -143,6 +143,14 @@ export interface PropertyInput {
   energyLabel?: string;
   purchasePrice: number;
   ownMoney?: number;
+  /**
+   * Gastos de comunidad, €/year - the building's community/condo fee.
+   * Mandatory, no default anywhere in the engine: this figure varies too
+   * much per building (size, amenities, elevator, shared services) to
+   * estimate generically the way a rate-based cost can (MODEL_SPEC.md
+   * §15). A caller without a real figure yet should not guess one here.
+   */
+  communityFeesAnnual: number;
 }
 
 /**
@@ -284,6 +292,8 @@ export interface FixedOperatingCosts {
   propertyTaxIBI: number;
   insurance: number;
   bankAccountFee: number;
+  /** Gastos de comunidad - PropertyInput.communityFeesAnnual, passed through unchanged; not rate-derived like the other lines. */
+  communityFees: number;
   /** mortgage x (selected rate + non-resident spread) - Excel D165. */
   mortgageInterest: number;
   total: number;
@@ -352,6 +362,8 @@ export interface ProjectionYear {
   propertyTaxIBI: number;
   insurance: number;
   bankAccountFee: number;
+  /** Gastos de comunidad for this calendar year, CPI-indexed like the other fixed cost lines. */
+  communityFees: number;
   fixedCosts: number;
   noi: number;
   interestPaid: number;

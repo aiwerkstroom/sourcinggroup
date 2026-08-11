@@ -56,8 +56,11 @@ export function buildProjectionYears(args: {
   scenarioResult: ScenarioResult;
   purchasePrice: number;
   financing: SelectedFinancing;
-  /** Phase-1 fixed cost breakdown (IBI/insurance/bank fee), the year-1 base each is indexed from. */
-  fixedCosts: Pick<FixedOperatingCosts, "propertyTaxIBI" | "insurance" | "bankAccountFee">;
+  /** Phase-1 fixed cost breakdown (IBI/insurance/bank fee/gastos de comunidad), the year-1 base each is indexed from. */
+  fixedCosts: Pick<
+    FixedOperatingCosts,
+    "propertyTaxIBI" | "insurance" | "bankAccountFee" | "communityFees"
+  >;
   euResident: boolean;
   /** The selected renovation strategy; its timeToRentMonths prorates year 1's rent. */
   renovation: Pick<RenovationStrategyResult, "timeToRentMonths">;
@@ -117,7 +120,8 @@ export function buildProjectionYears(args: {
     const propertyTaxIBI = args.fixedCosts.propertyTaxIBI * idx.costIndex;
     const insurance = args.fixedCosts.insurance * idx.costIndex;
     const bankAccountFee = args.fixedCosts.bankAccountFee * idx.costIndex;
-    const fixedCosts = propertyTaxIBI + insurance + bankAccountFee;
+    const communityFees = args.fixedCosts.communityFees * idx.costIndex;
+    const fixedCosts = propertyTaxIBI + insurance + bankAccountFee + communityFees;
 
     const noi = grossIncome - (propertyManagement + maintenance + utilities + fixedCosts);
 
@@ -137,7 +141,8 @@ export function buildProjectionYears(args: {
       maintenance +
       propertyManagement +
       depreciation +
-      bankAccountFee;
+      bankAccountFee +
+      communityFees;
     const taxableIncome = grossIncome - deductibleCosts;
     // Spanish non-resident rental tax (IRNR) is filed and withheld per
     // period; a negative result means no tax is due that year, not a
@@ -156,6 +161,7 @@ export function buildProjectionYears(args: {
       propertyTaxIBI,
       insurance,
       bankAccountFee,
+      communityFees,
       fixedCosts,
       noi,
       interestPaid,

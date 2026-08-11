@@ -27,6 +27,9 @@ export function validateEngineInput(input: EngineInput): string[] {
   if (!isFiniteNumber(property.purchasePrice) || property.purchasePrice <= 0) {
     issues.push("purchasePrice must be a positive number");
   }
+  if (!isFiniteNumber(property.communityFeesAnnual) || property.communityFeesAnnual < 0) {
+    issues.push("communityFeesAnnual must be zero or positive (no default: enter the real gastos de comunidad for this building)");
+  }
   if (!isFiniteNumber(constraints.totalBudget) || constraints.totalBudget <= 0) {
     issues.push("totalBudget must be a positive number");
   }

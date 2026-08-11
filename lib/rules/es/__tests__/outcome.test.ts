@@ -12,7 +12,10 @@ import { referenceCase } from "./referencecase";
  * - no Excel counterpart exists for phase 1b), reusing the same per-year
  * figures already locked down in projection.test.ts, exit.test.ts and
  * irr.test.ts. Ten-year holding period, reference case Avenida Primado
- * Reig 19.
+ * Reig 19. Recomputed for MODEL_SPEC.md §15's gastos de comunidad
+ * (€ 900/yr fixture, CPI-indexed) - every year's cashflowAfterTax is
+ * lower than before, so totalReturn is lower too, though the ranking and
+ * "payback is always null" conclusions are unaffected.
  */
 const testAssumptions: ExitAssumptions = {
   sellingCommissionRate: 0.04,
@@ -66,17 +69,17 @@ describe("scenario outcome (reference case, 10-year holding period)", () => {
     expect(outcome.years).toHaveLength(10);
 
     const y1 = outcome.years[0]!;
-    expect(y1.cashflowAfterTax).toBeCloseTo(-7353.931822, 4);
-    expect(y1.cumulativeCashflow).toBeCloseTo(-7353.931822, 4);
+    expect(y1.cashflowAfterTax).toBeCloseTo(-8094.569177, 4);
+    expect(y1.cumulativeCashflow).toBeCloseTo(-8094.569177, 4);
     // 330000 x 1.05^1 = 346500.
     expect(y1.propertyValue).toBeCloseTo(346500, 4);
     expect(y1.mortgageBalance).toBeCloseTo(235396.180058, 4);
     expect(y1.equityBuilt).toBeCloseTo(346500 - 235396.180058, 4);
 
     const y10 = outcome.years[9]!;
-    // Cumulative operating cashflow after 10 years: -14391.941285 (never
+    // Cumulative operating cashflow after 10 years: -22406.542135 (never
     // recoups the 197990 equity - see the payback test below).
-    expect(y10.cumulativeCashflow).toBeCloseTo(-14391.941285, 3);
+    expect(y10.cumulativeCashflow).toBeCloseTo(-22406.542135, 3);
     // 330000 x 1.05^10.
     expect(y10.propertyValue).toBeCloseTo(330000 * 1.05 ** 10, 4);
   });
@@ -85,9 +88,9 @@ describe("scenario outcome (reference case, 10-year holding period)", () => {
     ScenarioId,
     { totalReturn: number; paybackYear: null }
   > = {
-    conservative: { totalReturn: 0.328218, paybackYear: null },
-    base: { totalReturn: 0.810019, paybackYear: null },
-    optimistic: { totalReturn: 1.29953, paybackYear: null },
+    conservative: { totalReturn: 0.286934, paybackYear: null },
+    base: { totalReturn: 0.769539, paybackYear: null },
+    optimistic: { totalReturn: 1.259109, paybackYear: null },
   };
 
   (Object.keys(goldenTotals) as ScenarioId[]).forEach((scenario) => {
@@ -101,7 +104,7 @@ describe("scenario outcome (reference case, 10-year holding period)", () => {
 
   it("payback is null in every scenario: this deal only recoups via the sale, never via 10 years of rent alone", () => {
     // Even optimistic's cumulative operating cashflow after 10 years
-    // (40419.61) is far short of the 197990 equity invested - the return
+    // (32416.65) is far short of the 197990 equity invested - the return
     // comes from the exit, not from carrying the property.
     (["conservative", "base", "optimistic"] as ScenarioId[]).forEach((scenario) => {
       expect(outcomeFor(scenario).paybackYear).toBeNull();
@@ -163,7 +166,7 @@ describe("scenario outcome (reference case, 10-year holding period)", () => {
     const base = outcomeFor("base");
     const optimistic = outcomeFor("optimistic");
     expect(conservative.returnRequirement.minRequiredReturn).toBe(0.04);
-    // Conservative's IRR (2.49%) misses the 4% hurdle even though it is
+    // Conservative's IRR (2.18%) misses the 4% hurdle even though it is
     // a defined, positive return.
     expect(conservative.returnRequirement.meetsMinRequiredReturn).toBe(false);
     expect(base.returnRequirement.meetsMinRequiredReturn).toBe(true);
@@ -208,7 +211,7 @@ describe("scenario outcome (reference case, 10-year holding period)", () => {
       renovationStrategy: referenceCase.selections.renovationStrategy,
     });
     expect(outcome.returnRequirement.minRequiredReturn).toBe(0);
-    // Conservative's positive 2.49% IRR now clears the weaker 0% default.
+    // Conservative's positive 2.18% IRR now clears the weaker 0% default.
     expect(outcome.returnRequirement.meetsMinRequiredReturn).toBe(true);
     // DEFAULT_MIN_REQUIRED_RETURN joins placeholdersUsed only when the
     // hurdle rate was not supplied - unlike outcomeFor(), which always

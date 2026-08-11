@@ -49,6 +49,7 @@ describe("multi-year cashflow after tax (reference case)", () => {
     expect(y1.propertyTaxIBI).toBeCloseTo(1320, 6);
     expect(y1.insurance).toBeCloseTo(1030, 6);
     expect(y1.bankAccountFee).toBeCloseTo(100, 6);
+    expect(y1.communityFees).toBeCloseTo(900, 6);
   });
 
   it("year 1's rent is prorated for the renovation's lease-up vacancy (light: 2 months)", () => {
@@ -58,7 +59,8 @@ describe("multi-year cashflow after tax (reference case)", () => {
     // Property management is 8% of that already-prorated rent, so it
     // scales down with it automatically: 23700.6 x 0.08 = 1896.048.
     expect(y1.propertyManagement).toBeCloseTo(1896.048, 6);
-    expect(y1.noi).toBeCloseTo(15073.016, 4);
+    // 15073.016 (before gastos de comunidad) - 900 = 14173.016.
+    expect(y1.noi).toBeCloseTo(14173.016, 4);
   });
 
   it("does not prorate any other year: full rent from year 2 onwards", () => {
@@ -94,6 +96,12 @@ describe("multi-year cashflow after tax (reference case)", () => {
     expect(y1.interestPaid).toBeLessThan(10395);
   });
 
+  // Recomputed for MODEL_SPEC.md §15's gastos de comunidad (€ 900/yr
+  // fixture, CPI-indexed like the other fixed cost lines): grossIncome,
+  // interestPaid, principalPaid and mortgageBalance are unaffected (no
+  // fixed-cost coupling); noi/preTaxCashflow drop by that year's indexed
+  // community fee, and taxDue/cashflowAfterTax follow from the larger
+  // deductible cost.
   const goldenByScenario: Record<
     ScenarioId,
     Record<1 | 2 | 5 | 10, Record<string, number>>
@@ -101,127 +109,127 @@ describe("multi-year cashflow after tax (reference case)", () => {
     conservative: {
       1: {
         grossIncome: 19197.486,
-        noi: 10799.203044,
+        noi: 9899.203044,
         interestPaid: 11383.852975,
         principalPaid: 11641.200437,
         mortgageBalance: 235858.799563,
-        preTaxCashflow: -12225.850367,
+        preTaxCashflow: -13125.850367,
         taxDue: 0,
-        cashflowAfterTax: -12225.850367,
+        cashflowAfterTax: -13125.850367,
       },
       2: {
         grossIncome: 24188.8324,
-        noi: 15240.267,
+        noi: 14320.467046,
         interestPaid: 10824.775084,
         principalPaid: 12200.278328,
         mortgageBalance: 223658.521236,
-        preTaxCashflow: -7784.786366,
-        taxDue: 212.028954,
-        cashflowAfterTax: -7996.81532,
+        preTaxCashflow: -8704.586366,
+        taxDue: 37.266954,
+        cashflowAfterTax: -8741.85332,
       },
       5: {
         grossIncome: 26817.9649,
-        noi: 17222.4924,
+        noi: 16245.436345,
         interestPaid: 8981.220523,
         principalPaid: 14043.832889,
         mortgageBalance: 183428.207879,
-        preTaxCashflow: -5802.560989,
-        taxDue: 976.947436,
-        cashflowAfterTax: -6779.508425,
+        preTaxCashflow: -6779.617067,
+        taxDue: 791.306782,
+        cashflowAfterTax: -7570.923848,
       },
       10: {
         grossIncome: 31089.3715,
-        noi: 20376.7808,
+        noi: 19298.03192,
         interestPaid: 5269.038107,
         principalPaid: 17756.015305,
         mortgageBalance: 102420.428129,
-        preTaxCashflow: -2648.272632,
-        taxDue: 2349.104901,
-        cashflowAfterTax: -4997.377533,
+        preTaxCashflow: -3727.021492,
+        taxDue: 2144.142618,
+        cashflowAfterTax: -5871.16411,
       },
     },
     base: {
       1: {
         grossIncome: 23700.6,
-        noi: 15073.016,
+        noi: 14173.016,
         interestPaid: 10163.765235,
         principalPaid: 12103.819942,
         mortgageBalance: 235396.180058,
-        preTaxCashflow: -7194.569177,
-        taxDue: 159.362645,
-        cashflowAfterTax: -7353.931822,
+        preTaxCashflow: -8094.569177,
+        taxDue: 0,
+        cashflowAfterTax: -8094.569177,
       },
       2: {
         grossIncome: 29862.756,
-        noi: 20594.1057,
+        noi: 19674.305728,
         interestPaid: 9645.503785,
         principalPaid: 12622.081392,
         mortgageBalance: 222774.098666,
-        preTaxCashflow: -1673.479449,
-        taxDue: 1318.792079,
-        cashflowAfterTax: -2992.271528,
+        preTaxCashflow: -2593.279449,
+        taxDue: 1144.030079,
+        cashflowAfterTax: -3737.309528,
       },
       5: {
         grossIncome: 33108.5987,
-        noi: 23152.035,
+        noi: 22174.978964,
         interestPaid: 7953.732534,
         principalPaid: 14313.852643,
         mortgageBalance: 181571.585031,
-        preTaxCashflow: 884.449865,
-        taxDue: 2160.799091,
-        cashflowAfterTax: -1276.349226,
+        preTaxCashflow: -92.606213,
+        taxDue: 1975.158436,
+        cashflowAfterTax: -2067.764649,
       },
       10: {
         grossIncome: 38381.9401,
-        noi: 27242.8996,
+        noi: 26164.150699,
         interestPaid: 4615.372495,
         principalPaid: 17652.212682,
         mortgageBalance: 100266.961333,
-        preTaxCashflow: 4975.314381,
-        taxDue: 3633.740863,
-        cashflowAfterTax: 1341.573518,
+        preTaxCashflow: 3896.565522,
+        taxDue: 3428.77858,
+        cashflowAfterTax: 467.786942,
       },
     },
     optimistic: {
       1: {
         grossIncome: 28677.726,
-        noi: 19582.352538,
+        noi: 18682.352538,
         interestPaid: 9554.436089,
         principalPaid: 12339.952763,
         mortgageBalance: 235160.047237,
-        preTaxCashflow: -2312.036314,
-        taxDue: 1052.075875,
-        cashflowAfterTax: -3364.112189,
+        preTaxCashflow: -3212.036314,
+        taxDue: 881.075875,
+        cashflowAfterTax: -4093.112189,
       },
       2: {
         grossIncome: 36133.9348,
-        noi: 26292.4392,
+        noi: 25372.639179,
         interestPaid: 9058.08593,
         principalPaid: 12836.302922,
         mortgageBalance: 222323.744315,
-        preTaxCashflow: 4398.050327,
-        taxDue: 2432.653942,
-        cashflowAfterTax: 1965.396385,
+        preTaxCashflow: 3478.250327,
+        taxDue: 2257.891942,
+        cashflowAfterTax: 1220.358385,
       },
       5: {
         grossIncome: 40061.4044,
-        noi: 29473.0363,
+        noi: 28495.980183,
         interestPaid: 7446.002776,
         principalPaid: 14448.386076,
         mortgageBalance: 180633.040069,
-        preTaxCashflow: 7578.647409,
-        taxDue: 3376.098895,
-        cashflowAfterTax: 4202.548514,
+        preTaxCashflow: 6601.591331,
+        taxDue: 3190.458241,
+        cashflowAfterTax: 3411.13309,
       },
       10: {
         grossIncome: 46442.1475,
-        noi: 34574.8439,
+        noi: 33496.095046,
         interestPaid: 4296.86191,
         principalPaid: 17597.526942,
         mortgageBalance: 99191.89344,
-        preTaxCashflow: 12680.455053,
-        taxDue: 5002.098764,
-        cashflowAfterTax: 7678.356289,
+        preTaxCashflow: 11601.706194,
+        taxDue: 4797.136481,
+        cashflowAfterTax: 6804.569712,
       },
     },
   };
@@ -290,6 +298,16 @@ describe("multi-year cashflow after tax (reference case)", () => {
     // regression this test guards against.
     const y2 = projectionFor("base")[1]!;
     expect(y2.propertyTaxIBI).toBeCloseTo(1349.04, 2);
+  });
+
+  it("indexes gastos de comunidad with CPI, the same series as IBI/insurance/bank fee (MODEL_SPEC.md §15)", () => {
+    // Base scenario: 900 x costIndex(year 2) = 900 x 1.022 = 919.8.
+    const y2 = projectionFor("base")[1]!;
+    expect(y2.communityFees).toBeCloseTo(919.8, 6);
+    // Keeps compounding past 2030 rather than freezing (year 10: costIndex
+    // 1.1986098441366696).
+    const y10 = projectionFor("base")[9]!;
+    expect(y10.communityFees).toBeCloseTo(900 * 1.1986098441366696, 4);
   });
 
   it("keeps indexing IBI with CPI past 2030, in years marked extrapolated in the output", () => {

@@ -7,6 +7,14 @@ import { referenceCase } from "./referencecase";
  * for the reference case (MODEL_SPEC.md §11). v3 corrections: signed
  * optimistic interest delta (-0.25%) and fixed costs (IBI + insurance +
  * bank fee = 2450/yr) included in NOI and total opex.
+ *
+ * MODEL_SPEC.md §15 adds a fourth fixed cost beyond the Excel: gastos de
+ * comunidad, a mandatory PropertyInput.communityFeesAnnual with no
+ * default. The reference case's fixture (€ 900/yr - not sourced for this
+ * building, chosen only to exercise the formula) is included from here
+ * on, so the figures below are "Excel parity + € 900/yr community fees",
+ * not pure Excel parity; acquisition.test.ts keeps a communityFeesAnnual:
+ * 0 case for the untouched Excel baseline.
  */
 describe("reference case Avenida Primado Reig 19 (Excel parity)", () => {
   const result = runEngine(referenceCase);
@@ -46,14 +54,14 @@ describe("reference case Avenida Primado Reig 19 (Excel parity)", () => {
     expect(optimistic!.utilities).toBeCloseTo(2716.525, 8);
   });
 
-  it("includes the fixed costs 2450/yr in every scenario (v3)", () => {
-    expect(result.scenarios.map((s) => s.fixedCosts)).toEqual([2450, 2450, 2450]);
+  it("includes the fixed costs 3350/yr in every scenario (v3 2450 + 900 gastos de comunidad)", () => {
+    expect(result.scenarios.map((s) => s.fixedCosts)).toEqual([3350, 3350, 3350]);
   });
 
-  it("NOI incl. fixed costs matches (L86/N86/P86)", () => {
-    expect(conservative!.noi).toBeCloseTo(14331.540468, 7);
-    expect(base!.noi).toBeCloseTo(19433.9264, 7);
-    expect(optimistic!.noi).toBeCloseTo(24859.054122, 7);
+  it("NOI incl. fixed costs matches (L86/N86/P86), lowered by the € 900 community fee", () => {
+    expect(conservative!.noi).toBeCloseTo(13431.540468, 7);
+    expect(base!.noi).toBeCloseTo(18533.9264, 7);
+    expect(optimistic!.noi).toBeCloseTo(23959.054122, 7);
   });
 
   it("scenario interest rates include the signed delta + non-resident spread (L90/N90/P90)", () => {
@@ -71,18 +79,18 @@ describe("reference case Avenida Primado Reig 19 (Excel parity)", () => {
   });
 
   it("total opex incl. fixed costs and amortising debt service (L98/N98/P98)", () => {
-    expect(conservative!.totalOpexInclDebtService).toBeCloseTo(31730.4961434773, 7);
-    expect(base!.totalOpexInclDebtService).toBeCloseTo(31274.3787768972, 7);
-    expect(optimistic!.totalOpexInclDebtService).toBeCloseTo(31448.6059299706, 7);
+    expect(conservative!.totalOpexInclDebtService).toBeCloseTo(32630.4961434773, 7);
+    expect(base!.totalOpexInclDebtService).toBeCloseTo(32174.3787768972, 7);
+    expect(optimistic!.totalOpexInclDebtService).toBeCloseTo(32348.6059299706, 7);
   });
 
   it("annual and monthly cashflow match (L102-P104)", () => {
-    expect(conservative!.annualCashflow).toBeCloseTo(-8693.51294347732, 7);
-    expect(base!.annualCashflow).toBeCloseTo(-2833.65877689723, 7);
-    expect(optimistic!.annualCashflow).toBeCloseTo(2964.66527002944, 7);
-    expect(conservative!.monthlyCashflow).toBeCloseTo(-724.459411956443, 8);
-    expect(base!.monthlyCashflow).toBeCloseTo(-236.138231408102, 8);
-    expect(optimistic!.monthlyCashflow).toBeCloseTo(247.05543916912, 8);
+    expect(conservative!.annualCashflow).toBeCloseTo(-9593.51294347732, 7);
+    expect(base!.annualCashflow).toBeCloseTo(-3733.65877689723, 7);
+    expect(optimistic!.annualCashflow).toBeCloseTo(2064.66527002944, 7);
+    expect(conservative!.monthlyCashflow).toBeCloseTo(-799.459411956443, 8);
+    expect(base!.monthlyCashflow).toBeCloseTo(-311.138231408102, 8);
+    expect(optimistic!.monthlyCashflow).toBeCloseTo(172.05543916912, 8);
   });
 
   it("min monthly cashflow check: No / No / No (L106-P106)", () => {
@@ -94,9 +102,9 @@ describe("reference case Avenida Primado Reig 19 (Excel parity)", () => {
   });
 
   it("DSCR matches the corrected formula NOI / annuity (L108-P108)", () => {
-    expect(conservative!.dscr).toBeCloseTo(0.622432452680268, 10);
-    expect(base!.dscr).toBeCloseTo(0.872745124611125, 10);
-    expect(optimistic!.dscr).toBeCloseTo(1.13540753706686, 10);
+    expect(conservative!.dscr).toBeCloseTo(0.5833445954702777, 10);
+    expect(base!.dscr).toBeCloseTo(0.8323276301747033, 10);
+    expect(optimistic!.dscr).toBeCloseTo(1.0943011144996524, 10);
   });
 
   it("DSCR verdict: NO / NO / Yes (L110-P110)", () => {
@@ -111,11 +119,12 @@ describe("reference case Avenida Primado Reig 19 (Excel parity)", () => {
     expect(result.acquisition.renovationWithinBudget).toBe(true);
   });
 
-  it("fixed operating costs match (D159-D167)", () => {
+  it("fixed operating costs match (D159-D167), plus gastos de comunidad (§15, no Excel line)", () => {
     expect(result.fixedOperatingCosts.propertyTaxIBI).toBeCloseTo(1320, 9);
     expect(result.fixedOperatingCosts.insurance).toBe(1030);
+    expect(result.fixedOperatingCosts.communityFees).toBe(900);
     expect(result.fixedOperatingCosts.mortgageInterest).toBeCloseTo(10395, 9);
-    expect(result.fixedOperatingCosts.total).toBeCloseTo(12845, 9);
+    expect(result.fixedOperatingCosts.total).toBeCloseTo(13745, 9);
   });
 
   it("selected financing matches (D119-D124, D149)", () => {
@@ -126,15 +135,15 @@ describe("reference case Avenida Primado Reig 19 (Excel parity)", () => {
     expect(result.selectedFinancing.mortgageAmount).toBe(247500);
   });
 
-  it("tax calculator matches Reference Info (M63/N63/O63, I47-I54)", () => {
+  it("tax calculator matches Reference Info (M63/N63/O63, I47-I54), deductibleCosts +900 for gastos de comunidad", () => {
     const [cons, b, opt] = result.tax.scenarios;
-    expect(cons!.deductibleCosts).toBeCloseTo(24637.292732, 6);
-    expect(b!.deductibleCosts).toBeCloseTo(24462.2936, 6);
+    expect(cons!.deductibleCosts).toBeCloseTo(25537.292732, 6);
+    expect(b!.deductibleCosts).toBeCloseTo(25362.2936, 6);
     // Optimistic interest-only dropped to 9776.25 with the signed delta (v3).
-    expect(opt!.deductibleCosts).toBeCloseTo(24850.742078, 6);
+    expect(opt!.deductibleCosts).toBeCloseTo(25750.742078, 6);
     expect(result.tax.grossRentalIncomeBase).toBeCloseTo(28440.72, 8);
-    expect(result.tax.taxableIncomeBase).toBeCloseTo(3978.4264, 6);
-    expect(result.tax.taxDueBase).toBeCloseTo(755.901016, 6);
+    expect(result.tax.taxableIncomeBase).toBeCloseTo(3078.4264, 6);
+    expect(result.tax.taxDueBase).toBeCloseTo(584.901016, 6);
   });
 
   it("non-EU rate is 24% (I51/I54)", () => {
@@ -143,6 +152,6 @@ describe("reference case Avenida Primado Reig 19 (Excel parity)", () => {
       selections: { ...referenceCase.selections, euResident: false },
     });
     expect(nonEu.tax.taxRate).toBe(0.24);
-    expect(nonEu.tax.taxDueBase).toBeCloseTo(954.822336, 6);
+    expect(nonEu.tax.taxDueBase).toBeCloseTo(738.822336, 6);
   });
 });

@@ -58,16 +58,29 @@ describe("operating cost blocks", () => {
     expect(utilitiesBaseAnnual(133)).toBeCloseTo(2859.5, 9);
   });
 
-  it("computes fixed operating costs (D159-D167)", () => {
+  it("computes fixed operating costs, Excel parity (D159-D167): communityFeesAnnual 0, since the Excel has no such line", () => {
     const fixed = fixedOperatingCosts({
       purchasePrice: 330000,
       mortgageAmount: 247500,
       effectiveInterestRate: 0.042,
+      communityFeesAnnual: 0,
     });
     expect(fixed.propertyTaxIBI).toBeCloseTo(1320, 9);
     expect(fixed.insurance).toBe(1030);
     expect(fixed.bankAccountFee).toBe(100);
+    expect(fixed.communityFees).toBe(0);
     expect(fixed.mortgageInterest).toBeCloseTo(10395, 9);
     expect(fixed.total).toBeCloseTo(12845, 9);
+  });
+
+  it("adds gastos de comunidad on top of the Excel-parity total, unindexed (MODEL_SPEC.md §15 - new fixed cost, no Excel counterpart)", () => {
+    const fixed = fixedOperatingCosts({
+      purchasePrice: 330000,
+      mortgageAmount: 247500,
+      effectiveInterestRate: 0.042,
+      communityFeesAnnual: 900,
+    });
+    expect(fixed.communityFees).toBe(900);
+    expect(fixed.total).toBeCloseTo(12845 + 900, 9);
   });
 });

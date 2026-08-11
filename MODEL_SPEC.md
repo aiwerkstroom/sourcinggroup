@@ -14,7 +14,8 @@ Changelog van v2 al zijn genomen, staan als **[BESLIST]** met de gekozen optie.
 **Pand** (`Property Input`): naam, regio, wijk, adres, type, marktsegment,
 huurtype, woonoppervlak (m²), aantal kamers/slaapkamers/badkamers, huidige
 huurstatus, bouwjaar, energielabel, aankoopprijs, eigen inbreng, hypotheek,
-renovatiebudget.
+renovatiebudget, **gastos de comunidad €/jaar (verplicht, geen default —
+§15)**.
 
 **Uitgangspunten belegger** (`Costs & Income` B4–D26): totaal
 investeringsbudget, max renovatiebudget, gewenste LTV, min LTV, max LTV,
@@ -99,7 +100,8 @@ gecorrigeerd — notaris 0,15%→0,50%, kadaster 0,20%→0,30%, juridisch advies
 
 Vast: IBI 0,4% van aankoopprijs · verzekeringen (opstal 300 + inboedel 180 +
 verhuurdersdekking 250 + overlijdensrisico 300 = € 1.030/jaar) · bankkosten
-€ 100 · hypotheekrente = hypotheek × (geselecteerde rente + opslag).
+€ 100 · **gastos de comunidad (verplichte invoer per pand, geen default —
+§15)** · hypotheekrente = hypotheek × (geselecteerde rente + opslag).
 
 Inkomensafhankelijk: property management (8% bruto huur) · onderhoud (5% bruto
 huur × onderhoudsfactor renovatie × onderhoudsinflatie scenario) ·
@@ -191,33 +193,39 @@ D165.
 Avenida Primado Reig 19, Valencia · appartement, 5 studio's · 133 m² ·
 7 kamers, 5 slaapkamers, 5 badkamers · bouwjaar 1972 · label B ·
 studentenhuisvesting · langetermijn verhuurd · aankoopprijs € 330.000 · eigen
-geld € 115.000 · hypotheek € 215.000 · renovatie € 55.000.
+geld € 115.000 · hypotheek € 215.000 · renovatie € 55.000 · gastos de
+comunidad € 900/jaar (§15 — testfixture, niet gesourced voor dit specifieke
+pand).
 
 Uitgangspunten: budget € 450.000 · max renovatie € 60.000 · LTV 0,60–0,75 ·
 risicotolerantie midden · dealtype licht · strategie hybride · min ROI 4% ·
 min maandcashflow € 500 · max maandlast € 1.000. Selecties: huur 17/36 €/m² ·
 financiering strategie C · niet-ingezetene, EU/EER.
 
-Verwachte uitkomsten (gecorrigeerde Excel v3, vastgelegd in
-`lib/rules/es/__tests__/engine.test.ts`):
+Verwachte uitkomsten (gecorrigeerde Excel v3 **+ € 900/jaar gastos de
+comunidad**, vastgelegd in `lib/rules/es/__tests__/engine.test.ts`; de pure
+Excel-pariteit zonder deze post staat apart vast in
+`acquisition.test.ts`, `communityFeesAnnual: 0`):
 
 | Grootheid | Conservatief | Basis | Optimistisch |
 |---|---|---|---|
 | Bruto inkomen | 23.036,98 | 28.440,72 | 34.413,27 |
-| Vaste lasten | 2.450 | 2.450 | 2.450 |
-| NOI | 14.331,54 | 19.433,93 | 24.859,05 |
+| Vaste lasten | 3.350 | 3.350 | 3.350 |
+| NOI | 13.431,54 | 18.533,93 | 23.959,05 |
 | Rente | 4,70% | 4,20% | 3,95% |
 | Annuïteit | 23.025,05 | 22.267,59 | 21.894,39 |
-| Jaarcashflow | −8.693,51 | −2.833,66 | 2.964,67 |
-| Maandcashflow | −724,46 | −236,14 | 247,06 |
-| DSCR | 0,6224 | 0,8727 | 1,1354 |
+| Jaarcashflow | −9.593,51 | −3.733,66 | 2.064,67 |
+| Maandcashflow | −799,46 | −311,14 | 172,06 |
+| DSCR | 0,5833 | 0,8323 | 1,0943 |
 | DSCR-toets | NO | NO | Yes |
 
 Aankoop: totaal € 445.490 · hypotheek € 247.500 · equity € 197.990 · binnen
-budget: ja · renovatie binnen budget: ja. Vaste exploitatie (incl.
-hypotheekrente): € 12.845. Belasting (basis, EU/EER): aftrekbaar € 24.462,29 ·
-belastbaar € 3.978,43 · verschuldigd € 755,90; aftrekbaar optimistisch
-€ 24.850,74 (rente aflossingsvrij 9.776,25 bij 3,95%).
+budget: ja · renovatie binnen budget: ja (gastos de comunidad zit niet in de
+aankoopkosten, alleen in de exploitatie). Vaste exploitatie (incl.
+hypotheekrente en gastos de comunidad): € 13.745. Belasting (basis, EU/EER):
+aftrekbaar € 25.362,29 · belastbaar € 3.078,43 · verschuldigd € 584,90;
+aftrekbaar optimistisch € 25.750,74 (rente aflossingsvrij 9.776,25 bij
+3,95%).
 
 ## 12. Fase 1b — meerjarige projectie, exit en IRR
 
@@ -250,14 +258,18 @@ plaats van CPI.
 rente(jaar)      = uit het aflossingsschema (annuïteit gesplitst per jaar,
                     niet de vlakke aflossingsvrije schatting van fase 1)
 NOI(jaar)         = bruto huur(jaar) − (management + onderhoud + nutskosten
-                    + IBI + verzekeringen + bankkosten)(jaar)
+                    + IBI + verzekeringen + bankkosten + gastos de
+                    comunidad)(jaar)
 cashflow voor belasting(jaar) = NOI(jaar) − rente(jaar) − aflossing(jaar)
 belastbaar(jaar)  = bruto huur(jaar) − aftrekbare kosten(jaar)
                     (rente + IBI + verzekeringen + onderhoud + management +
-                    afschrijving + bankkosten, allemaal van dat jaar)
+                    afschrijving + bankkosten + gastos de comunidad,
+                    allemaal van dat jaar)
 belasting(jaar)   = MAX(0, belastbaar(jaar)) × belastingtarief
 cashflow na belasting(jaar) = cashflow voor belasting(jaar) − belasting(jaar)
 ```
+Gastos de comunidad (§15) volgt dezelfde CPI-indexatie als IBI/verzekeringen/
+bankkosten — het is een vaste last, geen inkomensafhankelijke post.
 Property management schaalt mee met de geïndexeerde huur (is per definitie
 een percentage van de huur van dat jaar, geen aparte CPI nodig). Afschrijving
 blijft vlak: gekoppeld aan de historische aanschafwaarde, niet geïndexeerd.
@@ -290,7 +302,7 @@ fase-1-Excel-pariteit blijft ongewijzigd. In de meerjarige projectie telt
 jaar 1 wél naar rato minder huurmaanden: bij strategie licht (2 maanden)
 dus 10 van de 12 maanden. Alleen de huur en de daaraan gekoppelde property
 management fee (percentage van de huur) schalen mee; onderhoud,
-nutskosten, IBI, verzekeringen, bankkosten en de volledige annuïteit lopen
+nutskosten, IBI, verzekeringen, bankkosten, gastos de comunidad en de volledige annuïteit lopen
 gewoon voor het hele jaar door — het pand kost evenveel om aan te houden
 tijdens de renovatie, het levert alleen nog geen (volledige) huur op.
 Vanaf jaar 2 is de aanloopperiode voorbij en telt het volledige jaar.
@@ -394,9 +406,10 @@ NPV op nul brengt, ongeacht het teken.
 **Referentiecasus — alle drie scenario's hebben een gedefinieerde,
 positieve IRR.** De ongedisconteerde som van jaar 1–10 (incl.
 verkoopopbrengst) overtreft in alle drie scenario's de inleg van
-€ 197.990, ook in het conservatieve scenario (€ 262.973,93 tegenover
-€ 197.990 inleg). IRR: conservatief 2,49% · basis 5,84% · optimistisch
-8,93%. Dit wijkt af van de eerdere verwachting dat het conservatieve
+€ 197.990, ook in het conservatieve scenario (€ 254.799,97 tegenover
+€ 197.990 inleg — lager dan vóór §15's gastos de comunidad, die elk jaar
+cashflow wegneemt). IRR: conservatief 2,18% · basis 5,54% · optimistisch
+8,64%. Dit wijkt af van de eerdere verwachting dat het conservatieve
 scenario geen oplossing zou hebben; die verwachting is met deze
 doorrekening niet bevestigd — de cashflow is negatief en de DSCR onder 1
 in de vroege jaren, maar het rendement zit in de aflossing en de
@@ -436,13 +449,13 @@ scenario af). `null` (niet `false`) wanneer `ownMoney` niet is opgegeven.
 geen eis heeft opgegeven — een 0%-drempel is de zwakst mogelijke grens (elke
 niet-negatieve IRR haalt hem) en kan dus nooit een slag die een echte eis
 niet zou halen, ten onrechte laten slagen. In de referentiecasus (eis 4%)
-haalt alleen het conservatieve scenario (2,49%) de eis niet; basis (5,84%)
-en optimistisch (8,93%) wel. `null` wanneer de IRR zelf niet gedefinieerd
+haalt alleen het conservatieve scenario (2,18%) de eis niet; basis (5,54%)
+en optimistisch (8,64%) wel. `null` wanneer de IRR zelf niet gedefinieerd
 is.
 
 **Terugverdientijd is `null` in alle drie scenario's van de
 referentiecasus** — ook optimistisch (cumulatieve operationele cashflow na
-10 jaar: € 40.419,61, nog altijd ver onder de inleg van € 197.990). Deze
+10 jaar: € 32.416,65, nog altijd ver onder de inleg van € 197.990). Deze
 deal verdient zichzelf uitsluitend terug via de verkoop, nooit via tien
 jaar huur alleen — precies het patroon dat aanleiding gaf tot de
 IRR-correctie hierboven, nu als apart, herleidbaar getal in plaats van als
@@ -635,3 +648,56 @@ nooit SOURCED/ESTIMATE; dat een langetermijn-only uitkomst wél de
 langetermijn- maar niet de kortetermijn-bezettingsgraad meedraagt; en dat
 een expliciet meegegeven `buildingShareOfValue`/`renovationImprovementShare`
 de bijbehorende default uit de lijst laat verdwijnen.
+
+## 15. Gastos de comunidad — verplichte invoer, geen default
+
+**Nieuwe vaste last, naast IBI, verzekeringen en bankkosten.** Elk gebouw
+met gemeenschappelijke ruimtes (trappenhuis, lift, tuin, zwembad, portiek)
+kent een maandelijkse of jaarlijkse bijdrage aan de vereniging van eigenaars
+(comunidad de propietarios). Deze post ontbrak volledig in
+`TSG_Model_v3.xlsx` en in fase 1/1b tot dit onderdeel.
+
+**Geen default — verplichte invoer per pand.** In tegenstelling tot IBI
+(een vast percentage van de aankoopprijs) of de verzekeringen (een vaste,
+gebronde jaarsom) is gastos de comunidad niet als percentage of vast bedrag
+te benaderen: het verschilt te sterk per gebouw — grootte van de
+vereniging, aanwezigheid van lift/zwembad/conciërge, staat van onderhoud
+van de gemeenschappelijke delen. Een generieke schatting zou hier meer
+schade doen dan een lege invoer: `PropertyInput.communityFeesAnnual` is
+daarom een **verplicht** veld zonder fallback in `parameters.ts` —
+`validateEngineInput()` wijst een ontbrekende of negatieve waarde af
+(`communityFeesAnnual must be zero or positive`); 0 is een geldige waarde
+voor een gebouw zonder vereniging.
+
+**Waar het meetelt.** Dezelfde behandeling als IBI/verzekeringen/
+bankkosten, overal waar die voorkomen:
+- `FixedOperatingCosts.communityFees` (`operating.ts`) — telt mee in
+  `FixedOperatingCosts.total` en, via `engine.ts`, in elk scenario's
+  `fixedCosts`/NOI/opex/cashflow/DSCR (fase 1, `scenarios.ts`).
+- `TaxResult`/`ProjectionYear.deductibleCosts` (`tax.ts`, `projection.ts`)
+  — een aftrekbare kostenpost bij het bepalen van de IRNR-huurbelasting,
+  dezelfde categorie als IBI/verzekeringen/onderhoud/management.
+- `ProjectionYear.communityFees` (`projection.ts`) — volgt de CPI-indexatie
+  van §3, net als de overige vaste lasten (géén marktwaarde-koppeling zoals
+  bij een huurgroei-gekoppelde post).
+- Blijft buiten `AcquisitionCosts` (geen aankoopkosten) en buiten
+  `ExitResult` (geen invloed op de aanschafwaarde of de vermogenswinst).
+
+**Referentiecasus.** `€ 900/jaar` is een **testfixture**, niet gesourced
+voor Avenida Primado Reig 19 — er bestaat geen brongegeven voor deze
+specifieke vereniging van eigenaars. Gekozen als rond getal om de formule
+te toetsen, net als `ExitAssumptions.sellingCommissionRate`/
+`.municipalCapitalGainsTax` in §12. `acquisition.test.ts` houdt daarnaast
+een expliciete `communityFeesAnnual: 0`-golden test aan om de pure
+Excel-pariteitscijfers (§11's onderliggende Excel-waarden, zonder deze
+post) apart herleidbaar te houden.
+
+Golden tests bijgewerkt via onafhankelijke Python-doorrekening (dezelfde
+methode als fase 1b): `operating.ts`/`engine.ts`/`tax.ts`
+(`acquisition.test.ts`, `engine.test.ts`), `projection.ts`
+(`projection.test.ts`, incl. een eigen CPI-indexatietoets voor
+`communityFees`), en de stroomafwaartse `irr.test.ts`/`outcome.test.ts` —
+`exit.test.ts` blijft **ongewijzigd**: `computeExit()` gebruikt nergens
+cashflow of vaste lasten, alleen verkoopprijs, cumulatieve afschrijving
+(onaangetast) en restschuld (onaangetast), dus gastos de comunidad raakt
+de exit-berekening niet.

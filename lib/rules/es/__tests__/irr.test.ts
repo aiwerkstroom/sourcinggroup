@@ -126,11 +126,14 @@ describe("buildEquityCashflows()", () => {
  * - no Excel counterpart exists for phase 1b), replicating the full
  * engine + projection + exit chain from first principles. Ten-year
  * holding period, all three scenarios of the reference case Avenida
- * Primado Reig 19.
+ * Primado Reig 19. Recomputed for MODEL_SPEC.md §15's gastos de comunidad
+ * (€ 900/yr fixture, CPI-indexed): every year's cashflowAfterTax is lower
+ * than before that addition, so the IRR is lower too, though still
+ * defined and positive in all three scenarios.
  *
  * All three scenarios turn out to have a DEFINED, positive IRR - including
  * conservative, whose nominal total return (undiscounted sum of all
- * cashflows incl. the exit) is +64,983.93 on a 197,990 investment. That
+ * cashflows incl. the exit) is +56,809.97 on a 197,990 investment. That
  * total is verified against the same per-year figures already locked down
  * as golden values in projection.test.ts and exit.test.ts.
  */
@@ -170,9 +173,9 @@ describe("scenario IRR (reference case, 10-year holding period)", () => {
   }
 
   const golden: Record<ScenarioId, number> = {
-    conservative: 0.024907993808813374,
-    base: 0.05841291426924096,
-    optimistic: 0.0892820595986141,
+    conservative: 0.02175059635133949,
+    base: 0.055436784474295564,
+    optimistic: 0.08640301656996599,
   };
 
   (Object.keys(golden) as ScenarioId[]).forEach((scenario) => {
@@ -185,9 +188,9 @@ describe("scenario IRR (reference case, 10-year holding period)", () => {
     });
   });
 
-  it("conservative has a defined IRR (~2.49%), not 'no solution'", () => {
+  it("conservative has a defined IRR (~2.18%), not 'no solution'", () => {
     // Sum of all 10 years' after-tax cashflow + net sale proceeds
-    // (262973.93) exceeds the equity invested (197990), so the investment
+    // (254799.97) exceeds the equity invested (197990), so the investment
     // nominally breaks even and a positive IRR exists - unlike a scenario
     // that never recoups its cost.
     const result = irrFor("conservative");

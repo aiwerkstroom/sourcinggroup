@@ -28,13 +28,18 @@ export function depreciationBase(purchasePrice: number): number {
 export function taxCalculator(args: {
   purchasePrice: number;
   scenarios: ScenarioResult[];
-  fixedCosts: Pick<FixedOperatingCosts, "propertyTaxIBI" | "insurance" | "bankAccountFee">;
+  fixedCosts: Pick<
+    FixedOperatingCosts,
+    "propertyTaxIBI" | "insurance" | "bankAccountFee" | "communityFees"
+  >;
   euResident: boolean;
 }): TaxResult {
   const base = depreciationBase(args.purchasePrice);
   const taxScenarios: TaxScenario[] = args.scenarios.map((sc) => {
     const depreciation = base * DEPRECIATION_SCENARIO_FACTORS[sc.id].value;
-    // Reference Info M63/N63/O63
+    // Reference Info M63/N63/O63, plus gastos de comunidad (not in the
+    // Excel; a deductible cost of obtaining the rental income, the same
+    // category as IBI/insurance/maintenance under IRNR rules).
     const deductibleCosts =
       sc.annualInterestOnly +
       args.fixedCosts.propertyTaxIBI +
@@ -42,7 +47,8 @@ export function taxCalculator(args: {
       sc.maintenance +
       sc.propertyManagement +
       depreciation +
-      args.fixedCosts.bankAccountFee;
+      args.fixedCosts.bankAccountFee +
+      args.fixedCosts.communityFees;
     return { id: sc.id, depreciation, deductibleCosts };
   });
 

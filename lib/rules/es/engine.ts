@@ -49,6 +49,7 @@ export function runEngine(input: EngineInput): EngineResult {
     mortgageAmount: selectedFinancing.mortgageAmount,
     effectiveInterestRate:
       selectedFinancing.interestRate + selectedFinancing.nonResidentSpread,
+    communityFeesAnnual: property.communityFeesAnnual,
   });
 
   const utilitiesBase = utilitiesBaseAnnual(property.livingAreaM2);
@@ -57,7 +58,10 @@ export function runEngine(input: EngineInput): EngineResult {
     grossAnnualIncome: income.selectedGrossAnnualIncome,
     utilitiesBaseAnnual: utilitiesBase,
     fixedAnnualCosts:
-      fixedCosts.propertyTaxIBI + fixedCosts.insurance + fixedCosts.bankAccountFee,
+      fixedCosts.propertyTaxIBI +
+      fixedCosts.insurance +
+      fixedCosts.bankAccountFee +
+      fixedCosts.communityFees,
     renovation: selectedRenovation,
     financing: selectedFinancing,
     constraints,

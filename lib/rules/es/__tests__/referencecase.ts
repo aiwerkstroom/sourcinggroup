@@ -21,6 +21,11 @@ export const referenceCase: EngineInput = {
     energyLabel: "B",
     purchasePrice: 330_000,
     ownMoney: 115_000,
+    // TEST FIXTURE - not sourced for this specific building. Gastos de
+    // comunidad has no default anywhere in the engine (MODEL_SPEC.md §15);
+    // this figure exercises the formula only, chosen for round-number
+    // clarity in the golden tests, not a claim about the real building.
+    communityFeesAnnual: 900,
   },
   constraints: {
     totalBudget: 450_000,
