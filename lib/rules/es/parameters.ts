@@ -18,6 +18,7 @@
  * and must not be changed here without sign-off by Samuel.
  */
 
+import { deriveParameter } from "./types";
 import type {
   EstimateParameter,
   FinancingStrategyId,
@@ -110,26 +111,28 @@ export const NEIGHBORHOOD_RENT_SHORT_TERM: SourcedParameter<Readonly<Record<stri
 };
 
 /**
- * Base occupancy, long-term. Matrices!B16 via Costs & Income!L14 - the
- * Excel's own baseline assumption; no external vacancy-rate citation is
- * tied directly to this figure (the workbook's own macro vacancy-rate
- * series, Correction Factors, is not wired into it).
+ * Base occupancy, long-term. Matrices!B16 via Costs & Income!L14 - a claim
+ * about the real market (how occupied a long-term rental actually runs),
+ * not a model definition, so it takes the reality-claim test: SOURCED or
+ * PLACEHOLDER only. No external vacancy-rate citation is tied to this
+ * figure (the workbook's own macro vacancy-rate series, Correction
+ * Factors, is not wired into it) - PLACEHOLDER.
  */
-export const BASE_OCCUPANCY_LONG_TERM: EstimateParameter<number> = {
+export const BASE_OCCUPANCY_LONG_TERM: PlaceholderParameter<number> = {
   name: "BASE_OCCUPANCY_LONG_TERM",
   value: 0.9,
-  provenance: "ESTIMATE",
+  provenance: "PLACEHOLDER",
   reasoning:
-    "Excel's own long-term occupancy baseline (Matrices!B16), TSG_Model_v3.xlsx (2026-08). A deliberate modeling convention, not tied to an external vacancy-rate citation.",
+    "Excel's own long-term occupancy baseline (Matrices!B16), TSG_Model_v3.xlsx (2026-08). A real-world market claim (achievable occupancy), not a model definition, with no external vacancy-rate citation tied to this figure.",
 };
 
-/** Base occupancy, short-term. Matrices!B29 via Costs & Income!N14 - same status as BASE_OCCUPANCY_LONG_TERM. */
-export const BASE_OCCUPANCY_SHORT_TERM: EstimateParameter<number> = {
+/** Base occupancy, short-term. Matrices!B29 via Costs & Income!N14 - same reality-claim status as BASE_OCCUPANCY_LONG_TERM. */
+export const BASE_OCCUPANCY_SHORT_TERM: PlaceholderParameter<number> = {
   name: "BASE_OCCUPANCY_SHORT_TERM",
   value: 0.6,
-  provenance: "ESTIMATE",
+  provenance: "PLACEHOLDER",
   reasoning:
-    "Excel's own short-term occupancy baseline (Matrices!B29), TSG_Model_v3.xlsx (2026-08). A deliberate modeling convention, not tied to an external vacancy-rate citation.",
+    "Excel's own short-term occupancy baseline (Matrices!B29), TSG_Model_v3.xlsx (2026-08). A real-world market claim (achievable occupancy), not a model definition, with no external vacancy-rate citation tied to this figure.",
 };
 
 /** Hybrid allocation: how the model defines "hybrid" as a 60/40 LT/ST blend. Costs & Income!L26/L28. */
@@ -168,18 +171,20 @@ export const INSURANCE_COSTS_ANNUAL: SourcedParameter<{
   date: "2024-2025",
 };
 
-/** Sum of INSURANCE_COSTS_ANNUAL's components. Same provenance as its inputs, since it is a pure sum. */
-export const TOTAL_INSURANCE_ANNUAL: SourcedParameter<number> = {
-  name: "TOTAL_INSURANCE_ANNUAL",
-  value:
-    INSURANCE_COSTS_ANNUAL.value.home +
+/**
+ * Sum of INSURANCE_COSTS_ANNUAL's components. Provenance is derived, not
+ * hand-typed: deriveParameter() takes the weakest label among its
+ * components (here just INSURANCE_COSTS_ANNUAL, SOURCED), so this total
+ * cannot silently stay SOURCED if that component is ever downgraded.
+ */
+export const TOTAL_INSURANCE_ANNUAL: Parameter<number> = deriveParameter(
+  "TOTAL_INSURANCE_ANNUAL",
+  INSURANCE_COSTS_ANNUAL.value.home +
     INSURANCE_COSTS_ANNUAL.value.contents +
     INSURANCE_COSTS_ANNUAL.value.landlord +
     INSURANCE_COSTS_ANNUAL.value.life,
-  provenance: "SOURCED",
-  source: INSURANCE_COSTS_ANNUAL.source,
-  date: INSURANCE_COSTS_ANNUAL.date,
-};
+  [INSURANCE_COSTS_ANNUAL],
+);
 
 /** Property management fee, share of gross rent. Costs & Income!F42; corrected 5%->8% per Changelog (2026-08). */
 export const PROPERTY_MANAGEMENT_FEE: SourcedParameter<number> = {
@@ -221,17 +226,17 @@ export const UTILITIES_PER_M2_ANNUAL: SourcedParameter<{
   date: "2024-2025",
 };
 
-/** Sum of UTILITIES_PER_M2_ANNUAL's components. Same provenance as its inputs, since it is a pure sum. */
-export const TOTAL_UTILITIES_PER_M2_ANNUAL: SourcedParameter<number> = {
-  name: "TOTAL_UTILITIES_PER_M2_ANNUAL",
-  value:
-    UTILITIES_PER_M2_ANNUAL.value.gas +
+/**
+ * Sum of UTILITIES_PER_M2_ANNUAL's components. Provenance is derived, not
+ * hand-typed - see the comment on TOTAL_INSURANCE_ANNUAL above.
+ */
+export const TOTAL_UTILITIES_PER_M2_ANNUAL: Parameter<number> = deriveParameter(
+  "TOTAL_UTILITIES_PER_M2_ANNUAL",
+  UTILITIES_PER_M2_ANNUAL.value.gas +
     UTILITIES_PER_M2_ANNUAL.value.water +
     UTILITIES_PER_M2_ANNUAL.value.electricity,
-  provenance: "SOURCED",
-  source: UTILITIES_PER_M2_ANNUAL.source,
-  date: UTILITIES_PER_M2_ANNUAL.date,
-};
+  [UTILITIES_PER_M2_ANNUAL],
+);
 
 /** Bank fee, € one-time / annual account fee. Costs & Income!D64 - no external citation; real bank fees vary by institution. */
 export const BANK_FEE: PlaceholderParameter<number> = {
@@ -290,18 +295,26 @@ interface RenovationStrategyParameters {
   label: string;
   /** [BESLISSING] absolute per strategy; MODEL_SPEC.md flags this as needing to become a function of area/construction year/energy label. */
   capex: PlaceholderParameter<number>;
-  rentMultiplier: EstimateParameter<number>;
-  maintenanceFactor: EstimateParameter<number>;
-  utilitiesEfficiency: EstimateParameter<number>;
-  timeToRentMonths: EstimateParameter<number>;
+  /** Claims a real-world consequence of the renovation (effect on achievable rent), not a tier definition - reality-claim test applies. */
+  rentMultiplier: PlaceholderParameter<number>;
+  /** Claims a real-world consequence (effect on maintenance cost) - reality-claim test applies. */
+  maintenanceFactor: PlaceholderParameter<number>;
+  /** Claims a real-world consequence (effect on utility costs) - reality-claim test applies. */
+  utilitiesEfficiency: PlaceholderParameter<number>;
+  /** Claims a real-world consequence (how long the renovation actually takes) - reality-claim test applies. */
+  timeToRentMonths: PlaceholderParameter<number>;
 }
 
 /**
  * Renovation strategies. Costs & Income!D68:H84, TSG_Model_v3.xlsx
- * (2026-08). CapEx is an absolute euro figure per strategy with no
- * external cost-estimation source (PLACEHOLDER, [BESLISSING] in
- * MODEL_SPEC.md); the multipliers define what "minimal/light/heavy" mean
- * in this model (ESTIMATE, not external facts).
+ * (2026-08).
+ *
+ * Herclassificatie (reality-vs-model test): CapEx and the four
+ * multipliers all claim a real-world consequence of doing this
+ * renovation (cost, rent effect, maintenance effect, utilities effect,
+ * lease-up time) - none of them define what "minimal/light/heavy" MEANS
+ * as a product tier the way e.g. a financing tier's LTV does. All five
+ * are PLACEHOLDER: no external source backs any of them.
  */
 export const RENOVATION_STRATEGIES: Readonly<
   Record<RenovationStrategyId, RenovationStrategyParameters>
@@ -318,26 +331,26 @@ export const RENOVATION_STRATEGIES: Readonly<
     rentMultiplier: {
       name: "RENOVATION_STRATEGIES.minimal.rentMultiplier",
       value: 0.95,
-      provenance: "ESTIMATE",
-      reasoning: "Costs & Income!D79. Defines the 'minimal' renovation tier's rent effect in this model.",
+      provenance: "PLACEHOLDER",
+      reasoning: "Costs & Income!D79, TSG_Model_v3.xlsx (2026-08). Claims a real-world rent effect of minimal renovation; no external source cited.",
     },
     maintenanceFactor: {
       name: "RENOVATION_STRATEGIES.minimal.maintenanceFactor",
       value: 1.2,
-      provenance: "ESTIMATE",
-      reasoning: "Costs & Income!D82. Defines the 'minimal' renovation tier's maintenance effect in this model.",
+      provenance: "PLACEHOLDER",
+      reasoning: "Costs & Income!D82, TSG_Model_v3.xlsx (2026-08). Claims a real-world maintenance-cost effect of minimal renovation; no external source cited.",
     },
     utilitiesEfficiency: {
       name: "RENOVATION_STRATEGIES.minimal.utilitiesEfficiency",
       value: 1.05,
-      provenance: "ESTIMATE",
-      reasoning: "Costs & Income!D84. Defines the 'minimal' renovation tier's utilities effect in this model.",
+      provenance: "PLACEHOLDER",
+      reasoning: "Costs & Income!D84, TSG_Model_v3.xlsx (2026-08). Claims a real-world utilities-cost effect of minimal renovation; no external source cited.",
     },
     timeToRentMonths: {
       name: "RENOVATION_STRATEGIES.minimal.timeToRentMonths",
       value: 1,
-      provenance: "ESTIMATE",
-      reasoning: "Costs & Income!D76. Defines the 'minimal' renovation tier's lease-up period in this model.",
+      provenance: "PLACEHOLDER",
+      reasoning: "Costs & Income!D76, TSG_Model_v3.xlsx (2026-08). Claims a real-world lease-up duration for minimal renovation; no external source cited.",
     },
   },
   light: {
@@ -352,26 +365,26 @@ export const RENOVATION_STRATEGIES: Readonly<
     rentMultiplier: {
       name: "RENOVATION_STRATEGIES.light.rentMultiplier",
       value: 1.0,
-      provenance: "ESTIMATE",
-      reasoning: "Costs & Income!F79. Defines the 'light' renovation tier's rent effect in this model.",
+      provenance: "PLACEHOLDER",
+      reasoning: "Costs & Income!F79, TSG_Model_v3.xlsx (2026-08). Claims a real-world rent effect of light renovation; no external source cited.",
     },
     maintenanceFactor: {
       name: "RENOVATION_STRATEGIES.light.maintenanceFactor",
       value: 1.0,
-      provenance: "ESTIMATE",
-      reasoning: "Costs & Income!F82. Defines the 'light' renovation tier's maintenance effect in this model.",
+      provenance: "PLACEHOLDER",
+      reasoning: "Costs & Income!F82, TSG_Model_v3.xlsx (2026-08). Claims a real-world maintenance-cost effect of light renovation; no external source cited.",
     },
     utilitiesEfficiency: {
       name: "RENOVATION_STRATEGIES.light.utilitiesEfficiency",
       value: 1.0,
-      provenance: "ESTIMATE",
-      reasoning: "Costs & Income!F84. Defines the 'light' renovation tier's utilities effect in this model.",
+      provenance: "PLACEHOLDER",
+      reasoning: "Costs & Income!F84, TSG_Model_v3.xlsx (2026-08). Claims a real-world utilities-cost effect of light renovation; no external source cited.",
     },
     timeToRentMonths: {
       name: "RENOVATION_STRATEGIES.light.timeToRentMonths",
       value: 2,
-      provenance: "ESTIMATE",
-      reasoning: "Costs & Income!F76. Defines the 'light' renovation tier's lease-up period in this model.",
+      provenance: "PLACEHOLDER",
+      reasoning: "Costs & Income!F76, TSG_Model_v3.xlsx (2026-08). Claims a real-world lease-up duration for light renovation; no external source cited.",
     },
   },
   heavy: {
@@ -386,26 +399,26 @@ export const RENOVATION_STRATEGIES: Readonly<
     rentMultiplier: {
       name: "RENOVATION_STRATEGIES.heavy.rentMultiplier",
       value: 1.1,
-      provenance: "ESTIMATE",
-      reasoning: "Costs & Income!H79. Defines the 'heavy' renovation tier's rent effect in this model.",
+      provenance: "PLACEHOLDER",
+      reasoning: "Costs & Income!H79, TSG_Model_v3.xlsx (2026-08). Claims a real-world rent effect of heavy renovation; no external source cited.",
     },
     maintenanceFactor: {
       name: "RENOVATION_STRATEGIES.heavy.maintenanceFactor",
       value: 0.85,
-      provenance: "ESTIMATE",
-      reasoning: "Costs & Income!H82. Defines the 'heavy' renovation tier's maintenance effect in this model.",
+      provenance: "PLACEHOLDER",
+      reasoning: "Costs & Income!H82, TSG_Model_v3.xlsx (2026-08). Claims a real-world maintenance-cost effect of heavy renovation; no external source cited.",
     },
     utilitiesEfficiency: {
       name: "RENOVATION_STRATEGIES.heavy.utilitiesEfficiency",
       value: 0.9,
-      provenance: "ESTIMATE",
-      reasoning: "Costs & Income!H84. Defines the 'heavy' renovation tier's utilities effect in this model.",
+      provenance: "PLACEHOLDER",
+      reasoning: "Costs & Income!H84, TSG_Model_v3.xlsx (2026-08). Claims a real-world utilities-cost effect of heavy renovation; no external source cited.",
     },
     timeToRentMonths: {
       name: "RENOVATION_STRATEGIES.heavy.timeToRentMonths",
       value: 3,
-      provenance: "ESTIMATE",
-      reasoning: "Costs & Income!H76. Defines the 'heavy' renovation tier's lease-up period in this model.",
+      provenance: "PLACEHOLDER",
+      reasoning: "Costs & Income!H76, TSG_Model_v3.xlsx (2026-08). Claims a real-world lease-up duration for heavy renovation; no external source cited.",
     },
   },
 };

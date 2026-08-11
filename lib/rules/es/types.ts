@@ -28,15 +28,27 @@ export type Residency = "resident" | "nonResident";
  * so a computation can inspect which parameters it drew on and whether
  * any of them are still PLACEHOLDER (see outcome.ts, ScenarioOutcome.provenance).
  *
+ * Classification test - applied to all 80 parameters: does the value make
+ * a claim about REALITY, or about the MODEL?
+ *
+ * - A claim about reality (rent prices, costs, premiums, interest rates,
+ *   renovation amounts, areas, growth rates, occupancy) can only ever be
+ *   SOURCED or PLACEHOLDER. ESTIMATE is not permitted there - a
+ *   real-world claim either has a citation or it doesn't; there is no
+ *   defensible middle ground.
+ * - A claim about the model (what a scenario means, an allocation, a
+ *   multiplier that defines a product tier, a threshold) can be ESTIMATE:
+ *   a deliberate, defensible modeling/product convention, not a claim
+ *   about a verifiable external fact.
+ *
  * - SOURCED: a named external source with a date backs this number.
- * - ESTIMATE: no external citation, but the number is a deliberate,
- *   defensible modeling/product convention (e.g. how "conservative" is
- *   defined) rather than a claim about a verifiable external fact.
- * - PLACEHOLDER: presented as if it were a real-world fact (a cost rate,
- *   a market price, a property attribute) but not externally verified;
- *   must be replaced with real, deal-specific or verified data before
- *   production use. Any value where SOURCED vs ESTIMATE was genuinely in
- *   doubt was assigned PLACEHOLDER, not the more flattering label.
+ * - ESTIMATE: reserved for model-definition choices per the test above
+ *   (e.g. what "conservative" means as a stress-test severity, what
+ *   "hybrid" means as an LT/ST blend, a financing tier's LTV/term).
+ * - PLACEHOLDER: a reality claim with no external verification; must be
+ *   replaced with real, deal-specific or verified data before production
+ *   use. Any value where SOURCED vs ESTIMATE was genuinely in doubt was
+ *   assigned PLACEHOLDER, not the more flattering label.
  */
 export type ParameterProvenance = "SOURCED" | "ESTIMATE" | "PLACEHOLDER";
 
@@ -64,6 +76,55 @@ export interface PlaceholderParameter<T> extends ParameterBase<T> {
 
 /** A single value with its provenance audit trail attached. */
 export type Parameter<T> = SourcedParameter<T> | EstimateParameter<T> | PlaceholderParameter<T>;
+
+/** PLACEHOLDER < ESTIMATE < SOURCED: how certain each provenance label is. */
+const PROVENANCE_RANK: Record<ParameterProvenance, number> = {
+  PLACEHOLDER: 0,
+  ESTIMATE: 1,
+  SOURCED: 2,
+};
+
+/**
+ * The weakest (least certain) of several provenance labels. A derived
+ * value (a sum, a lookup composed from several parameters) is only as
+ * trustworthy as its weakest input - it cannot be SOURCED if any
+ * component it was built from is a PLACEHOLDER.
+ */
+export function weakestProvenance(
+  provenances: readonly [ParameterProvenance, ...ParameterProvenance[]],
+): ParameterProvenance {
+  return provenances.reduce((weakest, p) =>
+    PROVENANCE_RANK[p] < PROVENANCE_RANK[weakest] ? p : weakest,
+  );
+}
+
+/**
+ * Builds a derived Parameter<T> (e.g. a sum of several cost lines) whose
+ * provenance is computed - not hand-typed - as the weakest of its
+ * components. This is what makes the weakest-link rule enforceable: if a
+ * component's own provenance is downgraded later, every value derived
+ * from it downgrades automatically, instead of silently keeping a label
+ * that no longer reflects its inputs.
+ */
+export function deriveParameter<T>(
+  name: string,
+  value: T,
+  components: readonly [Parameter<unknown>, ...Parameter<unknown>[]],
+): Parameter<T> {
+  let weakest = components[0];
+  for (const c of components) {
+    if (PROVENANCE_RANK[c.provenance] < PROVENANCE_RANK[weakest.provenance]) weakest = c;
+  }
+  if (weakest.provenance === "SOURCED") {
+    return { name, value, provenance: "SOURCED", source: weakest.source, date: weakest.date };
+  }
+  return {
+    name,
+    value,
+    provenance: weakest.provenance,
+    reasoning: `Derived value; weakest-link component is ${weakest.name} (${weakest.provenance}): ${weakest.reasoning}`,
+  };
+}
 
 /** "Property Input" sheet. */
 export interface PropertyInput {

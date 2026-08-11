@@ -475,38 +475,90 @@ PLACEHOLDER — gepresenteerd als feit maar niet extern geverifieerd; moet
               geverifieerde data vóór productiegebruik
 ```
 
+**Classificatietoets, toegepast op alle 80 parameters:** doet de waarde
+een uitspraak over de **werkelijkheid** of over het **model**?
+
+- Een uitspraak over de werkelijkheid (huurprijzen, kosten, premies,
+  rentetarieven, renovatiebedragen, oppervlaktes, groeivoeten, bezetting)
+  kan uitsluitend SOURCED of PLACEHOLDER zijn. ESTIMATE is daar niet
+  toegestaan — een feitelijke claim heeft een bron, of hij heeft er geen;
+  daartussen bestaat geen verdedigbaar midden.
+- Een uitspraak over het model (wat een scenario betekent, een verdeling,
+  een multiplier die een producttier definieert, een drempel) mag
+  ESTIMATE zijn: een bewuste, verdedigbare modelkeuze, geen claim over een
+  extern feit.
+
 Bij twijfel tussen ESTIMATE en PLACEHOLDER is PLACEHOLDER gekozen — nooit
-het gunstiger label. Optelling (`ALL_PARAMETERS`, `parameters.test.ts`):
-**25 SOURCED · 41 ESTIMATE · 14 PLACEHOLDER** van de 80 geaudite waarden.
+het gunstiger label. Optelling na de herclassificatie (`ALL_PARAMETERS`,
+`parameters.test.ts`): **25 SOURCED · 27 ESTIMATE · 28 PLACEHOLDER** van
+de 80 geaudite waarden (was 25 · 41 · 14 vóór de werkelijkheid-versus-
+modeltoets).
 
-**PLACEHOLDER** (moeten vóór productiegebruik worden vervangen of
-onderbouwd): `RENT_MATRIX_LONG_TERM_PER_M2`/`_SHORT_TERM_PER_M2` (geen
-externe bron voor deze specifieke prijspunten), `MAINTENANCE_RATE`,
-`BANK_FEE` (Excel-only, geen externe bron), CapEx per renovatiestrategie
-(`RENOVATION_STRATEGIES.{minimal,light,heavy}.capex` — al [BESLISSING] in
-§3), `DEFAULT_RENOVATION_IMPROVEMENT_SHARE`, `DEFAULT_MIN_REQUIRED_RETURN`,
-`DEFAULT_BUILDING_SHARE_OF_VALUE` (alle drie al [BESLISSING] elders in dit
-document), `DEPRECIATION_BUILDING_SHARE` (bestaat uitsluitend voor
-fase-1-Excel-pariteit, geen claim over een echt pand) en
-`DEPRECIATION_SCENARIO_FACTORS` per scenario (uit de Excel gerepliceerd
-zonder toegelichte afleiding — bij twijfel dus PLACEHOLDER, niet ESTIMATE).
+**Herclassificatie — 14 parameters verplaatst van ESTIMATE naar
+PLACEHOLDER**, omdat ze bij toepassing van de toets een feitelijke claim
+bleken te zijn, geen modeldefinitie:
+- `BASE_OCCUPANCY_LONG_TERM`, `BASE_OCCUPANCY_SHORT_TERM` — een claim over
+  daadwerkelijk haalbare bezetting in de markt, geen modelkeuze.
+- `RENOVATION_STRATEGIES.{minimal,light,heavy}.rentMultiplier` (3) — een
+  claim over het effect van renovatie op haalbare huur.
+- `RENOVATION_STRATEGIES.{minimal,light,heavy}.maintenanceFactor` (3) —
+  een claim over het effect op onderhoudskosten.
+- `RENOVATION_STRATEGIES.{minimal,light,heavy}.utilitiesEfficiency` (3) —
+  een claim over het effect op nutskosten.
+- `RENOVATION_STRATEGIES.{minimal,light,heavy}.timeToRentMonths` (3) — een
+  claim over hoe lang de renovatie daadwerkelijk duurt.
 
-**ESTIMATE** (TSG's eigen modelkeuzes, geen externe claim): de
+Onderscheid met wat **wel** ESTIMATE blijft: `FINANCING_STRATEGIES.*.ltv`/
+`.loanTermYears` definiëren waar TSG de grens van "Low/Medium/High
+Leverage" legt (een producttier-definitie, geen marktclaim — de rente zelf
+is wél een marktclaim en blijft SOURCED). `SCENARIOS.*` definieert hoe
+streng elk scenario doorrekent (methodologie: wat "conservatief" als
+stress-test betekent), niet een voorspelling dat de huur exact 10% zal
+dalen. `HYBRID_SHARE_*` en de projectiehorizon
+(`PROJECTION_YEARS`/`PROJECTION_INTERIM_YEAR`) zijn eveneens
+modeldefinities, geen feitelijke claims.
+
+**PLACEHOLDER** (28, moeten vóór productiegebruik worden vervangen of
+onderbouwd): de 14 hierboven, plus `RENT_MATRIX_LONG_TERM_PER_M2`/
+`_SHORT_TERM_PER_M2` (geen externe bron voor deze specifieke prijspunten),
+`MAINTENANCE_RATE`, `BANK_FEE` (Excel-only, geen externe bron), CapEx per
+renovatiestrategie (`RENOVATION_STRATEGIES.{minimal,light,heavy}.capex` —
+al [BESLISSING] in §3), `DEFAULT_RENOVATION_IMPROVEMENT_SHARE`,
+`DEFAULT_MIN_REQUIRED_RETURN`, `DEFAULT_BUILDING_SHARE_OF_VALUE` (alle
+drie al [BESLISSING] elders in dit document), `DEPRECIATION_BUILDING_SHARE`
+(bestaat uitsluitend voor fase-1-Excel-pariteit, geen claim over een echt
+pand) en `DEPRECIATION_SCENARIO_FACTORS` per scenario (uit de Excel
+gerepliceerd zonder toegelichte afleiding — bij twijfel dus PLACEHOLDER,
+niet ESTIMATE).
+
+**ESTIMATE** (27, TSG's eigen modeldefinities, geen externe claim): de
 scenariomultipliers (`SCENARIOS`), de hybride-verdeling
-(`HYBRID_SHARE_LONG_TERM`/`_SHORT_TERM`), de bezettingsbaselines
-(`BASE_OCCUPANCY_LONG_TERM`/`_SHORT_TERM`), de renovatiemultipliers
-(rentMultiplier/maintenanceFactor/utilitiesEfficiency/timeToRentMonths per
-strategie), de financieringstiers (`ltv`/`loanTermYears` per strategie —
-de rente zelf is wel SOURCED), en de projectiehorizon
+(`HYBRID_SHARE_LONG_TERM`/`_SHORT_TERM`), de financieringstiers
+(`ltv`/`loanTermYears` per strategie), en de projectiehorizon
 (`PROJECTION_YEARS`/`PROJECTION_INTERIM_YEAR`, MODEL_SPEC_FASE1B §2's
 eigen aanbeveling).
 
-**SOURCED**: belastingtarieven (IBI, huurinkomsten, vermogenswinst,
+**SOURCED** (25): belastingtarieven (IBI, huurinkomsten, vermogenswinst,
 afschrijving, niet-ingezetenenopslag), aankoopkosten (ITP/AJD/notaris/
 kadaster/courtage), de wijktabellen, verzekeringen, nutskosten,
 financieringsrentes, en de Correction Factors-reeksen (huurgroei, CPI,
 waardegroei) — elk met een genoemde bron en datum, zie de commentaren bij
 elke waarde in `parameters.ts` voor het volledige citaat.
+
+**Afgeleide waarden — zwakste-schakelregel.** Een afgeleide parameter
+(bijv. `TOTAL_INSURANCE_ANNUAL`, de som van vier verzekeringsposten) krijgt
+het zwakste label van zijn onderdelen, nooit stilzwijgend het sterkste.
+`types.ts` exporteert `weakestProvenance()` en `deriveParameter()`;
+`TOTAL_INSURANCE_ANNUAL` en `TOTAL_UTILITIES_PER_M2_ANNUAL` worden hiermee
+**berekend**, niet met een handmatig getypt label — als een onderdeel later
+wordt gedegradeerd (bijv. van SOURCED naar PLACEHOLDER omdat een bron
+onbetrouwbaar blijkt), volgt de afgeleide waarde automatisch mee. Dat
+maakt stilzwijgend verschuiven structureel onmogelijk in plaats van
+afhankelijk van menselijke discipline. `parameters.test.ts` legt dit vast:
+een test met een gesimuleerde degradatie bevestigt dat de afgeleide waarde
+meebeweegt, en twee regressietests bevestigen dat de huidige
+`TOTAL_INSURANCE_ANNUAL`/`TOTAL_UTILITIES_PER_M2_ANNUAL` exact overeenkomen
+met wat `deriveParameter()` uit hun bronparameters zou berekenen.
 
 Bestaande golden tests die op een nu-PLACEHOLDER waarde steunen (bijv. de
 80%-afschrijvingsbasis of de CapEx-bedragen) zijn ongewijzigd gebleven —

@@ -2,16 +2,29 @@ import { describe, expect, it } from "vitest";
 import {
   ALL_PARAMETERS,
   BANK_FEE,
+  BASE_OCCUPANCY_LONG_TERM,
+  BASE_OCCUPANCY_SHORT_TERM,
   DEFAULT_BUILDING_SHARE_OF_VALUE,
   DEFAULT_MIN_REQUIRED_RETURN,
   DEFAULT_RENOVATION_IMPROVEMENT_SHARE,
   DEPRECIATION_BUILDING_SHARE,
   DEPRECIATION_SCENARIO_FACTORS,
+  FINANCING_STRATEGIES,
+  HYBRID_SHARE_LONG_TERM,
+  HYBRID_SHARE_SHORT_TERM,
+  INSURANCE_COSTS_ANNUAL,
   MAINTENANCE_RATE,
+  PROJECTION_INTERIM_YEAR,
+  PROJECTION_YEARS,
   PROPERTY_MANAGEMENT_FEE,
   RENOVATION_STRATEGIES,
   SCENARIOS,
+  TOTAL_INSURANCE_ANNUAL,
+  TOTAL_UTILITIES_PER_M2_ANNUAL,
+  UTILITIES_PER_M2_ANNUAL,
 } from "../parameters";
+import { deriveParameter, weakestProvenance } from "../types";
+import type { Parameter } from "../types";
 
 /**
  * Provenance audit tests. The label lives on each parameter's type (see
@@ -68,6 +81,13 @@ describe("parameter provenance audit", () => {
     expect(placeholders).toContain("RENOVATION_STRATEGIES.light.capex");
   });
 
+  it("distribution after the reality-vs-model reclassification: 25 SOURCED / 27 ESTIMATE / 28 PLACEHOLDER", () => {
+    const counts = { SOURCED: 0, ESTIMATE: 0, PLACEHOLDER: 0 };
+    for (const p of ALL_PARAMETERS) counts[p.provenance]++;
+    expect(counts).toEqual({ SOURCED: 25, ESTIMATE: 27, PLACEHOLDER: 28 });
+    expect(counts.SOURCED + counts.ESTIMATE + counts.PLACEHOLDER).toBe(ALL_PARAMETERS.length);
+  });
+
   it("spot-checks: values already flagged [BESLISSING] in MODEL_SPEC.md are PLACEHOLDER, not ESTIMATE", () => {
     expect(DEFAULT_BUILDING_SHARE_OF_VALUE.provenance).toBe("PLACEHOLDER");
     expect(DEFAULT_RENOVATION_IMPROVEMENT_SHARE.provenance).toBe("PLACEHOLDER");
@@ -97,6 +117,13 @@ describe("parameter provenance audit", () => {
     expect(SCENARIOS.conservative.rentLevelMultiplier.provenance).toBe("ESTIMATE");
     expect(SCENARIOS.base.rentLevelMultiplier.provenance).toBe("ESTIMATE");
     expect(SCENARIOS.optimistic.rentLevelMultiplier.provenance).toBe("ESTIMATE");
+    // Allocations/tier definitions, not claims about the world.
+    expect(HYBRID_SHARE_LONG_TERM.provenance).toBe("ESTIMATE");
+    expect(HYBRID_SHARE_SHORT_TERM.provenance).toBe("ESTIMATE");
+    expect(FINANCING_STRATEGIES.low.ltv.provenance).toBe("ESTIMATE");
+    expect(FINANCING_STRATEGIES.low.loanTermYears.provenance).toBe("ESTIMATE");
+    expect(PROJECTION_YEARS.provenance).toBe("ESTIMATE");
+    expect(PROJECTION_INTERIM_YEAR.provenance).toBe("ESTIMATE");
   });
 
   it("values genuinely in doubt were assigned PLACEHOLDER, not the more flattering ESTIMATE", () => {
@@ -106,5 +133,144 @@ describe("parameter provenance audit", () => {
     for (const factor of Object.values(DEPRECIATION_SCENARIO_FACTORS)) {
       expect(factor.provenance).toBe("PLACEHOLDER");
     }
+  });
+
+  describe("herclassificatie: reality-vs-model test applied to the 41 former ESTIMATEs", () => {
+    it("occupancy baselines make a claim about the real market, not the model: reclassified to PLACEHOLDER", () => {
+      // BASE_OCCUPANCY_LONG_TERM/SHORT_TERM claim an achievable real-world
+      // occupancy rate - a reality claim with no external citation, so it
+      // cannot be ESTIMATE regardless of how deliberate the Excel's choice
+      // was.
+      expect(BASE_OCCUPANCY_LONG_TERM.provenance).toBe("PLACEHOLDER");
+      expect(BASE_OCCUPANCY_SHORT_TERM.provenance).toBe("PLACEHOLDER");
+    });
+
+    it("renovation multipliers claim a real-world consequence, not a tier definition: reclassified to PLACEHOLDER", () => {
+      // rentMultiplier/maintenanceFactor/utilitiesEfficiency/timeToRentMonths
+      // each claim what actually happens to rent, maintenance cost,
+      // utility cost, or lease-up time as a RESULT of doing that
+      // renovation - a real-world causal claim, unlike e.g. a financing
+      // tier's LTV, which merely defines where TSG drew that tier's
+      // boundary.
+      for (const strategy of Object.values(RENOVATION_STRATEGIES)) {
+        expect(strategy.rentMultiplier.provenance).toBe("PLACEHOLDER");
+        expect(strategy.maintenanceFactor.provenance).toBe("PLACEHOLDER");
+        expect(strategy.utilitiesEfficiency.provenance).toBe("PLACEHOLDER");
+        expect(strategy.timeToRentMonths.provenance).toBe("PLACEHOLDER");
+      }
+    });
+
+    it("financing tier definitions (LTV, term) remain ESTIMATE: they define the tier, not a market fact", () => {
+      // Unlike the renovation multipliers above, LTV/loanTermYears ARE the
+      // definition of "what counts as Low/Medium/High Leverage" - a
+      // product-tier boundary TSG chose, not a claim that this specific
+      // LTV or term is what the market generally offers (that claim, the
+      // interest rate, is separately SOURCED).
+      for (const strategy of Object.values(FINANCING_STRATEGIES)) {
+        expect(strategy.ltv.provenance).toBe("ESTIMATE");
+        expect(strategy.loanTermYears.provenance).toBe("ESTIMATE");
+        expect(strategy.interestRate.provenance).toBe("SOURCED");
+      }
+    });
+
+    it("scenario severity multipliers remain ESTIMATE: they define what a scenario means, not a market fact", () => {
+      for (const scenario of Object.values(SCENARIOS)) {
+        expect(scenario.rentLevelMultiplier.provenance).toBe("ESTIMATE");
+        expect(scenario.occupancyMultiplier.provenance).toBe("ESTIMATE");
+        expect(scenario.interestRateDelta.provenance).toBe("ESTIMATE");
+        expect(scenario.utilitiesMultiplier.provenance).toBe("ESTIMATE");
+        expect(scenario.maintenanceInflationMultiplier.provenance).toBe("ESTIMATE");
+      }
+    });
+
+    it("moved list: exactly these 14 parameters were reclassified from ESTIMATE to PLACEHOLDER", () => {
+      const moved = [
+        BASE_OCCUPANCY_LONG_TERM.name,
+        BASE_OCCUPANCY_SHORT_TERM.name,
+        ...Object.values(RENOVATION_STRATEGIES).flatMap((s) => [
+          s.rentMultiplier.name,
+          s.maintenanceFactor.name,
+          s.utilitiesEfficiency.name,
+          s.timeToRentMonths.name,
+        ]),
+      ];
+      expect(moved).toHaveLength(14);
+      for (const name of moved) {
+        const param = ALL_PARAMETERS.find((p) => p.name === name);
+        expect(param, `${name} missing from ALL_PARAMETERS`).toBeDefined();
+        expect(param!.provenance, `${name} should now be PLACEHOLDER`).toBe("PLACEHOLDER");
+      }
+    });
+  });
+});
+
+describe("derived values: weakest-link provenance", () => {
+  it("weakestProvenance() ranks PLACEHOLDER < ESTIMATE < SOURCED", () => {
+    expect(weakestProvenance(["SOURCED"])).toBe("SOURCED");
+    expect(weakestProvenance(["SOURCED", "SOURCED"])).toBe("SOURCED");
+    expect(weakestProvenance(["SOURCED", "ESTIMATE"])).toBe("ESTIMATE");
+    expect(weakestProvenance(["SOURCED", "PLACEHOLDER"])).toBe("PLACEHOLDER");
+    expect(weakestProvenance(["ESTIMATE", "PLACEHOLDER"])).toBe("PLACEHOLDER");
+    expect(weakestProvenance(["SOURCED", "ESTIMATE", "PLACEHOLDER"])).toBe("PLACEHOLDER");
+    expect(weakestProvenance(["ESTIMATE", "ESTIMATE"])).toBe("ESTIMATE");
+  });
+
+  it("deriveParameter() takes the weakest of its components, not the first or last", () => {
+    const sourced: Parameter<number> = {
+      name: "test.sourced",
+      value: 1,
+      provenance: "SOURCED",
+      source: "Test Source",
+      date: "2025",
+    };
+    const placeholder: Parameter<number> = {
+      name: "test.placeholder",
+      value: 2,
+      provenance: "PLACEHOLDER",
+      reasoning: "test reasoning",
+    };
+    // Placeholder listed last: the result must still be dragged down to
+    // PLACEHOLDER, proving this isn't just "inherit the last component".
+    const derived = deriveParameter("test.derived", 3, [sourced, placeholder]);
+    expect(derived.provenance).toBe("PLACEHOLDER");
+  });
+
+  it("deriveParameter() stays SOURCED only when every component is SOURCED", () => {
+    const a: Parameter<number> = { name: "a", value: 1, provenance: "SOURCED", source: "A", date: "2025" };
+    const b: Parameter<number> = { name: "b", value: 2, provenance: "SOURCED", source: "B", date: "2024" };
+    const derived = deriveParameter("sum", 3, [a, b]);
+    expect(derived.provenance).toBe("SOURCED");
+  });
+
+  it("a derived value cannot silently drift: TOTAL_INSURANCE_ANNUAL matches deriveParameter(INSURANCE_COSTS_ANNUAL)", () => {
+    // If INSURANCE_COSTS_ANNUAL is ever reclassified (e.g. to PLACEHOLDER
+    // because one of its cited sources turns out to be unreliable), this
+    // test fails unless TOTAL_INSURANCE_ANNUAL - built via deriveParameter,
+    // not a hand-typed literal - is regenerated to match. The label cannot
+    // go stale without a test catching it.
+    expect(TOTAL_INSURANCE_ANNUAL.provenance).toBe(
+      weakestProvenance([INSURANCE_COSTS_ANNUAL.provenance]),
+    );
+  });
+
+  it("a derived value cannot silently drift: TOTAL_UTILITIES_PER_M2_ANNUAL matches deriveParameter(UTILITIES_PER_M2_ANNUAL)", () => {
+    expect(TOTAL_UTILITIES_PER_M2_ANNUAL.provenance).toBe(
+      weakestProvenance([UTILITIES_PER_M2_ANNUAL.provenance]),
+    );
+  });
+
+  it("simulated downgrade: if the insurance component became PLACEHOLDER, the derived total would follow", () => {
+    // Proves the mechanism reacts to a hypothetical future downgrade,
+    // without actually mutating the real parameter.
+    const hypotheticallyDowngraded: Parameter<{ home: number }> = {
+      name: "INSURANCE_COSTS_ANNUAL",
+      value: { home: 300 },
+      provenance: "PLACEHOLDER",
+      reasoning: "hypothetical: a cited source turned out to be unreliable",
+    };
+    const derivedTotal = deriveParameter("TOTAL_INSURANCE_ANNUAL", 300, [
+      hypotheticallyDowngraded,
+    ]);
+    expect(derivedTotal.provenance).toBe("PLACEHOLDER");
   });
 });
