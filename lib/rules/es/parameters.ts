@@ -21,12 +21,15 @@
 import { deriveParameter } from "./types";
 import type {
   EstimateParameter,
+  FeasibilityScoreLevels,
   FinancingStrategyId,
   Parameter,
   PlaceholderParameter,
   RenovationStrategyId,
   ScenarioId,
+  ScoreAnchor,
   SourcedParameter,
+  TsgScoreDimension,
 } from "./types";
 
 // ---------------------------------------------------------------------------
@@ -983,6 +986,158 @@ export const CORRECTION_FACTORS_FIRST_ESTIMATE_YEAR: EstimateParameter<number> =
   reasoning: "The first estimate year present in the sourced Correction Factors series above; a modelling convention for where the projection starts.",
 };
 
+// ---------------------------------------------------------------------------
+// TSG score (SCORE_SPEC.md)
+// ---------------------------------------------------------------------------
+
+/**
+ * The scoring curves and weights below are all ESTIMATE, and that survives
+ * the reality-vs-model test in types.ts deliberately: none of them claims
+ * anything about the world. They define what a TSG score *means* - where
+ * TSG chose to put "a 5", how steeply a shortfall is punished, how much
+ * each dimension counts toward the total. That is a product definition,
+ * exactly like what "conservative" means as a scenario or where a
+ * financing tier's LTV boundary sits, and the same category the audit
+ * already admits as ESTIMATE.
+ *
+ * They are not SOURCED: no external body publishes these thresholds, and
+ * inventing a citation for them would be worse than admitting they are
+ * TSG's own. They are not PLACEHOLDER either: a PLACEHOLDER is a reality
+ * claim awaiting verification, and no amount of market data could ever
+ * "verify" that break-even cashflow deserves a 4 rather than a 5 - only a
+ * product decision can settle that. SCORE_SPEC.md §3 says as much for the
+ * weights ("een startpunt ... kan worden bijgesteld op basis van
+ * kalibratie"); the same holds for the curves.
+ *
+ * Consequence worth knowing: because they are ESTIMATE, they never enter
+ * ScenarioOutcome.placeholdersUsed, so the data-certainty dimension does
+ * not count its own curve. That avoids a circularity where the score's
+ * definition would degrade the score.
+ */
+
+/** Cashflow dimension curve, SCORE_SPEC.md §2.1. x = monthly cashflow of the base scenario, in €. */
+export const TSG_SCORE_ANCHORS_CASHFLOW: EstimateParameter<readonly ScoreAnchor[]> = {
+  name: "TSG_SCORE_ANCHORS_CASHFLOW",
+  value: [
+    { x: -500, score: 0 },
+    { x: -250, score: 2 },
+    { x: 0, score: 4 },
+    { x: 250, score: 6 },
+    { x: 500, score: 7.5 },
+    { x: 1000, score: 9 },
+    { x: 1500, score: 10 },
+  ],
+  provenance: "ESTIMATE",
+  reasoning:
+    "SCORE_SPEC.md §2.1. Defines how the product grades monthly cashflow; break-even scores a 4 rather than a 5 because breaking even on financed foreign property is already an achievement. A product definition, not a claim about achievable cashflow.",
+};
+
+/** Debt resilience curve, SCORE_SPEC.md §2.2. x = DSCR of the base scenario (bare ratio). */
+export const TSG_SCORE_ANCHORS_DEBT_RESILIENCE: EstimateParameter<readonly ScoreAnchor[]> = {
+  name: "TSG_SCORE_ANCHORS_DEBT_RESILIENCE",
+  value: [
+    { x: 0.5, score: 0 },
+    { x: 0.75, score: 2.5 },
+    { x: 1.0, score: 5 },
+    { x: 1.2, score: 7 },
+    { x: 1.4, score: 8.5 },
+    { x: 1.8, score: 10 },
+  ],
+  provenance: "ESTIMATE",
+  reasoning:
+    "SCORE_SPEC.md §2.2. Anchors a DSCR of exactly 1.0 - break-even on the debt service - at the midpoint 5. A product definition of what constitutes a debt buffer, not a claim about lender requirements.",
+};
+
+/**
+ * Return dimension curve, SCORE_SPEC.md §2.3. x = the base scenario's IRR
+ * minus the investor's required return, in PERCENTAGE POINTS (so +1.84
+ * means the IRR beats the hurdle by 1.84pp), not as a fraction.
+ */
+export const TSG_SCORE_ANCHORS_RETURN_VS_REQUIREMENT: EstimateParameter<readonly ScoreAnchor[]> = {
+  name: "TSG_SCORE_ANCHORS_RETURN_VS_REQUIREMENT",
+  value: [
+    { x: -4, score: 0 },
+    { x: -2, score: 2 },
+    { x: 0, score: 5 },
+    { x: 2, score: 7 },
+    { x: 4, score: 8.5 },
+    { x: 8, score: 10 },
+  ],
+  provenance: "ESTIMATE",
+  reasoning:
+    "SCORE_SPEC.md §2.3. Grades the surplus over the investor's own hurdle rate rather than the absolute IRR, anchoring 'requirement exactly met' at 5. A product definition of how much outperformance is worth how much score.",
+};
+
+/**
+ * Data certainty curve, SCORE_SPEC.md §2.5. x = the number of PLACEHOLDER
+ * parameters in ScenarioOutcome.placeholdersUsed. Deliberately descending:
+ * more unverified assumptions, lower score.
+ */
+export const TSG_SCORE_ANCHORS_DATA_CERTAINTY: EstimateParameter<readonly ScoreAnchor[]> = {
+  name: "TSG_SCORE_ANCHORS_DATA_CERTAINTY",
+  value: [
+    { x: 0, score: 10 },
+    { x: 3, score: 8 },
+    { x: 6, score: 6 },
+    { x: 10, score: 4 },
+    { x: 15, score: 2 },
+    { x: 20, score: 0 },
+  ],
+  provenance: "ESTIMATE",
+  reasoning:
+    "SCORE_SPEC.md §2.5. Defines how heavily an unverified assumption discounts confidence in the score. A product definition; the count it reads is itself derived from the provenance audit, not from market data.",
+};
+
+/** The four discrete feasibility steps, SCORE_SPEC.md §2.4. */
+export const TSG_SCORE_FEASIBILITY_LEVELS: EstimateParameter<FeasibilityScoreLevels> = {
+  name: "TSG_SCORE_FEASIBILITY_LEVELS",
+  value: {
+    bothChecksFail: 0,
+    oneCheckFails: 3,
+    bothPassNarrowMargin: 7,
+    bothPassAmpleMargin: 10,
+  },
+  provenance: "ESTIMATE",
+  reasoning:
+    "SCORE_SPEC.md §2.4. The only non-continuous dimension: a deal that cannot be financed is not partially financeable. A product definition of how hard infeasibility should drag the total down.",
+};
+
+/**
+ * The relative margin separating the top two feasibility steps
+ * (SCORE_SPEC.md §2.4), as a fraction of equityRequired. Stops a deal that
+ * clears its constraints by € 50 from scoring the same as one with
+ * € 30.000 of room.
+ */
+export const TSG_SCORE_FEASIBILITY_MARGIN_THRESHOLD: EstimateParameter<number> = {
+  name: "TSG_SCORE_FEASIBILITY_MARGIN_THRESHOLD",
+  value: 0.1,
+  provenance: "ESTIMATE",
+  reasoning:
+    "SCORE_SPEC.md §2.4. A product definition of where 'just barely fits' ends and 'comfortably fits' begins; no external source defines that boundary.",
+};
+
+/**
+ * Dimension weights for the total score, SCORE_SPEC.md §3. Must sum to
+ * 1.00 (enforced by test). Per UI_SPEC.md §5 these are deliberately NOT
+ * published in the report - only the methodology is described - so a
+ * change here changes the total without any customer-visible number
+ * moving. SCORE_SPEC.md §3 requires recording when and why that happens,
+ * and SCORE_SPEC.md §5 requires regenerating the reference distribution.
+ */
+export const TSG_SCORE_DIMENSION_WEIGHTS: EstimateParameter<Readonly<Record<TsgScoreDimension, number>>> = {
+  name: "TSG_SCORE_DIMENSION_WEIGHTS",
+  value: {
+    cashflow: 0.2,
+    debtResilience: 0.15,
+    returnVsRequirement: 0.3,
+    feasibility: 0.2,
+    dataCertainty: 0.15,
+  },
+  provenance: "ESTIMATE",
+  reasoning:
+    "SCORE_SPEC.md §3, which calls the weighting 'een startpunt' open to calibration against real deals. A product definition of what matters how much, not a measurable fact.",
+};
+
 /** All parameters in this file, for provenance tooling (e.g. collecting every PLACEHOLDER). */
 export const ALL_PARAMETERS: ReadonlyArray<Parameter<unknown>> = [
   RENT_MATRIX_LONG_TERM_PER_M2,
@@ -1039,4 +1194,11 @@ export const ALL_PARAMETERS: ReadonlyArray<Parameter<unknown>> = [
   CPI_PERCENT_BY_YEAR,
   CORRECTION_FACTORS_LAST_YEAR,
   CORRECTION_FACTORS_FIRST_ESTIMATE_YEAR,
+  TSG_SCORE_ANCHORS_CASHFLOW,
+  TSG_SCORE_ANCHORS_DEBT_RESILIENCE,
+  TSG_SCORE_ANCHORS_RETURN_VS_REQUIREMENT,
+  TSG_SCORE_ANCHORS_DATA_CERTAINTY,
+  TSG_SCORE_FEASIBILITY_LEVELS,
+  TSG_SCORE_FEASIBILITY_MARGIN_THRESHOLD,
+  TSG_SCORE_DIMENSION_WEIGHTS,
 ];

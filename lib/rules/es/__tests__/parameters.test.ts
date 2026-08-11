@@ -81,11 +81,32 @@ describe("parameter provenance audit", () => {
     expect(placeholders).toContain("RENOVATION_STRATEGIES.light.capex");
   });
 
-  it("distribution: 25 SOURCED / 27 ESTIMATE / 30 PLACEHOLDER (§16/§17 add the cadastral and area-ratio defaults)", () => {
+  it("distribution: 25 SOURCED / 34 ESTIMATE / 30 PLACEHOLDER (SCORE_SPEC.md adds seven scoring ESTIMATEs)", () => {
     const counts = { SOURCED: 0, ESTIMATE: 0, PLACEHOLDER: 0 };
     for (const p of ALL_PARAMETERS) counts[p.provenance]++;
-    expect(counts).toEqual({ SOURCED: 25, ESTIMATE: 27, PLACEHOLDER: 30 });
+    expect(counts).toEqual({ SOURCED: 25, ESTIMATE: 34, PLACEHOLDER: 30 });
     expect(counts.SOURCED + counts.ESTIMATE + counts.PLACEHOLDER).toBe(ALL_PARAMETERS.length);
+  });
+
+  it("the scoring curves and weights are ESTIMATE: model definitions, not claims about the world", () => {
+    // SCORE_SPEC.md's curves say where TSG chose to put "a 5" and how much
+    // each dimension counts. No external body publishes those thresholds
+    // (so not SOURCED), and no future market data could verify them (so
+    // not PLACEHOLDER, which is a reality claim awaiting verification) -
+    // only a product decision can settle them. Same category as what
+    // "conservative" means as a scenario.
+    const scoreParameters = ALL_PARAMETERS.filter((p) => p.name.startsWith("TSG_SCORE_"));
+    expect(scoreParameters).toHaveLength(7);
+    for (const p of scoreParameters) {
+      expect(p.provenance, `${p.name} should be ESTIMATE`).toBe("ESTIMATE");
+    }
+    // Consequence that matters: being ESTIMATE keeps them out of
+    // placeholdersUsed, so the data-certainty dimension never discounts
+    // the score for the existence of the scoring model itself.
+    const placeholderNames = ALL_PARAMETERS.filter((p) => p.provenance === "PLACEHOLDER").map(
+      (p) => p.name,
+    );
+    expect(placeholderNames.filter((n) => n.startsWith("TSG_SCORE_"))).toEqual([]);
   });
 
   it("spot-checks: values already flagged [BESLISSING] in MODEL_SPEC.md are PLACEHOLDER, not ESTIMATE", () => {

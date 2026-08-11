@@ -584,6 +584,77 @@ export interface RentalStrategyAvailability {
   unavailable: UnavailableRentalStrategy[];
 }
 
+/**
+ * One anchor point of a piecewise-linear dimension score curve
+ * (SCORE_SPEC.md §2). `x` is the engine value being scored - the unit
+ * differs per dimension (€/month for cashflow, a bare ratio for DSCR,
+ * percentage points for the return surplus, a count for data certainty) -
+ * and `score` is the 0-10 dimension score at exactly that point.
+ *
+ * A curve is a list of these, strictly ascending in `x`. Between anchors
+ * the score is interpolated linearly; outside the outermost anchors it is
+ * clamped to that anchor's own score. Clamping to the endpoint value
+ * rather than to a fixed 0/10 is what lets the data-certainty curve run
+ * downward (0 placeholders = 10, >= 20 = 0) with the same machinery.
+ */
+export interface ScoreAnchor {
+  x: number;
+  score: number;
+}
+
+/**
+ * The four discrete steps of the feasibility dimension (SCORE_SPEC.md
+ * §2.4) - the only dimension that is not a continuous curve, because a
+ * deal that cannot be financed is not partially financeable.
+ */
+export interface FeasibilityScoreLevels {
+  /** Equity insufficient AND renovation budget exceeded. */
+  bothChecksFail: number;
+  /** Exactly one of the two checks fails. */
+  oneCheckFails: number;
+  /** Both checks pass, but the relative margin is below the threshold. */
+  bothPassNarrowMargin: number;
+  /** Both checks pass with a margin at or above the threshold. */
+  bothPassAmpleMargin: number;
+}
+
+/**
+ * The five TSG score dimensions (SCORE_SPEC.md §2), each 0.0-10.0 with one
+ * decimal. Named for what they measure rather than for the engine field
+ * they read, since several read more than one:
+ *
+ * - cashflow: monthly cashflow of the base scenario.
+ * - debtResilience: DSCR of the base scenario.
+ * - returnVsRequirement: the base scenario's IRR minus the investor's own
+ *   hurdle rate - a surplus, not the absolute IRR, so two investors with
+ *   different requirements score the same property differently.
+ * - feasibility: the equity-fit and renovation-budget checks.
+ * - dataCertainty: how many PLACEHOLDER parameters the outcome rests on.
+ */
+export interface TsgDimensionScores {
+  cashflow: number;
+  debtResilience: number;
+  returnVsRequirement: number;
+  feasibility: number;
+  dataCertainty: number;
+}
+
+export type TsgScoreDimension = keyof TsgDimensionScores;
+
+/**
+ * A complete TSG score (SCORE_SPEC.md §1/§3): the five dimensions plus the
+ * weighted total. Both the dimension scores and the total carry one
+ * decimal; the total is computed from the *rounded* dimension scores, the
+ * way SCORE_SPEC.md §4's worked example does, so the arithmetic a reader
+ * can redo by hand from the published dimension figures matches the
+ * published total exactly.
+ */
+export interface TsgScore {
+  dimensions: TsgDimensionScores;
+  /** Sum of (dimension score x weight), rounded to one decimal. */
+  total: number;
+}
+
 export interface EngineResult {
   income: IncomeModel;
   renovationStrategies: RenovationStrategyResult[];

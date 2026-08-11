@@ -14,3 +14,4 @@ export * from "./scenarios";
 export * from "./tax";
 export * from "./validation";
 export { runEngine } from "./engine";
+export * from "./score";
