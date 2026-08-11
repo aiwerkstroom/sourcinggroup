@@ -32,7 +32,7 @@ describe("income model (Excel golden values)", () => {
     const base = {
       rentPerM2LongTerm: 17,
       rentPerM2ShortTerm: 36,
-      livingAreaM2: 133,
+      usableAreaM2: 133,
       rentMultiplier: 1,
     };
     expect(

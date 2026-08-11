@@ -13,18 +13,18 @@ import type { IncomeLine, IncomeModel, RentalStrategy } from "./types";
 export const MONTHS_PER_YEAR = 12;
 
 /** Base rent per month: €/m²/month x living area (L10/N10). */
-export function baseMonthlyRent(rentPerM2: number, livingAreaM2: number): number {
-  return rentPerM2 * livingAreaM2;
+export function baseMonthlyRent(rentPerM2: number, usableAreaM2: number): number {
+  return rentPerM2 * usableAreaM2;
 }
 
 /** One income line: base rent -> annual -> at occupancy -> renovation-adjusted (L10..L20). */
 export function incomeLine(
   rentPerM2: number,
-  livingAreaM2: number,
+  usableAreaM2: number,
   occupancy: number,
   rentMultiplier: number,
 ): IncomeLine {
-  const monthly = baseMonthlyRent(rentPerM2, livingAreaM2);
+  const monthly = baseMonthlyRent(rentPerM2, usableAreaM2);
   const annual = monthly * MONTHS_PER_YEAR;
   const atOccupancy = annual * occupancy;
   return {
@@ -49,19 +49,19 @@ export function hybridGrossIncome(adjustedLongTerm: number, adjustedShortTerm: n
 export function buildIncomeModel(args: {
   rentPerM2LongTerm: number;
   rentPerM2ShortTerm: number;
-  livingAreaM2: number;
+  usableAreaM2: number;
   rentMultiplier: number;
   rentalStrategy: RentalStrategy;
 }): IncomeModel {
   const longTerm = incomeLine(
     args.rentPerM2LongTerm,
-    args.livingAreaM2,
+    args.usableAreaM2,
     BASE_OCCUPANCY_LONG_TERM.value,
     args.rentMultiplier,
   );
   const shortTerm = incomeLine(
     args.rentPerM2ShortTerm,
-    args.livingAreaM2,
+    args.usableAreaM2,
     BASE_OCCUPANCY_SHORT_TERM.value,
     args.rentMultiplier,
   );

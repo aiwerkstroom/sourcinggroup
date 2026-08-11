@@ -153,6 +153,25 @@ export const HYBRID_SHARE_SHORT_TERM: EstimateParameter<number> = {
     "Costs & Income!L28, TSG_Model_v3.xlsx (2026-08). Defines what 'hybrid' means in this model rather than reporting an external fact.",
 };
 
+/**
+ * Ratio of usable floor area (superficie útil) to built floor area
+ * (superficie construida), used only to derive PropertyInput.usableAreaM2
+ * when a property's usable area is not known directly and must be
+ * approximated from its built area. A claim about the real relationship
+ * between two physical measurements of an actual building, not a model
+ * definition - the reality-vs-model test (see ParameterProvenance in
+ * types.ts) puts this at PLACEHOLDER, not ESTIMATE: no external source is
+ * cited for this specific figure, and the true ratio varies per building
+ * (wall thickness, shared circulation space). MODEL_SPEC.md §17.
+ */
+export const DEFAULT_USABLE_TO_BUILT_AREA_RATIO: PlaceholderParameter<number> = {
+  name: "DEFAULT_USABLE_TO_BUILT_AREA_RATIO",
+  value: 0.85,
+  provenance: "PLACEHOLDER",
+  reasoning:
+    "Common rule-of-thumb for the usable/built area ratio in Spanish residential property (built area includes shared walls and common circulation space); no external source cited for this specific figure, and it varies per building. Must be replaced by the property's own usableAreaM2 (floor plan or cadastral record) before production use.",
+};
+
 // ---------------------------------------------------------------------------
 // Fixed operating costs
 // ---------------------------------------------------------------------------
@@ -974,6 +993,7 @@ export const ALL_PARAMETERS: ReadonlyArray<Parameter<unknown>> = [
   BASE_OCCUPANCY_SHORT_TERM,
   HYBRID_SHARE_LONG_TERM,
   HYBRID_SHARE_SHORT_TERM,
+  DEFAULT_USABLE_TO_BUILT_AREA_RATIO,
   INSURANCE_COSTS_ANNUAL,
   TOTAL_INSURANCE_ANNUAL,
   PROPERTY_MANAGEMENT_FEE,

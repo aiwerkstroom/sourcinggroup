@@ -12,10 +12,11 @@ Changelog van v2 al zijn genomen, staan als **[BESLIST]** met de gekozen optie.
 ## 1. Invoer
 
 **Pand** (`Property Input`): naam, regio, wijk, adres, type, marktsegment,
-huurtype, woonoppervlak (m²), aantal kamers/slaapkamers/badkamers, huidige
-huurstatus, bouwjaar, energielabel, aankoopprijs, eigen inbreng, hypotheek,
-renovatiebudget, **gastos de comunidad €/jaar (verplicht, geen default —
-§15)**, **kadastrale waarde suelo/construcción (optioneel — §16)**.
+huurtype, **bruikbaar oppervlak en gebouwd oppervlak, m² gescheiden — §17**,
+aantal kamers/slaapkamers/badkamers, huidige huurstatus, bouwjaar,
+energielabel, aankoopprijs, eigen inbreng, hypotheek, renovatiebudget,
+**gastos de comunidad €/jaar (verplicht, geen default — §15)**,
+**kadastrale waarde suelo/construcción (optioneel — §16)**.
 
 **Uitgangspunten belegger** (`Costs & Income` B4–D26): totaal
 investeringsbudget, max renovatiebudget, gewenste LTV, min LTV, max LTV,
@@ -33,7 +34,7 @@ huurprijs €/m²/maand LT en ST (uit de matrix/wijktabel), renovatiestrategie
 ## 2. Huurinkomsten
 
 ```
-basishuur/maand   = huurprijs €/m²/maand × woonoppervlak
+basishuur/maand   = huurprijs €/m²/maand × bruikbaar oppervlak (§17 - niet gebouwd oppervlak)
 bruto jaarhuur    = basishuur × 12
 inkomen           = bruto jaarhuur × bezettingsgraad
 aangepast inkomen = inkomen × huurmultiplier renovatiestrategie
@@ -107,6 +108,7 @@ verhuurdersdekking 250 + overlijdensrisico 300 = € 1.030/jaar) · bankkosten
 Inkomensafhankelijk: property management (8% bruto huur) · onderhoud (5% bruto
 huur × onderhoudsfactor renovatie × onderhoudsinflatie scenario) ·
 nutsvoorzieningen (gas 8 + water 3,5 + elektra 10 = 21,5 €/m²/jaar ×
+**gebouwd oppervlak, niet bruikbaar oppervlak — §17** ×
 nutsefficiëntie renovatie × scenariomultiplier).
 
 ## 7. Scenariolaag
@@ -762,3 +764,70 @@ pad, geen wijziging van de bestaande uitkomst. Nieuwe golden tests
 afschrijvingsbasis € 80.000 (vóór 3%/scenariofactor) in plaats van
 € 231.000 (330.000 × 0,70), en dat beide defaults uit `placeholdersUsed`
 verdwijnen zodra de kadastrale waarde is doorgegeven.
+
+## 17. Bruikbaar en gebouwd oppervlak — gescheiden invoer
+
+**Twee verschillende oppervlaktes, één invoerveld in de Excel.**
+`TSG_Model_v3.xlsx` heeft één `livingAreaM2` dat zowel de huurschatting als
+de nutskostenschatting voedt. Feitelijk zijn dit twee verschillende
+metingen: superficie útil (bruikbaar oppervlak — vloeroppervlak binnen de
+muren, waar een huurder daadwerkelijk woont) en superficie construida
+(gebouwd oppervlak — inclusief buitenmuren en een aandeel gemeenschappelijke
+ruimtes), en Spaanse vastgoedadvertenties/kadastrale gegevens vermelden ze
+vaak apart. `PropertyInput` splitst dit nu:
+```
+usableAreaM2?: number   (superficie útil, optioneel)
+builtAreaM2: number     (superficie construida, verplicht)
+```
+
+**Wat elk oppervlak voedt.** Ongewijzigd qua formule, alleen de juiste
+invoer gekoppeld:
+- Huurschatting (§2, `income.ts`): `basishuur = huurprijs €/m² × bruikbaar
+  oppervlak` — niet gebouwd oppervlak, dat een huurder niet daadwerkelijk
+  gebruikt.
+- Nutskosten (§6, `operating.ts`): `nutskosten = 21,5 €/m²/jaar × gebouwd
+  oppervlak` — gas/water/elektra-aansluitingen en -leidingen lopen door het
+  hele gebouwde oppervlak, niet alleen het bruikbare deel.
+
+**Waar alleen gebouwd oppervlak bekend is.** `builtAreaM2` is verplicht;
+`usableAreaM2` is optioneel omdat vastgoedadvertenties en kadastrale
+gegevens het gebouwde oppervlak vaker vermelden dan het bruikbare. Nieuwe
+parameter in `parameters.ts`:
+```
+DEFAULT_USABLE_TO_BUILT_AREA_RATIO = 0,85   [PLACEHOLDER]
+```
+Een uitspraak over de werkelijke verhouding tussen twee fysieke metingen
+van een concreet gebouw — geen modelkeuze — dus volgens de toets uit §13
+uitsluitend SOURCED of PLACEHOLDER, nooit ESTIMATE. Geen bron gevonden voor
+dit specifieke cijfer (een veelgenoemde vuistregel, geen geciteerde
+meting) en de werkelijke verhouding verschilt per gebouw (muurdikte,
+aandeel gemeenschappelijke circulatieruimte) — PLACEHOLDER. `engine.ts`
+past hem alleen toe wanneer `usableAreaM2` ontbreekt:
+`usableAreaM2 = builtAreaM2 × DEFAULT_USABLE_TO_BUILT_AREA_RATIO`.
+
+**Zichtbaar in de uitkomst (onderdeel 2, §14).** `buildScenarioOutcome()`
+krijgt een nieuwe vlag `usableAreaM2Provided`; wanneer die op `false` staat
+(default, en dus ook wanneer de aanroeper hem vergeet te zetten), neemt
+`collectPlaceholders()` `DEFAULT_USABLE_TO_BUILT_AREA_RATIO` op in
+`placeholdersUsed` — dezelfde vlag-op-caller-niveau als bij
+`buildingShareOfValueProvided`/`cadastralValueProvided`, om dezelfde reden:
+`outcome.ts` ziet zelf niet of de al berekende `ProjectionYear[]` op een
+gemeten of afgeleid oppervlak rust.
+
+**Referentiecasus ongewijzigd.** Avenida Primado Reig 19 heeft in
+`TSG_Model_v3.xlsx` één oppervlaktecijfer (133 m²), geen aparte
+bruikbaar/gebouwd-splitsing. `referencecase.ts` zet `usableAreaM2` en
+`builtAreaM2` daarom expliciet en identiek op 133 — de huidige benadering
+letterlijk voortgezet, niet de `DEFAULT_USABLE_TO_BUILT_AREA_RATIO`-fallback
+(die alleen intreedt wanneer `usableAreaM2` wordt weggelaten). Alle
+bestaande golden tests (§11, §12, §15, §16) blijven daardoor exact staan.
+
+Golden tests: `engine.test.ts` (`describe("usable vs. built floor area")`)
+bewijst met een synthetisch voorbeeld (bruikbaar 100 m², gebouwd 120 m²)
+dat huur en nutskosten onafhankelijk de juiste invoer gebruiken, en dat de
+conversiefactor correct wordt toegepast wanneer `usableAreaM2` ontbreekt
+(120 × 0,85 = 102 m² bruikbaar); `validation.test.ts` toetst dat
+`usableAreaM2` niet groter mag zijn dan `builtAreaM2`; `outcome.test.ts`
+bevestigt dat `DEFAULT_USABLE_TO_BUILT_AREA_RATIO` alleen in
+`placeholdersUsed` verschijnt wanneer `usableAreaM2Provided` op `false`
+staat.

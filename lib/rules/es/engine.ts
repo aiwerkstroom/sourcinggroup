@@ -8,6 +8,7 @@ import { acquisitionCosts } from "./acquisition";
 import { financingStrategyTable, selectFinancing } from "./financing";
 import { buildIncomeModel } from "./income";
 import { fixedOperatingCosts, utilitiesBaseAnnual } from "./operating";
+import { DEFAULT_USABLE_TO_BUILT_AREA_RATIO } from "./parameters";
 import { renovationStrategyTable, selectRenovation } from "./renovation";
 import { runScenarios } from "./scenarios";
 import { taxCalculator } from "./tax";
@@ -18,13 +19,18 @@ export function runEngine(input: EngineInput): EngineResult {
   assertValidEngineInput(input);
   const { property, constraints, selections } = input;
 
+  // MODEL_SPEC.md §17: rent uses usable floor area; when it isn't known
+  // directly, derive it from the built area via the PLACEHOLDER ratio.
+  const usableAreaM2 =
+    property.usableAreaM2 ?? property.builtAreaM2 * DEFAULT_USABLE_TO_BUILT_AREA_RATIO.value;
+
   const renovationStrategies = renovationStrategyTable(constraints);
   const selectedRenovation = selectRenovation(selections.renovationStrategy, constraints);
 
   const income = buildIncomeModel({
     rentPerM2LongTerm: selections.rentPerM2LongTerm,
     rentPerM2ShortTerm: selections.rentPerM2ShortTerm,
-    livingAreaM2: property.livingAreaM2,
+    usableAreaM2,
     rentMultiplier: selectedRenovation.rentMultiplier,
     rentalStrategy: selections.rentalStrategy,
   });
@@ -53,7 +59,7 @@ export function runEngine(input: EngineInput): EngineResult {
     cadastralValue: property.cadastralValue,
   });
 
-  const utilitiesBase = utilitiesBaseAnnual(property.livingAreaM2);
+  const utilitiesBase = utilitiesBaseAnnual(property.builtAreaM2);
 
   const scenarios = runScenarios({
     grossAnnualIncome: income.selectedGrossAnnualIncome,

@@ -13,7 +13,13 @@ export const referenceCase: EngineInput = {
     propertyType: "Apartment (5 studios)",
     marketSegment: "Student Housing",
     currentRentStatus: "Rented Long-Term",
-    livingAreaM2: 133,
+    // TSG_Model_v3.xlsx has one area figure (133 m²), not a separate
+    // usable/built split for this property (MODEL_SPEC.md §17). Both are
+    // set explicitly and identically here - the current approximation
+    // carried forward as-is, not the DEFAULT_USABLE_TO_BUILT_AREA_RATIO
+    // fallback (which only applies when usableAreaM2 is omitted).
+    usableAreaM2: 133,
+    builtAreaM2: 133,
     rooms: 7,
     bedrooms: 5,
     bathrooms: 5,

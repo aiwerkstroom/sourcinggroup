@@ -135,7 +135,19 @@ export interface PropertyInput {
   propertyType?: string;
   marketSegment?: string;
   currentRentStatus?: string;
-  livingAreaM2: number;
+  /**
+   * Superficie útil (bruikbaar oppervlak), m² - the rent estimate
+   * (income.ts) uses this, not superficie construida. Optional when only
+   * builtAreaM2 is known: derived via DEFAULT_USABLE_TO_BUILT_AREA_RATIO,
+   * a PLACEHOLDER (MODEL_SPEC.md §17).
+   */
+  usableAreaM2?: number;
+  /**
+   * Superficie construida (gebouwd oppervlak), m² - utilities per m²
+   * (operating.ts) use this, and it is also the basis for deriving
+   * usableAreaM2 when that isn't known directly.
+   */
+  builtAreaM2: number;
   rooms?: number;
   bedrooms?: number;
   bathrooms?: number;

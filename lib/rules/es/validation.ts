@@ -21,8 +21,18 @@ export function validateEngineInput(input: EngineInput): string[] {
   const issues: string[] = [];
   const { property, constraints, selections } = input;
 
-  if (!isFiniteNumber(property.livingAreaM2) || property.livingAreaM2 <= 0) {
-    issues.push("livingAreaM2 must be a positive number");
+  if (!isFiniteNumber(property.builtAreaM2) || property.builtAreaM2 <= 0) {
+    issues.push("builtAreaM2 must be a positive number");
+  }
+  if (property.usableAreaM2 !== undefined) {
+    if (!isFiniteNumber(property.usableAreaM2) || property.usableAreaM2 <= 0) {
+      issues.push("usableAreaM2 must be a positive number");
+    } else if (
+      isFiniteNumber(property.builtAreaM2) &&
+      property.usableAreaM2 > property.builtAreaM2
+    ) {
+      issues.push("usableAreaM2 cannot exceed builtAreaM2");
+    }
   }
   if (!isFiniteNumber(property.purchasePrice) || property.purchasePrice <= 0) {
     issues.push("purchasePrice must be a positive number");

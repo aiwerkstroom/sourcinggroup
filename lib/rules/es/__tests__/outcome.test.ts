@@ -61,6 +61,7 @@ describe("scenario outcome (reference case, 10-year holding period)", () => {
       minRequiredReturn: referenceCase.constraints.minRoiTarget,
       rentalStrategy: referenceCase.selections.rentalStrategy,
       renovationStrategy: referenceCase.selections.renovationStrategy,
+      usableAreaM2Provided: true,
     });
   }
 
@@ -156,6 +157,7 @@ describe("scenario outcome (reference case, 10-year holding period)", () => {
       equityAvailable: undefined,
       rentalStrategy: referenceCase.selections.rentalStrategy,
       renovationStrategy: referenceCase.selections.renovationStrategy,
+      usableAreaM2Provided: true,
     });
     expect(outcome.equityFit.fitsWithinAvailableEquity).toBeNull();
   });
@@ -209,6 +211,7 @@ describe("scenario outcome (reference case, 10-year holding period)", () => {
       // minRequiredReturn omitted deliberately.
       rentalStrategy: referenceCase.selections.rentalStrategy,
       renovationStrategy: referenceCase.selections.renovationStrategy,
+      usableAreaM2Provided: true,
     });
     expect(outcome.returnRequirement.minRequiredReturn).toBe(0);
     // Conservative's positive 2.18% IRR now clears the weaker 0% default.
@@ -261,6 +264,7 @@ describe("scenario outcome (reference case, 10-year holding period)", () => {
       equityAvailable: referenceCase.property.ownMoney,
       rentalStrategy: referenceCase.selections.rentalStrategy,
       renovationStrategy: referenceCase.selections.renovationStrategy,
+      usableAreaM2Provided: true,
     });
     expect(outcome.returnRequirement.meetsMinRequiredReturn).toBeNull();
   });
@@ -277,6 +281,7 @@ describe("scenario outcome (reference case, 10-year holding period)", () => {
         equityAvailable: referenceCase.property.ownMoney,
         rentalStrategy: referenceCase.selections.rentalStrategy,
         renovationStrategy: referenceCase.selections.renovationStrategy,
+      usableAreaM2Provided: true,
       }),
     ).toThrow(/at least one projection year/);
   });
@@ -314,6 +319,53 @@ describe("scenario outcome (reference case, 10-year holding period)", () => {
       expect(names).not.toContain("RENOVATION_STRATEGIES.heavy.capex");
       expect(names).not.toContain("DEPRECIATION_SCENARIO_FACTORS.conservative");
       expect(names).not.toContain("DEPRECIATION_SCENARIO_FACTORS.optimistic");
+      // referenceCase.property.usableAreaM2 is set (usableAreaM2Provided:
+      // true in outcomeFor()), so the area-ratio placeholder does not
+      // apply - see the dedicated test below for the opposite case.
+      expect(names).not.toContain("DEFAULT_USABLE_TO_BUILT_AREA_RATIO");
+    });
+
+    it("DEFAULT_USABLE_TO_BUILT_AREA_RATIO joins placeholdersUsed only when usableAreaM2Provided is false (MODEL_SPEC.md §17)", () => {
+      const scenarioResult = engineResult.scenarios.find((s) => s.id === "base")!;
+      const years = buildProjectionYears({
+        years: 1,
+        scenario: "base",
+        scenarioResult,
+        purchasePrice: referenceCase.property.purchasePrice,
+        financing: engineResult.selectedFinancing,
+        fixedCosts: engineResult.fixedOperatingCosts,
+        euResident: true,
+        renovation: engineResult.selectedRenovation,
+      });
+      const exit = computeExit({
+        scenario: "base",
+        years,
+        purchasePrice: referenceCase.property.purchasePrice,
+        acquisition: engineResult.acquisition,
+        renovation: engineResult.selectedRenovation,
+        assumptions: testAssumptions,
+      });
+      const irr = computeScenarioIrr({
+        equityInvested: engineResult.acquisition.equityRequired,
+        years,
+        exit,
+      });
+      const outcome = buildScenarioOutcome({
+        scenario: "base",
+        purchasePrice: referenceCase.property.purchasePrice,
+        years,
+        exit,
+        irr,
+        equityRequired: engineResult.acquisition.equityRequired,
+        equityAvailable: referenceCase.property.ownMoney,
+        minRequiredReturn: referenceCase.constraints.minRoiTarget,
+        rentalStrategy: referenceCase.selections.rentalStrategy,
+        renovationStrategy: referenceCase.selections.renovationStrategy,
+        // usableAreaM2Provided omitted deliberately (defaults to false).
+      });
+      expect(outcome.placeholdersUsed.map((p) => p.name)).toContain(
+        "DEFAULT_USABLE_TO_BUILT_AREA_RATIO",
+      );
     });
 
     it("every entry is genuinely PLACEHOLDER, never SOURCED or ESTIMATE", () => {
@@ -403,6 +455,7 @@ describe("scenario outcome (reference case, 10-year holding period)", () => {
         minRequiredReturn: referenceCase.constraints.minRoiTarget,
         rentalStrategy: referenceCase.selections.rentalStrategy,
         renovationStrategy: referenceCase.selections.renovationStrategy,
+      usableAreaM2Provided: true,
         buildingShareOfValueProvided: true,
         renovationImprovementShareProvided: true,
       });
@@ -449,6 +502,7 @@ describe("scenario outcome (reference case, 10-year holding period)", () => {
         minRequiredReturn: referenceCase.constraints.minRoiTarget,
         rentalStrategy: referenceCase.selections.rentalStrategy,
         renovationStrategy: referenceCase.selections.renovationStrategy,
+      usableAreaM2Provided: true,
         cadastralValueProvided: true,
         buildingShareOfValueProvided: true,
       });

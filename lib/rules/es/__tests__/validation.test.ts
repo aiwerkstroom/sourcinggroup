@@ -8,13 +8,35 @@ describe("input validation (self-serve: reject impossible combinations)", () => 
     expect(validateEngineInput(referenceCase)).toEqual([]);
   });
 
-  it("rejects a non-positive living area", () => {
+  it("rejects a non-positive built area", () => {
     const bad = {
       ...referenceCase,
-      property: { ...referenceCase.property, livingAreaM2: 0 },
+      property: { ...referenceCase.property, builtAreaM2: 0 },
     };
     expect(validateEngineInput(bad)).not.toEqual([]);
     expect(() => runEngine(bad)).toThrow(ValidationError);
+  });
+
+  it("rejects a non-positive usable area when given", () => {
+    const bad = {
+      ...referenceCase,
+      property: { ...referenceCase.property, usableAreaM2: 0 },
+    };
+    expect(validateEngineInput(bad)).not.toEqual([]);
+  });
+
+  it("rejects usableAreaM2 exceeding builtAreaM2", () => {
+    const bad = {
+      ...referenceCase,
+      property: { ...referenceCase.property, usableAreaM2: 140, builtAreaM2: 133 },
+    };
+    expect(validateEngineInput(bad).join(" ")).toContain("usableAreaM2 cannot exceed");
+  });
+
+  it("accepts a property without usableAreaM2 (derived from builtAreaM2)", () => {
+    const { usableAreaM2, ...propertyWithoutUsableArea } = referenceCase.property;
+    const ok = { ...referenceCase, property: propertyWithoutUsableArea };
+    expect(validateEngineInput(ok)).toEqual([]);
   });
 
   it("rejects minLtv > maxLtv", () => {

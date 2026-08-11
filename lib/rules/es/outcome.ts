@@ -31,6 +31,7 @@ import {
   DEFAULT_CADASTRAL_TO_PURCHASE_PRICE_RATIO,
   DEFAULT_MIN_REQUIRED_RETURN,
   DEFAULT_RENOVATION_IMPROVEMENT_SHARE,
+  DEFAULT_USABLE_TO_BUILT_AREA_RATIO,
   DEPRECIATION_SCENARIO_FACTORS,
   MAINTENANCE_RATE,
   RENOVATION_STRATEGIES,
@@ -71,6 +72,10 @@ import type {
  *   value replaces both this IBI-base approximation and, if the caller
  *   wires it through, the DEFAULT_BUILDING_SHARE_OF_VALUE depreciation
  *   fallback above (MODEL_SPEC.md §16).
+ * - DEFAULT_USABLE_TO_BUILT_AREA_RATIO (engine.ts) only when the caller
+ *   did not supply PropertyInput.usableAreaM2 directly - the rent estimate
+ *   this outcome was built from then rests on a derived, not measured,
+ *   usable area (MODEL_SPEC.md §17).
  * - DEFAULT_MIN_REQUIRED_RETURN (this module) only when the investor did
  *   not state a minRoiTarget.
  */
@@ -82,6 +87,7 @@ function collectPlaceholders(args: {
   renovationImprovementShareProvided: boolean;
   minRequiredReturnProvided: boolean;
   cadastralValueProvided: boolean;
+  usableAreaM2Provided: boolean;
 }): Parameter<unknown>[] {
   const placeholders: Parameter<unknown>[] = [MAINTENANCE_RATE, BANK_FEE];
 
@@ -112,6 +118,9 @@ function collectPlaceholders(args: {
   if (!args.cadastralValueProvided) {
     placeholders.push(DEFAULT_CADASTRAL_TO_PURCHASE_PRICE_RATIO);
   }
+  if (!args.usableAreaM2Provided) {
+    placeholders.push(DEFAULT_USABLE_TO_BUILT_AREA_RATIO);
+  }
   if (!args.minRequiredReturnProvided) {
     placeholders.push(DEFAULT_MIN_REQUIRED_RETURN);
   }
@@ -140,6 +149,8 @@ export function buildScenarioOutcome(args: {
   renovationImprovementShareProvided?: boolean;
   /** True when the caller passed PropertyInput.cadastralValue through to fixedOperatingCosts (operating.ts) instead of relying on DEFAULT_CADASTRAL_TO_PURCHASE_PRICE_RATIO for the IBI base. */
   cadastralValueProvided?: boolean;
+  /** True when the caller passed PropertyInput.usableAreaM2 directly to buildIncomeModel (income.ts, via engine.ts) instead of relying on DEFAULT_USABLE_TO_BUILT_AREA_RATIO to derive it from builtAreaM2. */
+  usableAreaM2Provided?: boolean;
 }): ScenarioOutcome {
   if (args.years.length === 0) {
     throw new Error("buildScenarioOutcome needs at least one projection year");
@@ -193,6 +204,7 @@ export function buildScenarioOutcome(args: {
     renovationImprovementShareProvided: args.renovationImprovementShareProvided ?? false,
     minRequiredReturnProvided: args.minRequiredReturn !== undefined,
     cadastralValueProvided: args.cadastralValueProvided ?? false,
+    usableAreaM2Provided: args.usableAreaM2Provided ?? false,
   });
 
   return {

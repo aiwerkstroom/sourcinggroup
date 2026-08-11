@@ -12,9 +12,9 @@ import {
 } from "./parameters";
 import type { CadastralValue, FixedOperatingCosts } from "./types";
 
-/** Utilities base €/year: (gas + water + electricity per m²) x living area (H60). */
-export function utilitiesBaseAnnual(livingAreaM2: number): number {
-  return TOTAL_UTILITIES_PER_M2_ANNUAL.value * livingAreaM2;
+/** Utilities base €/year: (gas + water + electricity per m²) x built area (H60). */
+export function utilitiesBaseAnnual(builtAreaM2: number): number {
+  return TOTAL_UTILITIES_PER_M2_ANNUAL.value * builtAreaM2;
 }
 
 /**

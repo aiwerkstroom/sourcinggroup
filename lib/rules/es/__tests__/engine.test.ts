@@ -155,3 +155,42 @@ describe("reference case Avenida Primado Reig 19 (Excel parity)", () => {
     expect(nonEu.tax.taxDueBase).toBeCloseTo(738.822336, 6);
   });
 });
+
+/**
+ * MODEL_SPEC.md §17: rent uses usable floor area (superficie útil), while
+ * utilities per m² use built floor area (superficie construida) - two
+ * different physical measurements the Excel conflated into a single
+ * livingAreaM2. Reference case has both set identically (133 m², no
+ * distinct measurement available for this property); these tests use a
+ * synthetic case with genuinely different values to prove the two areas
+ * feed different formulas independently.
+ */
+describe("usable vs. built floor area (MODEL_SPEC.md §17)", () => {
+  it("rent uses usableAreaM2, utilities use builtAreaM2 - independently, when both are given", () => {
+    const withBoth = runEngine({
+      ...referenceCase,
+      property: { ...referenceCase.property, usableAreaM2: 100, builtAreaM2: 120 },
+    });
+    // Rent: 17 €/m² x 100 m² x 12 = 20400 (usable, not the 120 built).
+    expect(withBoth.income.longTerm.baseMonthlyRent).toBe(1700);
+    expect(withBoth.income.longTerm.baseAnnualRent).toBe(20400);
+    // Utilities: 21.5 €/m² x 120 m² = 2580 (built, not the 100 usable).
+    expect(withBoth.utilitiesBaseAnnual).toBeCloseTo(2580, 9);
+  });
+
+  it("derives usableAreaM2 from builtAreaM2 via DEFAULT_USABLE_TO_BUILT_AREA_RATIO when only built area is known", () => {
+    const builtOnly = runEngine({
+      ...referenceCase,
+      property: {
+        ...referenceCase.property,
+        usableAreaM2: undefined,
+        builtAreaM2: 120,
+      },
+    });
+    // 120 x 0.85 = 102 usable; rent = 17 x 102 x 12 = 20808.
+    expect(builtOnly.income.longTerm.baseMonthlyRent).toBeCloseTo(17 * 102, 9);
+    expect(builtOnly.income.longTerm.baseAnnualRent).toBeCloseTo(17 * 102 * 12, 9);
+    // Utilities still use the full built area, unaffected by the ratio.
+    expect(builtOnly.utilitiesBaseAnnual).toBeCloseTo(21.5 * 120, 9);
+  });
+});
