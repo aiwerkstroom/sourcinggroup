@@ -23,17 +23,91 @@
  */
 
 import { propertyValueIndex } from "./indexation";
-import { DEFAULT_MIN_REQUIRED_RETURN } from "./parameters";
+import {
+  BANK_FEE,
+  BASE_OCCUPANCY_LONG_TERM,
+  BASE_OCCUPANCY_SHORT_TERM,
+  DEFAULT_BUILDING_SHARE_OF_VALUE,
+  DEFAULT_MIN_REQUIRED_RETURN,
+  DEFAULT_RENOVATION_IMPROVEMENT_SHARE,
+  DEPRECIATION_SCENARIO_FACTORS,
+  MAINTENANCE_RATE,
+  RENOVATION_STRATEGIES,
+} from "./parameters";
 import type {
   EquityFitCheck,
   ExitResult,
   IrrResult,
+  Parameter,
   ProjectionYear,
+  RentalStrategy,
+  RenovationStrategyId,
   ReturnRequirementCheck,
   ScenarioId,
   ScenarioOutcome,
   ScenarioProjectionYear,
 } from "./types";
+
+/**
+ * The PLACEHOLDER-provenance parameters one scenario outcome's calculation
+ * chain actually draws on, given its selections - not every PLACEHOLDER in
+ * parameters.ts. Traced against the modules that build a ScenarioOutcome:
+ *
+ * - MAINTENANCE_RATE (scenarios.ts) and BANK_FEE (operating.ts,
+ *   acquisition.ts) apply to every outcome unconditionally.
+ * - BASE_OCCUPANCY_LONG_TERM/SHORT_TERM (income.ts) apply only for the
+ *   strategy actually selected - both for hybrid, one for longTerm/shortTerm.
+ * - The selected renovation strategy's five PLACEHOLDER fields
+ *   (RENOVATION_STRATEGIES[id]) - the two strategies NOT selected never
+ *   entered this outcome's numbers.
+ * - DEPRECIATION_SCENARIO_FACTORS[scenario] (projection.ts) - only this
+ *   scenario's own factor.
+ * - DEFAULT_BUILDING_SHARE_OF_VALUE (projection.ts) and
+ *   DEFAULT_RENOVATION_IMPROVEMENT_SHARE (exit.ts) only when the caller did
+ *   not override them with a property-specific figure.
+ * - DEFAULT_MIN_REQUIRED_RETURN (this module) only when the investor did
+ *   not state a minRoiTarget.
+ */
+function collectPlaceholders(args: {
+  scenario: ScenarioId;
+  rentalStrategy: RentalStrategy;
+  renovationStrategy: RenovationStrategyId;
+  buildingShareOfValueProvided: boolean;
+  renovationImprovementShareProvided: boolean;
+  minRequiredReturnProvided: boolean;
+}): Parameter<unknown>[] {
+  const placeholders: Parameter<unknown>[] = [MAINTENANCE_RATE, BANK_FEE];
+
+  if (args.rentalStrategy === "longTerm" || args.rentalStrategy === "hybrid") {
+    placeholders.push(BASE_OCCUPANCY_LONG_TERM);
+  }
+  if (args.rentalStrategy === "shortTerm" || args.rentalStrategy === "hybrid") {
+    placeholders.push(BASE_OCCUPANCY_SHORT_TERM);
+  }
+
+  const renovation = RENOVATION_STRATEGIES[args.renovationStrategy];
+  placeholders.push(
+    renovation.capex,
+    renovation.rentMultiplier,
+    renovation.maintenanceFactor,
+    renovation.utilitiesEfficiency,
+    renovation.timeToRentMonths,
+  );
+
+  placeholders.push(DEPRECIATION_SCENARIO_FACTORS[args.scenario]);
+
+  if (!args.buildingShareOfValueProvided) {
+    placeholders.push(DEFAULT_BUILDING_SHARE_OF_VALUE);
+  }
+  if (!args.renovationImprovementShareProvided) {
+    placeholders.push(DEFAULT_RENOVATION_IMPROVEMENT_SHARE);
+  }
+  if (!args.minRequiredReturnProvided) {
+    placeholders.push(DEFAULT_MIN_REQUIRED_RETURN);
+  }
+
+  return placeholders;
+}
 
 export function buildScenarioOutcome(args: {
   scenario: ScenarioId;
@@ -46,6 +120,14 @@ export function buildScenarioOutcome(args: {
   equityAvailable: number | undefined;
   /** InvestorConstraints.minRoiTarget when stated; falls back to DEFAULT_MIN_REQUIRED_RETURN (0) otherwise. */
   minRequiredReturn?: number;
+  /** The rental strategy actually used for this outcome's income (income.ts) - determines which occupancy PLACEHOLDER(s) apply. */
+  rentalStrategy: RentalStrategy;
+  /** The renovation strategy actually used - determines which RENOVATION_STRATEGIES PLACEHOLDER group applies. */
+  renovationStrategy: RenovationStrategyId;
+  /** True when the caller passed an explicit buildingShareOfValue to buildProjectionYears (projection.ts) instead of relying on DEFAULT_BUILDING_SHARE_OF_VALUE. */
+  buildingShareOfValueProvided?: boolean;
+  /** True when the caller passed an explicit renovationImprovementShare to computeExit (exit.ts) instead of relying on DEFAULT_RENOVATION_IMPROVEMENT_SHARE. */
+  renovationImprovementShareProvided?: boolean;
 }): ScenarioOutcome {
   if (args.years.length === 0) {
     throw new Error("buildScenarioOutcome needs at least one projection year");
@@ -91,6 +173,15 @@ export function buildScenarioOutcome(args: {
     meetsMinRequiredReturn: args.irr.defined ? args.irr.irr >= minRequiredReturn : null,
   };
 
+  const placeholdersUsed = collectPlaceholders({
+    scenario: args.scenario,
+    rentalStrategy: args.rentalStrategy,
+    renovationStrategy: args.renovationStrategy,
+    buildingShareOfValueProvided: args.buildingShareOfValueProvided ?? false,
+    renovationImprovementShareProvided: args.renovationImprovementShareProvided ?? false,
+    minRequiredReturnProvided: args.minRequiredReturn !== undefined,
+  });
+
   return {
     scenario: args.scenario,
     years,
@@ -100,5 +191,6 @@ export function buildScenarioOutcome(args: {
     paybackYear,
     equityFit,
     returnRequirement,
+    placeholdersUsed,
   };
 }

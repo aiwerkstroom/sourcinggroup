@@ -496,6 +496,17 @@ export interface ScenarioOutcome {
   paybackYear: number | null;
   equityFit: EquityFitCheck;
   returnRequirement: ReturnRequirementCheck;
+  /**
+   * The PLACEHOLDER-provenance parameters this specific outcome's numbers
+   * actually depend on, given its scenario, rental strategy and renovation
+   * strategy selections - not every PLACEHOLDER in parameters.ts, and not
+   * a single boolean flag. Empty when the outcome happens to rest on none
+   * (not possible today, since MAINTENANCE_RATE and BANK_FEE apply to
+   * every outcome, but the type does not assume that stays true). The
+   * report reads this list to name exactly which conclusions rest on
+   * unconfirmed assumptions (MODEL_SPEC.md §14).
+   */
+  placeholdersUsed: Parameter<unknown>[];
 }
 
 export interface EngineResult {

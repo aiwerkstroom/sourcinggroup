@@ -56,6 +56,8 @@ describe("scenario outcome (reference case, 10-year holding period)", () => {
       equityRequired: engineResult.acquisition.equityRequired,
       equityAvailable: referenceCase.property.ownMoney,
       minRequiredReturn: referenceCase.constraints.minRoiTarget,
+      rentalStrategy: referenceCase.selections.rentalStrategy,
+      renovationStrategy: referenceCase.selections.renovationStrategy,
     });
   }
 
@@ -149,6 +151,8 @@ describe("scenario outcome (reference case, 10-year holding period)", () => {
       irr,
       equityRequired: engineResult.acquisition.equityRequired,
       equityAvailable: undefined,
+      rentalStrategy: referenceCase.selections.rentalStrategy,
+      renovationStrategy: referenceCase.selections.renovationStrategy,
     });
     expect(outcome.equityFit.fitsWithinAvailableEquity).toBeNull();
   });
@@ -200,10 +204,18 @@ describe("scenario outcome (reference case, 10-year holding period)", () => {
       equityRequired: engineResult.acquisition.equityRequired,
       equityAvailable: referenceCase.property.ownMoney,
       // minRequiredReturn omitted deliberately.
+      rentalStrategy: referenceCase.selections.rentalStrategy,
+      renovationStrategy: referenceCase.selections.renovationStrategy,
     });
     expect(outcome.returnRequirement.minRequiredReturn).toBe(0);
     // Conservative's positive 2.49% IRR now clears the weaker 0% default.
     expect(outcome.returnRequirement.meetsMinRequiredReturn).toBe(true);
+    // DEFAULT_MIN_REQUIRED_RETURN joins placeholdersUsed only when the
+    // hurdle rate was not supplied - unlike outcomeFor(), which always
+    // passes referenceCase.constraints.minRoiTarget.
+    expect(outcome.placeholdersUsed.map((p) => p.name)).toContain(
+      "DEFAULT_MIN_REQUIRED_RETURN",
+    );
   });
 
   it("return requirement is null (not false) when the IRR itself is not defined", () => {
@@ -244,6 +256,8 @@ describe("scenario outcome (reference case, 10-year holding period)", () => {
       irr,
       equityRequired: engineResult.acquisition.equityRequired,
       equityAvailable: referenceCase.property.ownMoney,
+      rentalStrategy: referenceCase.selections.rentalStrategy,
+      renovationStrategy: referenceCase.selections.renovationStrategy,
     });
     expect(outcome.returnRequirement.meetsMinRequiredReturn).toBeNull();
   });
@@ -258,7 +272,137 @@ describe("scenario outcome (reference case, 10-year holding period)", () => {
         irr: outcomeFor("base").irr,
         equityRequired: engineResult.acquisition.equityRequired,
         equityAvailable: referenceCase.property.ownMoney,
+        rentalStrategy: referenceCase.selections.rentalStrategy,
+        renovationStrategy: referenceCase.selections.renovationStrategy,
       }),
     ).toThrow(/at least one projection year/);
+  });
+
+  describe("placeholdersUsed: which unconfirmed assumptions this outcome actually rests on", () => {
+    it("reference case (hybrid, light renovation): occupancy (both), the five light-renovation fields, this scenario's depreciation factor, the building-share and mejora-share defaults", () => {
+      const outcome = outcomeFor("base");
+      const names = outcome.placeholdersUsed.map((p) => p.name);
+      expect(names).toEqual(
+        expect.arrayContaining([
+          "MAINTENANCE_RATE",
+          "BANK_FEE",
+          "BASE_OCCUPANCY_LONG_TERM",
+          "BASE_OCCUPANCY_SHORT_TERM",
+          "RENOVATION_STRATEGIES.light.capex",
+          "RENOVATION_STRATEGIES.light.rentMultiplier",
+          "RENOVATION_STRATEGIES.light.maintenanceFactor",
+          "RENOVATION_STRATEGIES.light.utilitiesEfficiency",
+          "RENOVATION_STRATEGIES.light.timeToRentMonths",
+          "DEPRECIATION_SCENARIO_FACTORS.base",
+          "DEFAULT_BUILDING_SHARE_OF_VALUE",
+          "DEFAULT_RENOVATION_IMPROVEMENT_SHARE",
+        ]),
+      );
+      // referenceCase.constraints.minRoiTarget is set, so the fallback is
+      // not consulted for this outcome.
+      expect(names).not.toContain("DEFAULT_MIN_REQUIRED_RETURN");
+      // Not the minimal or heavy strategy's fields, and not the other
+      // scenarios' depreciation factors - those never entered this
+      // outcome's numbers.
+      expect(names).not.toContain("RENOVATION_STRATEGIES.minimal.capex");
+      expect(names).not.toContain("RENOVATION_STRATEGIES.heavy.capex");
+      expect(names).not.toContain("DEPRECIATION_SCENARIO_FACTORS.conservative");
+      expect(names).not.toContain("DEPRECIATION_SCENARIO_FACTORS.optimistic");
+    });
+
+    it("every entry is genuinely PLACEHOLDER, never SOURCED or ESTIMATE", () => {
+      const outcome = outcomeFor("optimistic");
+      outcome.placeholdersUsed.forEach((p) => {
+        expect(p.provenance).toBe("PLACEHOLDER");
+      });
+    });
+
+    it("long-term-only strategy depends on the long-term occupancy PLACEHOLDER but not the short-term one", () => {
+      const scenarioResult = engineResult.scenarios.find((s) => s.id === "base")!;
+      const years = buildProjectionYears({
+        years: 1,
+        scenario: "base",
+        scenarioResult,
+        purchasePrice: referenceCase.property.purchasePrice,
+        financing: engineResult.selectedFinancing,
+        fixedCosts: engineResult.fixedOperatingCosts,
+        euResident: true,
+        renovation: engineResult.selectedRenovation,
+      });
+      const exit = computeExit({
+        scenario: "base",
+        years,
+        purchasePrice: referenceCase.property.purchasePrice,
+        acquisition: engineResult.acquisition,
+        renovation: engineResult.selectedRenovation,
+        assumptions: testAssumptions,
+      });
+      const irr = computeScenarioIrr({
+        equityInvested: engineResult.acquisition.equityRequired,
+        years,
+        exit,
+      });
+      const outcome = buildScenarioOutcome({
+        scenario: "base",
+        purchasePrice: referenceCase.property.purchasePrice,
+        years,
+        exit,
+        irr,
+        equityRequired: engineResult.acquisition.equityRequired,
+        equityAvailable: referenceCase.property.ownMoney,
+        minRequiredReturn: referenceCase.constraints.minRoiTarget,
+        rentalStrategy: "longTerm",
+        renovationStrategy: "light",
+      });
+      const names = outcome.placeholdersUsed.map((p) => p.name);
+      expect(names).toContain("BASE_OCCUPANCY_LONG_TERM");
+      expect(names).not.toContain("BASE_OCCUPANCY_SHORT_TERM");
+    });
+
+    it("an explicit buildingShareOfValue / renovationImprovementShare drops their defaults from the list", () => {
+      const scenarioResult = engineResult.scenarios.find((s) => s.id === "base")!;
+      const years = buildProjectionYears({
+        years: 1,
+        scenario: "base",
+        scenarioResult,
+        purchasePrice: referenceCase.property.purchasePrice,
+        financing: engineResult.selectedFinancing,
+        fixedCosts: engineResult.fixedOperatingCosts,
+        euResident: true,
+        renovation: engineResult.selectedRenovation,
+        buildingShareOfValue: 0.65, // property-specific cadastral figure, not the generic default
+      });
+      const exit = computeExit({
+        scenario: "base",
+        years,
+        purchasePrice: referenceCase.property.purchasePrice,
+        acquisition: engineResult.acquisition,
+        renovation: engineResult.selectedRenovation,
+        assumptions: testAssumptions,
+        renovationImprovementShare: 0.5, // documented mejora share, not the safe 0 default
+      });
+      const irr = computeScenarioIrr({
+        equityInvested: engineResult.acquisition.equityRequired,
+        years,
+        exit,
+      });
+      const outcome = buildScenarioOutcome({
+        scenario: "base",
+        purchasePrice: referenceCase.property.purchasePrice,
+        years,
+        exit,
+        irr,
+        equityRequired: engineResult.acquisition.equityRequired,
+        equityAvailable: referenceCase.property.ownMoney,
+        minRequiredReturn: referenceCase.constraints.minRoiTarget,
+        rentalStrategy: referenceCase.selections.rentalStrategy,
+        renovationStrategy: referenceCase.selections.renovationStrategy,
+        buildingShareOfValueProvided: true,
+        renovationImprovementShareProvided: true,
+      });
+      const names = outcome.placeholdersUsed.map((p) => p.name);
+      expect(names).not.toContain("DEFAULT_BUILDING_SHARE_OF_VALUE");
+      expect(names).not.toContain("DEFAULT_RENOVATION_IMPROVEMENT_SHARE");
+    });
   });
 });

@@ -565,3 +565,73 @@ Bestaande golden tests die op een nu-PLACEHOLDER waarde steunen (bijv. de
 ze toetsen dat de rekenlogica de waarde correct gebruikt, niet dat de
 waarde zelf juist is. Dat blijft zo totdat een PLACEHOLDER wordt vervangen
 door een geverifieerd cijfer.
+
+## 14. Herkomst zichtbaar in de scenario-uitkomst — `outcome.ts`
+
+Onderdeel §13 geeft elke parameter een herkomstlabel; dit onderdeel draagt
+dat label door tot in `ScenarioOutcome` (MODEL_SPEC_FASE1B §7), zodat het
+rapport later kan tonen welke conclusies op onbevestigde aannames rusten —
+zonder de gehele rekenketen te herbouwen om `Parameter<T>`-objecten in
+plaats van kale getallen door te geven.
+
+**Ontwerp: een lijst per uitkomst, geen vlag.** `ScenarioOutcome` krijgt
+een nieuw veld `placeholdersUsed: Parameter<unknown>[]` — de volledige
+PLACEHOLDER-objecten (naam, waarde, redenering) die déze specifieke
+combinatie van scenario, huurstrategie en renovatiestrategie daadwerkelijk
+gebruikt, niet elke PLACEHOLDER die ergens in `parameters.ts` bestaat. Een
+enkel `hasPlaceholder: boolean`-veld zou geen van beide vragen kunnen
+beantwoorden die het rapport moet stellen: *welke* aannames, en *waarom*
+onbevestigd.
+
+**Herleiding, niet gok.** `outcome.ts` exporteert (intern)
+`collectPlaceholders()`, die per uitkomst teruggrijpt op de daadwerkelijke
+code-paden in de andere modules — nagelopen bestand voor bestand, niet
+aangenomen:
+
+- `MAINTENANCE_RATE` (`scenarios.ts`) en `BANK_FEE` (`operating.ts`,
+  `acquisition.ts`) gelden voor élke uitkomst onvoorwaardelijk.
+- `BASE_OCCUPANCY_LONG_TERM`/`SHORT_TERM` (`income.ts`) gelden alleen voor
+  de daadwerkelijk gekozen huurstrategie: beide bij hybride, één bij
+  langetermijn/kortetermijn — `buildIncomeModel()` berekent intern altijd
+  beide lijnen, maar alleen de geselecteerde stroomt door naar
+  `selectedGrossAnnualIncome` en dus naar de rest van de keten.
+- De vijf PLACEHOLDER-velden van de gekozen renovatiestrategie
+  (`RENOVATION_STRATEGIES[id]`) — de twee niet-gekozen strategieën hebben
+  deze uitkomst nooit geraakt.
+- `DEPRECIATION_SCENARIO_FACTORS[scenario]` (`projection.ts`) — alleen de
+  factor van dit ene scenario.
+- `DEFAULT_BUILDING_SHARE_OF_VALUE` (`projection.ts`) en
+  `DEFAULT_RENOVATION_IMPROVEMENT_SHARE` (`exit.ts`) alleen wanneer de
+  aanroeper geen pandspecifiek cijfer heeft meegegeven — `outcome.ts` kan
+  dat niet zelf zien in een reeds berekend `ExitResult`/`ProjectionYear[]`,
+  dus `buildScenarioOutcome()` accepteert twee expliciete vlaggen
+  (`buildingShareOfValueProvided`, `renovationImprovementShareProvided`)
+  die de aanroeper zet zodra hij zelf een niet-standaardwaarde doorgeeft
+  aan `buildProjectionYears()`/`computeExit()`. Zodra onderdeel 4
+  (kadastrale waarde) de eerste daadwerkelijk verbindt, verdwijnt
+  `DEFAULT_BUILDING_SHARE_OF_VALUE` automatisch uit de lijst voor elk pand
+  waar de kadastrale waarde is ingevuld.
+- `DEFAULT_MIN_REQUIRED_RETURN` (`outcome.ts` zelf) alleen wanneer de
+  belegger geen `minRoiTarget` heeft opgegeven.
+
+De `RENT_MATRIX_LONG_TERM_PER_M2`/`SHORT_TERM_PER_M2` PLACEHOLDERS (§13)
+komen bewust niet voor: die tabellen voeden vandaag geen enkele berekening
+(referentiedata voor een toekomstige huurselectie-UI), dus geen enkele
+uitkomst rust erop.
+
+**Referentiecasus (hybride, licht renovatie).** `placeholdersUsed` bevat
+twaalf parameters: `MAINTENANCE_RATE`, `BANK_FEE`, beide
+bezettingsgraad-PLACEHOLDERS (hybride gebruikt beide), de vijf
+`RENOVATION_STRATEGIES.light.*`-velden, `DEPRECIATION_SCENARIO_FACTORS`
+van het betreffende scenario, en de twee standaardaannames
+(`DEFAULT_BUILDING_SHARE_OF_VALUE`, `DEFAULT_RENOVATION_IMPROVEMENT_SHARE`
+— geen van beide is in de referentiecasus overschreven).
+`DEFAULT_MIN_REQUIRED_RETURN` ontbreekt, omdat de referentiecasus wél een
+`minRoiTarget` (4%) opgeeft.
+
+Golden tests (`outcome.test.ts`, `describe("placeholdersUsed: ...")`):
+de exacte referentiecasus-lijst; dat elk item werkelijk PLACEHOLDER is en
+nooit SOURCED/ESTIMATE; dat een langetermijn-only uitkomst wél de
+langetermijn- maar niet de kortetermijn-bezettingsgraad meedraagt; en dat
+een expliciet meegegeven `buildingShareOfValue`/`renovationImprovementShare`
+de bijbehorende default uit de lijst laat verdwijnen.
