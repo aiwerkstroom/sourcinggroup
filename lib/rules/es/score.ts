@@ -49,9 +49,14 @@ import type {
  * a form that also covers the deliberately descending data-certainty curve
  * (§2.5), where the lowest anchor scores 10 and the highest 0.
  *
- * Throws rather than guesses on a malformed curve or a non-finite input: a
- * silently wrong score is worse than a crash, since nothing downstream
- * could detect it.
+ * Throws on a malformed curve or on NaN: a silently wrong score is worse
+ * than a crash, since nothing downstream could detect it. +-Infinity is
+ * accepted, deliberately not folded into that guard: it is a legitimate
+ * domain value the clamp logic below already resolves correctly (e.g.
+ * DSCR = NOI / debtService is a real +Infinity, not an error, for an
+ * all-cash purchase with zero debt service - the best possible debt
+ * resilience, which clamping to the top anchor's score correctly
+ * reflects). NaN has no such legitimate reading and stays rejected.
  */
 export function piecewiseLinear(anchors: readonly ScoreAnchor[], x: number): number {
   if (anchors.length < 2) {
@@ -64,8 +69,8 @@ export function piecewiseLinear(anchors: readonly ScoreAnchor[], x: number): num
       );
     }
   }
-  if (!Number.isFinite(x)) {
-    throw new Error(`piecewiseLinear cannot score a non-finite value (${x})`);
+  if (Number.isNaN(x)) {
+    throw new Error(`piecewiseLinear cannot score NaN`);
   }
 
   const first = anchors[0]!;

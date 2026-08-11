@@ -1256,6 +1256,57 @@ export const TSG_SCORE_DISTRIBUTION_EQUITY_COVERAGE_RANGE: EstimateParameter<{
     "Available equity (and totalBudget) as a coverage factor on equityRequired, the figure the engine already computes for this specific case, rather than a fraction of purchase price - the latter ignored how much a deal's own leverage, acquisition costs and renovation actually demand. 0.6-1.4 simulates a spread from under-prepared to well-prepared investors relative to what this deal needs, not relative to an unrelated price-based estimate.",
 };
 
+/**
+ * Preferred LTV per generated case, fed straight into the engine's own
+ * ModelSelections/InvestorConstraints.preferredLtv field (financing.ts,
+ * clampLtv()). Every case previously used whichever of the three
+ * FINANCING_STRATEGIES tiers (60%/70%/75% LTV) was drawn, but
+ * TSG_SCORE_DISTRIBUTION_CONSTRAINTS.minLtv (0.6) then clamped ALL of them
+ * into the same narrow 60%-75% band regardless - so leverage never
+ * actually varied, and cashflow/DSCR were structurally weak for nearly
+ * every case (amortising debt service on 60%+ LTV rarely leaves much
+ * operating cashflow at a market-consistent rental yield).
+ *
+ * 0-0.75 spans an all-cash purchase (LTV 0, no mortgage at all) up to the
+ * engine's own highest existing leverage tier (FINANCING_STRATEGIES.high.
+ * ltv, 0.75) - the full range clampLtv() can already produce, not a new
+ * financing mechanism. TSG_SCORE_DISTRIBUTION_CONSTRAINTS.minLtv is
+ * lowered to 0 (see below) so this draw is not clamped back up before it
+ * reaches clampLtv().
+ */
+export const TSG_SCORE_DISTRIBUTION_PREFERRED_LTV_RANGE: EstimateParameter<{
+  min: number;
+  max: number;
+}> = {
+  name: "TSG_SCORE_DISTRIBUTION_PREFERRED_LTV_RANGE",
+  value: { min: 0, max: 0.75 },
+  provenance: "ESTIMATE",
+  reasoning:
+    "Drawn per case as InvestorConstraints.preferredLtv, using the engine's existing clampLtv()/selectInterestRate() mechanism (financing.ts) rather than new financing logic. 0-0.75 spans an all-cash purchase up to FINANCING_STRATEGIES.high.ltv, the engine's own highest defined leverage tier - the full range the mechanism already supports, previously unreachable because minLtv (0.6) clamped every draw into a narrow high-leverage band regardless of strategy.",
+};
+
+/**
+ * Holding period (years) per generated case, replacing the single fixed
+ * PROJECTION_YEARS.value (10) every case previously used for both
+ * buildProjectionYears() and computeExit(). A single fixed horizon meant
+ * the exit outcome - and so the IRR, the only score dimension it feeds -
+ * varied only with price and scenario, never with how long the synthetic
+ * investor actually holds. 5-15 years spans short to medium-length holds
+ * a real investor might choose, centered near PROJECTION_YEARS' own
+ * 10-year recommendation (MODEL_SPEC_FASE1B §2) rather than replacing it
+ * with an unrelated figure.
+ */
+export const TSG_SCORE_DISTRIBUTION_HOLDING_PERIOD_RANGE_YEARS: EstimateParameter<{
+  min: number;
+  max: number;
+}> = {
+  name: "TSG_SCORE_DISTRIBUTION_HOLDING_PERIOD_RANGE_YEARS",
+  value: { min: 5, max: 15 },
+  provenance: "ESTIMATE",
+  reasoning:
+    "SCORE_SPEC.md §5 does not specify a holding-period range. 5-15 years spans short to medium-length holds a real investor might choose, centered near PROJECTION_YEARS' own 10-year recommendation (MODEL_SPEC_FASE1B §2) rather than fixing every generated case to that single value.",
+};
+
 /** Rental strategy mix for generated cases, SCORE_SPEC.md §5: "langetermijn (70%) en hybride (30%)". "shortTerm" is not generated. */
 export const TSG_SCORE_DISTRIBUTION_RENTAL_STRATEGY_SHARES: EstimateParameter<{
   longTerm: number;
@@ -1328,7 +1379,12 @@ export const TSG_SCORE_DISTRIBUTION_CONSTRAINTS: EstimateParameter<{
   name: "TSG_SCORE_DISTRIBUTION_CONSTRAINTS",
   value: {
     maxRenovationBudget: 60_000,
-    minLtv: 0.6,
+    // 0, not referencecase.ts's 0.6: this is the floor clampLtv() applies
+    // to TSG_SCORE_DISTRIBUTION_PREFERRED_LTV_RANGE's per-case draw
+    // (0-0.75). A 0.6 floor would clamp every low-leverage/cash-purchase
+    // draw straight back up to 60% LTV, which is exactly the bug that
+    // range was introduced to fix - see its own reasoning above.
+    minLtv: 0,
     maxLtv: 0.75,
     minRoiTarget: 0.04,
     minMonthlyCashflow: 500,
@@ -1336,7 +1392,7 @@ export const TSG_SCORE_DISTRIBUTION_CONSTRAINTS: EstimateParameter<{
   },
   provenance: "ESTIMATE",
   reasoning:
-    "SCORE_SPEC.md §5's 'overige invoer: de defaults uit parameters.ts', applied to the InvestorConstraints fields that do not scale with equityRequired (totalBudget does now - see TSG_SCORE_DISTRIBUTION_EQUITY_COVERAGE_RANGE). Reuses referencecase.ts's TEST FIXTURE constraints for consistency with the rest of the golden-test suite.",
+    "SCORE_SPEC.md §5's 'overige invoer: de defaults uit parameters.ts', applied to the InvestorConstraints fields that do not scale with equityRequired or vary per case (totalBudget does now - see TSG_SCORE_DISTRIBUTION_EQUITY_COVERAGE_RANGE - and minLtv is lowered from referencecase.ts's 0.6 to 0 so TSG_SCORE_DISTRIBUTION_PREFERRED_LTV_RANGE's per-case draw is not clamped away). The remaining fields reuse referencecase.ts's TEST FIXTURE constraints for consistency with the rest of the golden-test suite.",
 };
 
 /** All parameters in this file, for provenance tooling (e.g. collecting every PLACEHOLDER). */
@@ -1407,6 +1463,8 @@ export const ALL_PARAMETERS: ReadonlyArray<Parameter<unknown>> = [
   TSG_SCORE_DISTRIBUTION_AREA_RANGE_M2,
   TSG_SCORE_DISTRIBUTION_PRICE_TO_RENT_MULTIPLIER_RANGE,
   TSG_SCORE_DISTRIBUTION_EQUITY_COVERAGE_RANGE,
+  TSG_SCORE_DISTRIBUTION_PREFERRED_LTV_RANGE,
+  TSG_SCORE_DISTRIBUTION_HOLDING_PERIOD_RANGE_YEARS,
   TSG_SCORE_DISTRIBUTION_RENTAL_STRATEGY_SHARES,
   TSG_SCORE_DISTRIBUTION_COMMUNITY_FEES_RANGE,
   TSG_SCORE_DISTRIBUTION_EXIT_ASSUMPTIONS,

@@ -6,14 +6,19 @@ import {
   generateReferenceDistribution,
 } from "../distribution/generate";
 import {
+  FINANCING_STRATEGIES,
   NEIGHBORHOOD_RENT_LONG_TERM,
   NEIGHBORHOOD_RENT_SHORT_TERM,
   TSG_SCORE_DISTRIBUTION_AREA_RANGE_M2,
   TSG_SCORE_DISTRIBUTION_COMMUNITY_FEES_RANGE,
+  TSG_SCORE_DISTRIBUTION_CONSTRAINTS,
   TSG_SCORE_DISTRIBUTION_EQUITY_COVERAGE_RANGE,
+  TSG_SCORE_DISTRIBUTION_HOLDING_PERIOD_RANGE_YEARS,
+  TSG_SCORE_DISTRIBUTION_PREFERRED_LTV_RANGE,
   TSG_SCORE_DISTRIBUTION_PRICE_TO_RENT_MULTIPLIER_RANGE,
   TSG_SCORE_DISTRIBUTION_RENTAL_STRATEGY_SHARES,
 } from "../parameters";
+import { buildProjectionYears } from "../projection";
 import { computePercentile } from "../percentile";
 
 /**
@@ -129,6 +134,92 @@ describe("corrections to the generator's sampling design", () => {
     const over = deriveSyntheticEquitySupply(() => 0.999999, 100_000);
     expect(over.equityAvailable).toBeGreaterThan(100_000);
   });
+
+  it("4. leverage now genuinely varies per case: preferredLtv spans an all-cash purchase up to the engine's highest tier, and actually reaches the engine (unclamped)", () => {
+    const rng = createRng(6);
+    const ltvRange = TSG_SCORE_DISTRIBUTION_PREFERRED_LTV_RANGE.value;
+    expect(ltvRange.min).toBe(0);
+    expect(ltvRange.max).toBe(FINANCING_STRATEGIES.high.ltv.value);
+    // minLtv must not clamp the draw back up - the bug this correction fixes.
+    expect(TSG_SCORE_DISTRIBUTION_CONSTRAINTS.value.minLtv).toBe(0);
+
+    const seenLtv: number[] = [];
+    for (let i = 0; i < 200; i++) {
+      const { input, derived } = buildSyntheticEngineInput(rng);
+      expect(derived.preferredLtv).toBeGreaterThanOrEqual(ltvRange.min);
+      expect(derived.preferredLtv).toBeLessThanOrEqual(ltvRange.max);
+      expect(input.constraints.preferredLtv).toBe(derived.preferredLtv);
+
+      // The engine actually uses it, unclamped - not just present in the input.
+      const engineResult = runEngine(input);
+      expect(engineResult.selectedFinancing.ltv).toBeCloseTo(derived.preferredLtv, 9);
+      seenLtv.push(engineResult.selectedFinancing.ltv);
+    }
+    // Genuinely spans low and high leverage, not stuck in one band.
+    expect(Math.min(...seenLtv)).toBeLessThan(0.1);
+    expect(Math.max(...seenLtv)).toBeGreaterThan(0.65);
+  });
+
+  it("an all-cash draw (preferredLtv exactly 0) produces zero mortgage and scores cleanly, not a crash", () => {
+    // The scenario the user explicitly asked for: "lage OF GEEN hypotheek".
+    // With zero debt service, DSCR = NOI / 0 = +Infinity in JS - a real,
+    // meaningful value (no debt to service at all), not an error. This
+    // used to crash computeTsgScore() via piecewiseLinear()'s old blanket
+    // non-finite guard; see score.ts/score.test.ts for the fix (NaN is
+    // still rejected, +-Infinity is now accepted and clamps correctly).
+    const { input } = buildSyntheticEngineInput(createRng(7));
+    const cashInput = {
+      ...input,
+      constraints: { ...input.constraints, preferredLtv: 0 },
+    };
+    const engineResult = runEngine(cashInput);
+    expect(engineResult.selectedFinancing.ltv).toBe(0);
+    expect(engineResult.selectedFinancing.mortgageAmount).toBe(0);
+    const scenarioResult = engineResult.scenarios.find((s) => s.id === "base")!;
+    // Cashflow is unaffected by the zero-division and stays an ordinary
+    // finite number - only DSCR (NOI / debtService, with debtService = 0)
+    // becomes an infinity: +Infinity if this case's NOI is positive,
+    // -Infinity if negative (this particular draw's own operating
+    // economics decide the sign, not this test) - either way a real,
+    // meaningful value, never NaN.
+    expect(Number.isFinite(scenarioResult.monthlyCashflow)).toBe(true);
+    expect(Number.isNaN(scenarioResult.dscr)).toBe(false);
+    expect(Number.isFinite(scenarioResult.dscr)).toBe(false);
+  });
+
+  it("5. holding period varies per case within 5-15 years, not fixed at PROJECTION_YEARS' default of 10", () => {
+    const rng = createRng(8);
+    const range = TSG_SCORE_DISTRIBUTION_HOLDING_PERIOD_RANGE_YEARS.value;
+    const seen = new Set<number>();
+    for (let i = 0; i < 200; i++) {
+      const { derived } = buildSyntheticEngineInput(rng);
+      expect(Number.isInteger(derived.holdingYears)).toBe(true);
+      expect(derived.holdingYears).toBeGreaterThanOrEqual(range.min);
+      expect(derived.holdingYears).toBeLessThanOrEqual(range.max);
+      seen.add(derived.holdingYears);
+    }
+    // All eleven whole years in [5, 15] should turn up in 200 draws.
+    expect(seen.size).toBe(range.max - range.min + 1);
+  });
+
+  it("the holding period actually reaches the projection: buildProjectionYears() produces exactly that many years", () => {
+    const rng = createRng(9);
+    const { input, derived } = buildSyntheticEngineInput(rng);
+    const engineResult = runEngine(input);
+    const scenarioResult = engineResult.scenarios.find((s) => s.id === "base")!;
+    const years = buildProjectionYears({
+      years: derived.holdingYears,
+      scenario: "base",
+      scenarioResult,
+      purchasePrice: derived.purchasePrice,
+      financing: engineResult.selectedFinancing,
+      fixedCosts: engineResult.fixedOperatingCosts,
+      euResident: true,
+      renovation: engineResult.selectedRenovation,
+    });
+    expect(years).toHaveLength(derived.holdingYears);
+    expect(years[years.length - 1]!.yearNumber).toBe(derived.holdingYears);
+  });
 });
 
 describe("data used by the generator is self-consistent", () => {
@@ -236,33 +327,28 @@ describe("the default (1.000-case, default-seed) reference distribution", () => 
     // SCORE_SPEC.md §5's "verversing" rule applies and this value is
     // expected to move; it is not expected to move on its own.
     //
-    // 98 - barely moved from the 99 the price-based equity draw produced,
-    // and both are still far above the 78 the original independent-price-
-    // sampling generator gave. Anchoring the coverage factor to
-    // equityRequired fixed the systematic ~50%-of-cases-fail-on-principle
-    // problem (see the feasibility pass-rate test below - now a realistic
-    // ~50/50 split), but the OTHER three dimensions (cashflow,
-    // debtResilience, returnVsRequirement) are still computed from
-    // properties priced at a realistic market yield (13-24x annual rent)
-    // and highly leveraged (60-75% LTV, amortising) - which keeps most
-    // synthetic deals' operating cashflow and DSCR weak regardless of how
-    // much equity the investor happens to have on hand. Equity coverage
-    // only ever touches ONE of the five dimensions' worth of weight (0.20).
-    expect(computePercentile(distribution, 3.8)).toBe(98);
+    // 70 - down from 98 once leverage and holding period actually vary per
+    // case. The earlier corrections (price/area coupling, equity coverage)
+    // only ever fixed the feasibility dimension; every case was still
+    // highly leveraged (60-75% LTV, amortising) regardless of drawn
+    // financingStrategy, because a fixed minLtv of 0.6 clamped every
+    // strategy's LTV into that band. Freeing preferredLtv to span 0-0.75
+    // lets a real share of cases carry a small or no mortgage - the
+    // regime where positive year-1 cashflow is actually possible - which
+    // is what moved the OTHER three dimensions (cashflow, debtResilience,
+    // returnVsRequirement), not just feasibility.
+    expect(computePercentile(distribution, 3.8)).toBe(70);
   });
 
   it("presentation sentence renders as SCORE_SPEC.md §5 specifies", () => {
     const percentile = computePercentile(distribution, 3.8);
     const sentence = `Deze investering scoort in het ${percentile}ste percentiel van ons modelbereik.`;
-    expect(sentence).toBe("Deze investering scoort in het 98ste percentiel van ons modelbereik.");
+    expect(sentence).toBe("Deze investering scoort in het 70ste percentiel van ons modelbereik.");
   });
 
-  it("the feasibility check now passes for a realistic share of cases - roughly half, not almost none", () => {
-    // The equity-coverage range (0.6-1.4) is centered on exactly 1.0
-    // (coverage == equityRequired), so a case's equity check should pass
-    // roughly as often as it fails - unlike the price-based draw, which
-    // failed it for ~100% of a 300-case sample because it undershot
-    // equityRequired systematically rather than spreading around it.
+  it("the feasibility check still passes for a realistic share of cases - roughly half, not almost none", () => {
+    // Unaffected by this correction (equity coverage still governs
+    // feasibility on its own), reconfirmed here for good measure.
     const rng = createRng(99);
     let pass = 0;
     const n = 400;
@@ -276,39 +362,69 @@ describe("the default (1.000-case, default-seed) reference distribution", () => 
     expect(passRate).toBeGreaterThan(0.4);
     expect(passRate).toBeLessThan(0.6);
   });
+
+  it("a realistic share of cases now have positive after-tax cashflow in year 1, not almost none", () => {
+    const rng = createRng(20260811);
+    let positiveYear1 = 0;
+    const n = 500;
+    for (let i = 0; i < n; i++) {
+      const { input, derived } = buildSyntheticEngineInput(rng);
+      const engineResult = runEngine(input);
+      const scenarioResult = engineResult.scenarios.find((s) => s.id === "base")!;
+      deriveSyntheticEquitySupply(rng, engineResult.acquisition.equityRequired); // advances rng in step with scoreOneCase()
+      const years = buildProjectionYears({
+        years: derived.holdingYears,
+        scenario: "base",
+        scenarioResult,
+        purchasePrice: derived.purchasePrice,
+        financing: engineResult.selectedFinancing,
+        fixedCosts: engineResult.fixedOperatingCosts,
+        euResident: true,
+        renovation: engineResult.selectedRenovation,
+      });
+      if (years[0]!.cashflowAfterTax > 0) positiveYear1++;
+    }
+    // Golden value: 108/500 = 21.6% with the default seed - was
+    // structurally close to 0% before leverage varied, since every case
+    // carried a 60-75% amortising mortgage regardless of strategy.
+    const share = positiveYear1 / n;
+    expect(share).toBeGreaterThan(0.15);
+    expect(share).toBeLessThan(0.3);
+  });
 });
 
 /**
  * The corrected generator's overall shape - reported explicitly per the
  * instruction to state whether the left-skew was resolved or only
- * reduced. It was reduced, not resolved: the equity-coverage fix pulled
- * the median and max back up somewhat (1.3 -> 1.8, 4.5 -> 4.6) versus the
- * price-based equity draw, but both remain well below the ORIGINAL
- * independent-price-sampling generator's 1.9 median and 8.3 max. Golden
- * values below are for the default (1.000-case, default-seed)
- * distribution.
+ * reduced, and whether the range is now realistic on BOTH ends, not only
+ * the bottom. Still not fully resolved (a market-consistent yield with
+ * variable-but-often-substantial leverage keeps most cases in the lower
+ * half), but now genuinely wider on both ends: max 4.6 -> 6.8, median
+ * 1.8 -> 2.7 - a real middle and upper range exists now, not just a
+ * compressed floor. Golden values below are for the default (1.000-case,
+ * default-seed) distribution.
  */
-describe("shape of the corrected distribution (left-skew: reduced, not resolved)", () => {
+describe("shape of the corrected distribution (left-skew: further reduced by varying leverage/holding period)", () => {
   const distribution = generateReferenceDistribution();
   const s = distribution.scores;
 
-  it("min/median/max: 0.4 / 1.8 / 4.6 (price-based equity draw gave 0.4 / 1.3 / 4.5; the original generator gave 0.4 / 1.9 / 8.3)", () => {
+  it("min/median/max: 0.4 / 2.7 / 6.8 (equity-coverage-only correction gave 0.4 / 1.8 / 4.6; the original generator gave 0.4 / 1.9 / 8.3)", () => {
     expect(s[0]).toBe(0.4);
-    expect(s[500]).toBe(1.8);
-    expect(s[999]).toBe(4.6);
+    expect(s[500]).toBe(2.7);
+    expect(s[999]).toBe(6.8);
   });
 
-  it("the median recovered most of the way to the original 1.9, but the top of the range did not recover at all", () => {
-    // Median: 1.8 is close to the original 1.9 - fixing the
-    // near-universal feasibility failure did most of the work here.
-    expect(s[500]).toBeGreaterThan(1.3);
-    expect(s[500]).toBeLessThanOrEqual(1.9);
-    // Max: still capped near 4.6, nowhere close to the original 8.3 - the
-    // price-to-rent coupling (a market-consistent yield, then leveraged at
-    // 60-75% LTV with an amortising loan) keeps cashflow/DSCR/return weak
-    // for nearly every synthetic case regardless of how much equity the
-    // investor has, and equity coverage cannot fix that: it only touches
-    // the feasibility dimension's 0.20 weight, not the other 0.80.
-    expect(Math.max(...s)).toBeLessThan(5);
+  it("the range is now realistic on both ends, not just the bottom: p75/p90 sit meaningfully above the median", () => {
+    // p25=1.8, p75=4.0, p90=5.0 (golden, default seed) - real spread
+    // across the range, not a distribution crammed against the floor the
+    // way the previous two corrections still were (max 4.5-4.6 total).
+    expect(s[750]!).toBeGreaterThan(s[500]!);
+    expect(s[900]!).toBeGreaterThan(s[750]!);
+    expect(s[900]!).toBeGreaterThan(4);
+  });
+
+  it("the maximum is still below the ORIGINAL (independent-sampling) generator's 8.3 - not fully resolved, only further reduced", () => {
+    expect(Math.max(...s)).toBeLessThan(8.3);
+    expect(Math.max(...s)).toBeGreaterThan(4.6); // but a real improvement over the equity-coverage-only correction
   });
 });

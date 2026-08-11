@@ -93,9 +93,13 @@ describe("piecewiseLinear() (SCORE_SPEC.md §2)", () => {
     ).toThrow(/strictly ascending/);
   });
 
-  it("rejects a non-finite input rather than silently returning the top score", () => {
-    expect(() => piecewiseLinear(curve, NaN)).toThrow(/non-finite/);
-    expect(() => piecewiseLinear(curve, Infinity)).toThrow(/non-finite/);
+  it("rejects NaN - it has no legitimate reading on any curve", () => {
+    expect(() => piecewiseLinear(curve, NaN)).toThrow(/NaN/);
+  });
+
+  it("accepts +-Infinity and clamps to the outermost anchors, rather than throwing - a legitimate domain value (e.g. DSCR with zero debt service), not garbage", () => {
+    expect(piecewiseLinear(curve, Infinity)).toBe(10);
+    expect(piecewiseLinear(curve, -Infinity)).toBe(0);
   });
 });
 
@@ -208,6 +212,15 @@ describe("debt resilience dimension (SCORE_SPEC.md §2.2)", () => {
 
   it("DSCR exactly 1.0 is the midpoint: neither good nor bad", () => {
     expect(debtResilienceScore(1.0)).toBe(5);
+  });
+
+  it("DSCR of +-Infinity (an all-cash purchase, zero debt service) scores cleanly, not a crash", () => {
+    // NOI / 0 is +-Infinity in JS depending on NOI's sign, not NaN - a
+    // real, meaningful value for "no debt to service at all", not an
+    // error. Both signs must clamp to their respective outermost anchor
+    // like any other out-of-range value, not be rejected as garbage.
+    expect(debtResilienceScore(Infinity)).toBe(10);
+    expect(debtResilienceScore(-Infinity)).toBe(0);
   });
 });
 
@@ -641,6 +654,6 @@ describe("computeTsgScore() determinism (SCORE_SPEC.md §6)", () => {
   it("refuses to score an undefined IRR rather than treating it as the worst case", () => {
     // A cashflow series with no sign change has no IRR; that is not the
     // same as a terrible return, and must not be scored as one.
-    expect(() => computeTsgScore({ ...input, irr: NaN })).toThrow(/non-finite/);
+    expect(() => computeTsgScore({ ...input, irr: NaN })).toThrow(/NaN/);
   });
 });

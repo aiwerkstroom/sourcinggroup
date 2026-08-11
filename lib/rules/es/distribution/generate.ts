@@ -33,13 +33,14 @@ import {
   FINANCING_STRATEGIES,
   NEIGHBORHOOD_RENT_LONG_TERM,
   NEIGHBORHOOD_RENT_SHORT_TERM,
-  PROJECTION_YEARS,
   RENOVATION_STRATEGIES,
   TSG_SCORE_DISTRIBUTION_AREA_RANGE_M2,
   TSG_SCORE_DISTRIBUTION_COMMUNITY_FEES_RANGE,
   TSG_SCORE_DISTRIBUTION_CONSTRAINTS,
   TSG_SCORE_DISTRIBUTION_EQUITY_COVERAGE_RANGE,
   TSG_SCORE_DISTRIBUTION_EXIT_ASSUMPTIONS,
+  TSG_SCORE_DISTRIBUTION_HOLDING_PERIOD_RANGE_YEARS,
+  TSG_SCORE_DISTRIBUTION_PREFERRED_LTV_RANGE,
   TSG_SCORE_DISTRIBUTION_PRICE_TO_RENT_MULTIPLIER_RANGE,
   TSG_SCORE_DISTRIBUTION_RENTAL_STRATEGY_SHARES,
   TSG_SCORE_DISTRIBUTION_SAMPLE_SIZE,
@@ -65,6 +66,11 @@ function uniform(rng: () => number, min: number, max: number): number {
   return min + rng() * (max - min);
 }
 
+/** A whole number uniformly drawn from [min, max], both inclusive. */
+function uniformInt(rng: () => number, min: number, max: number): number {
+  return min + Math.min(max - min, Math.floor(rng() * (max - min + 1)));
+}
+
 function pickIndex(rng: () => number, length: number): number {
   return Math.min(length - 1, Math.floor(rng() * length));
 }
@@ -84,18 +90,20 @@ function pickRentalStrategy(rng: () => number): "longTerm" | "hybrid" {
     : "hybrid";
 }
 
-/** builtAreaM2, purchasePrice and communityFeesAnnual as buildSyntheticEngineInput() derived them, exposed for tests that check the derivation itself rather than only its downstream score. */
+/** builtAreaM2, purchasePrice, communityFeesAnnual, preferredLtv and holdingYears as buildSyntheticEngineInput() derived them, exposed for tests that check the derivation itself rather than only its downstream score. */
 export interface SyntheticCaseDerivedFigures {
   builtAreaM2: number;
   neighborhood: string;
   priceToRentMultiplier: number;
   purchasePrice: number;
   communityFeesAnnual: number;
+  preferredLtv: number;
+  holdingYears: number;
 }
 
 /**
  * Builds one synthetic EngineInput (SCORE_SPEC.md §5's bullet list,
- * corrected per Samuel's review of the first two drafts):
+ * corrected per Samuel's review of earlier drafts):
  *
  * 1. Purchase price is no longer drawn independently of floor area - it is
  *    derived from the neighborhood's own rent table (price = annual rent
@@ -104,20 +112,34 @@ export interface SyntheticCaseDerivedFigures {
  *    (a huge cheap unit, a tiny expensive one).
  * 2. Gastos de comunidad is drawn from a range per case, not fixed at
  *    € 900 for every one regardless of the building.
+ * 3. Leverage now actually varies per case. Drawing financingStrategy
+ *    alone did NOT vary leverage in practice: TSG_SCORE_DISTRIBUTION_
+ *    CONSTRAINTS.minLtv used to be 0.6, so clampLtv() (financing.ts)
+ *    clamped every strategy's LTV (60%/70%/75%) into the same narrow
+ *    60%-75% band regardless of which was drawn - nearly every case ended
+ *    up highly leveraged, which structurally weakens cashflow and DSCR
+ *    (an amortising loan on 60%+ LTV rarely leaves much room at a
+ *    market-consistent rental yield). A preferredLtv is now drawn per case
+ *    from TSG_SCORE_DISTRIBUTION_PREFERRED_LTV_RANGE (0-0.75, an all-cash
+ *    purchase up to the engine's own highest existing leverage tier) and
+ *    minLtv is lowered to 0 so that draw reaches clampLtv() unclamped.
+ *    financingStrategy is still drawn too - with preferredLtv set, it now
+ *    controls only loanTermYears (selectFinancing() takes the rate from
+ *    whichever tier preferredLtv falls into, not from financingStrategy).
+ *    No new financing mechanism: both preferredLtv and minLtv are existing
+ *    InvestorConstraints fields the engine already reads.
+ * 4. Holding period now varies per case too, drawn from
+ *    TSG_SCORE_DISTRIBUTION_HOLDING_PERIOD_RANGE_YEARS (5-15 years)
+ *    instead of every case using the same fixed PROJECTION_YEARS (10).
  *
- * A third correction - available equity (and totalBudget) - is deliberately
- * NOT made here: it depends on equityRequired, which this function's own
- * output does not yet contain (the engine has not run). See
- * deriveSyntheticEquitySupply() below, applied by the caller once
- * runEngine() has produced this case's actual equityRequired.
- *
- * `constraints.totalBudget` here is therefore PROVISIONAL: any positive
- * number would do, because totalBudget feeds exactly one thing downstream
+ * `constraints.totalBudget` here is PROVISIONAL: any positive number would
+ * do, because totalBudget feeds exactly one thing downstream
  * (AcquisitionCosts.withinTotalBudget, a diagnostic flag this generator
  * never reads - not equityRequired, not any score dimension) and nothing
  * else in the engine's calculation chain depends on it. purchasePrice is
  * used as that placeholder only because it is guaranteed positive, not
- * because it carries any meaning here.
+ * because it carries any meaning here. The real figure (equityAvailable) is
+ * derived once equityRequired is known - see deriveSyntheticEquitySupply().
  *
  * Every generated case still sets hasTouristRentalLicense: true. §5's
  * rental mix includes a 30% "hybrid" share, which MODEL_SPEC.md §18
@@ -164,6 +186,12 @@ export function buildSyntheticEngineInput(rng: () => number): {
   );
   const rentalStrategy = pickRentalStrategy(rng);
 
+  const ltvRange = TSG_SCORE_DISTRIBUTION_PREFERRED_LTV_RANGE.value;
+  const preferredLtv = uniform(rng, ltvRange.min, ltvRange.max);
+
+  const holdingPeriodRange = TSG_SCORE_DISTRIBUTION_HOLDING_PERIOD_RANGE_YEARS.value;
+  const holdingYears = uniformInt(rng, holdingPeriodRange.min, holdingPeriodRange.max);
+
   const constraints = TSG_SCORE_DISTRIBUTION_CONSTRAINTS.value;
 
   const input: EngineInput = {
@@ -181,6 +209,7 @@ export function buildSyntheticEngineInput(rng: () => number): {
       maxRenovationBudget: constraints.maxRenovationBudget,
       minLtv: constraints.minLtv,
       maxLtv: constraints.maxLtv,
+      preferredLtv,
       minRoiTarget: constraints.minRoiTarget,
       minMonthlyCashflow: constraints.minMonthlyCashflow,
       maxMonthlyDebt: constraints.maxMonthlyDebt,
@@ -198,7 +227,15 @@ export function buildSyntheticEngineInput(rng: () => number): {
 
   return {
     input,
-    derived: { builtAreaM2, neighborhood, priceToRentMultiplier, purchasePrice, communityFeesAnnual },
+    derived: {
+      builtAreaM2,
+      neighborhood,
+      priceToRentMultiplier,
+      purchasePrice,
+      communityFeesAnnual,
+      preferredLtv,
+      holdingYears,
+    },
   };
 }
 
@@ -245,7 +282,7 @@ export function deriveSyntheticEquitySupply(
  */
 function scoreOneCase(rng: () => number): number | null {
   const { input, derived } = buildSyntheticEngineInput(rng);
-  const { purchasePrice } = derived;
+  const { purchasePrice, holdingYears } = derived;
   const { rentalStrategy, renovationStrategy } = input.selections;
 
   const engineResult = runEngine(input);
@@ -257,7 +294,7 @@ function scoreOneCase(rng: () => number): number | null {
   const equityAvailable = equity.equityAvailable;
 
   const years = buildProjectionYears({
-    years: PROJECTION_YEARS.value,
+    years: holdingYears,
     scenario: "base",
     scenarioResult,
     purchasePrice,

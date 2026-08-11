@@ -81,10 +81,10 @@ describe("parameter provenance audit", () => {
     expect(placeholders).toContain("RENOVATION_STRATEGIES.light.capex");
   });
 
-  it("distribution: 25 SOURCED / 43 ESTIMATE / 30 PLACEHOLDER (SCORE_SPEC.md adds 7 scoring-curve + 9 distribution-generation ESTIMATEs)", () => {
+  it("distribution: 25 SOURCED / 45 ESTIMATE / 30 PLACEHOLDER (SCORE_SPEC.md adds 7 scoring-curve + 11 distribution-generation ESTIMATEs)", () => {
     const counts = { SOURCED: 0, ESTIMATE: 0, PLACEHOLDER: 0 };
     for (const p of ALL_PARAMETERS) counts[p.provenance]++;
-    expect(counts).toEqual({ SOURCED: 25, ESTIMATE: 43, PLACEHOLDER: 30 });
+    expect(counts).toEqual({ SOURCED: 25, ESTIMATE: 45, PLACEHOLDER: 30 });
     expect(counts.SOURCED + counts.ESTIMATE + counts.PLACEHOLDER).toBe(ALL_PARAMETERS.length);
   });
 
@@ -97,7 +97,7 @@ describe("parameter provenance audit", () => {
     // - only a product decision can settle them. Same category as what
     // "conservative" means as a scenario.
     const scoreParameters = ALL_PARAMETERS.filter((p) => p.name.startsWith("TSG_SCORE_"));
-    expect(scoreParameters).toHaveLength(16);
+    expect(scoreParameters).toHaveLength(18);
     for (const p of scoreParameters) {
       expect(p.provenance, `${p.name} should be ESTIMATE`).toBe("ESTIMATE");
     }
