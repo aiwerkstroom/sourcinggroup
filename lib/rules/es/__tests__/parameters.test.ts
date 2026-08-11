@@ -81,10 +81,10 @@ describe("parameter provenance audit", () => {
     expect(placeholders).toContain("RENOVATION_STRATEGIES.light.capex");
   });
 
-  it("distribution after the reality-vs-model reclassification: 25 SOURCED / 27 ESTIMATE / 28 PLACEHOLDER", () => {
+  it("distribution: 25 SOURCED / 27 ESTIMATE / 29 PLACEHOLDER (§16 adds DEFAULT_CADASTRAL_TO_PURCHASE_PRICE_RATIO)", () => {
     const counts = { SOURCED: 0, ESTIMATE: 0, PLACEHOLDER: 0 };
     for (const p of ALL_PARAMETERS) counts[p.provenance]++;
-    expect(counts).toEqual({ SOURCED: 25, ESTIMATE: 27, PLACEHOLDER: 28 });
+    expect(counts).toEqual({ SOURCED: 25, ESTIMATE: 27, PLACEHOLDER: 29 });
     expect(counts.SOURCED + counts.ESTIMATE + counts.PLACEHOLDER).toBe(ALL_PARAMETERS.length);
   });
 

@@ -28,6 +28,7 @@ import {
   BASE_OCCUPANCY_LONG_TERM,
   BASE_OCCUPANCY_SHORT_TERM,
   DEFAULT_BUILDING_SHARE_OF_VALUE,
+  DEFAULT_CADASTRAL_TO_PURCHASE_PRICE_RATIO,
   DEFAULT_MIN_REQUIRED_RETURN,
   DEFAULT_RENOVATION_IMPROVEMENT_SHARE,
   DEPRECIATION_SCENARIO_FACTORS,
@@ -65,6 +66,11 @@ import type {
  * - DEFAULT_BUILDING_SHARE_OF_VALUE (projection.ts) and
  *   DEFAULT_RENOVATION_IMPROVEMENT_SHARE (exit.ts) only when the caller did
  *   not override them with a property-specific figure.
+ * - DEFAULT_CADASTRAL_TO_PURCHASE_PRICE_RATIO (operating.ts) only when the
+ *   caller did not supply PropertyInput.cadastralValue - a real cadastral
+ *   value replaces both this IBI-base approximation and, if the caller
+ *   wires it through, the DEFAULT_BUILDING_SHARE_OF_VALUE depreciation
+ *   fallback above (MODEL_SPEC.md §16).
  * - DEFAULT_MIN_REQUIRED_RETURN (this module) only when the investor did
  *   not state a minRoiTarget.
  */
@@ -75,6 +81,7 @@ function collectPlaceholders(args: {
   buildingShareOfValueProvided: boolean;
   renovationImprovementShareProvided: boolean;
   minRequiredReturnProvided: boolean;
+  cadastralValueProvided: boolean;
 }): Parameter<unknown>[] {
   const placeholders: Parameter<unknown>[] = [MAINTENANCE_RATE, BANK_FEE];
 
@@ -102,6 +109,9 @@ function collectPlaceholders(args: {
   if (!args.renovationImprovementShareProvided) {
     placeholders.push(DEFAULT_RENOVATION_IMPROVEMENT_SHARE);
   }
+  if (!args.cadastralValueProvided) {
+    placeholders.push(DEFAULT_CADASTRAL_TO_PURCHASE_PRICE_RATIO);
+  }
   if (!args.minRequiredReturnProvided) {
     placeholders.push(DEFAULT_MIN_REQUIRED_RETURN);
   }
@@ -124,10 +134,12 @@ export function buildScenarioOutcome(args: {
   rentalStrategy: RentalStrategy;
   /** The renovation strategy actually used - determines which RENOVATION_STRATEGIES PLACEHOLDER group applies. */
   renovationStrategy: RenovationStrategyId;
-  /** True when the caller passed an explicit buildingShareOfValue to buildProjectionYears (projection.ts) instead of relying on DEFAULT_BUILDING_SHARE_OF_VALUE. */
+  /** True when the caller passed an explicit buildingShareOfValue OR a cadastralValue to buildProjectionYears (projection.ts) instead of relying on DEFAULT_BUILDING_SHARE_OF_VALUE. */
   buildingShareOfValueProvided?: boolean;
   /** True when the caller passed an explicit renovationImprovementShare to computeExit (exit.ts) instead of relying on DEFAULT_RENOVATION_IMPROVEMENT_SHARE. */
   renovationImprovementShareProvided?: boolean;
+  /** True when the caller passed PropertyInput.cadastralValue through to fixedOperatingCosts (operating.ts) instead of relying on DEFAULT_CADASTRAL_TO_PURCHASE_PRICE_RATIO for the IBI base. */
+  cadastralValueProvided?: boolean;
 }): ScenarioOutcome {
   if (args.years.length === 0) {
     throw new Error("buildScenarioOutcome needs at least one projection year");
@@ -180,6 +192,7 @@ export function buildScenarioOutcome(args: {
     buildingShareOfValueProvided: args.buildingShareOfValueProvided ?? false,
     renovationImprovementShareProvided: args.renovationImprovementShareProvided ?? false,
     minRequiredReturnProvided: args.minRequiredReturn !== undefined,
+    cadastralValueProvided: args.cadastralValueProvided ?? false,
   });
 
   return {

@@ -83,4 +83,27 @@ describe("operating cost blocks", () => {
     expect(fixed.communityFees).toBe(900);
     expect(fixed.total).toBeCloseTo(12845 + 900, 9);
   });
+
+  it("approximates IBI with the purchase price when no cadastralValue is given (0.4% x 330000 = 1320, same as Excel parity)", () => {
+    const fixed = fixedOperatingCosts({
+      purchasePrice: 330000,
+      mortgageAmount: 247500,
+      effectiveInterestRate: 0.042,
+      communityFeesAnnual: 0,
+    });
+    expect(fixed.propertyTaxIBI).toBeCloseTo(1320, 9);
+  });
+
+  it("computes IBI over suelo + construcción when cadastralValue is given (MODEL_SPEC.md §16), not over the purchase price", () => {
+    // A cadastral value well below market price, as is typical in Spain:
+    // (120000 + 80000) x 0.4% = 800, not 330000 x 0.4% = 1320.
+    const fixed = fixedOperatingCosts({
+      purchasePrice: 330000,
+      mortgageAmount: 247500,
+      effectiveInterestRate: 0.042,
+      communityFeesAnnual: 0,
+      cadastralValue: { suelo: 120000, construccion: 80000 },
+    });
+    expect(fixed.propertyTaxIBI).toBeCloseTo(800, 9);
+  });
 });

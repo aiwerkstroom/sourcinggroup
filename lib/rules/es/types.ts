@@ -151,6 +151,21 @@ export interface PropertyInput {
    * §15). A caller without a real figure yet should not guess one here.
    */
   communityFeesAnnual: number;
+  /**
+   * Valor catastral desglosado (Catastro) - the property's cadastral value
+   * split into land (suelo) and building (construcción). Optional: when
+   * provided, IBI is computed over suelo + construcción instead of
+   * approximating it with the purchase price, and the depreciation base
+   * uses construcción directly instead of
+   * purchasePrice x DEFAULT_BUILDING_SHARE_OF_VALUE (MODEL_SPEC.md §16).
+   */
+  cadastralValue?: CadastralValue;
+}
+
+/** Valor catastral desglosado - suelo (land) and construcción (building), both in €. */
+export interface CadastralValue {
+  suelo: number;
+  construccion: number;
 }
 
 /**

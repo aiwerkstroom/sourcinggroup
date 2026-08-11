@@ -30,6 +30,17 @@ export function validateEngineInput(input: EngineInput): string[] {
   if (!isFiniteNumber(property.communityFeesAnnual) || property.communityFeesAnnual < 0) {
     issues.push("communityFeesAnnual must be zero or positive (no default: enter the real gastos de comunidad for this building)");
   }
+  if (property.cadastralValue !== undefined) {
+    if (!isFiniteNumber(property.cadastralValue.suelo) || property.cadastralValue.suelo < 0) {
+      issues.push("cadastralValue.suelo must be zero or positive");
+    }
+    if (
+      !isFiniteNumber(property.cadastralValue.construccion) ||
+      property.cadastralValue.construccion < 0
+    ) {
+      issues.push("cadastralValue.construccion must be zero or positive");
+    }
+  }
   if (!isFiniteNumber(constraints.totalBudget) || constraints.totalBudget <= 0) {
     issues.push("totalBudget must be a positive number");
   }

@@ -286,6 +286,25 @@ describe("multi-year cashflow after tax (reference case)", () => {
     expect(years[0]!.depreciation).toBeCloseTo(8415, 6);
   });
 
+  it("derives the depreciation base from cadastralValue.construccion when given, ignoring buildingShareOfValue (MODEL_SPEC.md §16)", () => {
+    const scenarioResult = engineResult.scenarios.find((s) => s.id === "base")!;
+    const years = buildProjectionYears({
+      years: 1,
+      scenario: "base",
+      scenarioResult,
+      purchasePrice: referenceCase.property.purchasePrice,
+      financing: engineResult.selectedFinancing,
+      fixedCosts: engineResult.fixedOperatingCosts,
+      euResident: true,
+      renovation: engineResult.selectedRenovation,
+      cadastralValue: { suelo: 120000, construccion: 80000 },
+      buildingShareOfValue: 0.85, // must be ignored: cadastralValue takes priority
+    });
+    // 80000 (construcción only, excl. suelo) x 3% x 1.00 = 2400 - neither
+    // the 0.70 default (6930) nor the 0.85 override (8415).
+    expect(years[0]!.depreciation).toBeCloseTo(2400, 6);
+  });
+
   it("clamps tax at zero instead of reporting a refund on negative taxable income", () => {
     const y1 = projectionFor("conservative")[0]!;
     expect(y1.taxableIncome).toBeLessThan(0);

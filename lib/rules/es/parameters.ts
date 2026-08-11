@@ -256,6 +256,24 @@ export const PROPERTY_TAX_IBI_RATE: SourcedParameter<number> = {
   date: "2025",
 };
 
+/**
+ * IBI is actually levied on the cadastral value (valor catastral), not the
+ * purchase price - Spanish cadastral values are administratively set and
+ * commonly diverge from market price, with no universal, sourced ratio
+ * between the two. Absent a property's real PropertyInput.cadastralValue
+ * (MODEL_SPEC.md §16), this model assumes a 1:1 ratio - the purchase price
+ * stands in directly for the IBI base - purely to keep the estimate
+ * computable, not as a claim that cadastral value equals purchase price.
+ * Superseded automatically once cadastralValue is supplied.
+ */
+export const DEFAULT_CADASTRAL_TO_PURCHASE_PRICE_RATIO: PlaceholderParameter<number> = {
+  name: "DEFAULT_CADASTRAL_TO_PURCHASE_PRICE_RATIO",
+  value: 1.0,
+  provenance: "PLACEHOLDER",
+  reasoning:
+    "No universal, sourced ratio exists between a property's valor catastral and its market/purchase price. Absent a real cadastral value, this model assumes 1:1 purely to keep the IBI estimate computable - a placeholder, not a market claim.",
+};
+
 // ---------------------------------------------------------------------------
 // Acquisition costs
 // ---------------------------------------------------------------------------
@@ -965,6 +983,7 @@ export const ALL_PARAMETERS: ReadonlyArray<Parameter<unknown>> = [
   TOTAL_UTILITIES_PER_M2_ANNUAL,
   BANK_FEE,
   PROPERTY_TAX_IBI_RATE,
+  DEFAULT_CADASTRAL_TO_PURCHASE_PRICE_RATIO,
   ACQUISITION_RATES,
   ...Object.values(RENOVATION_STRATEGIES).flatMap((s) => [
     s.capex,

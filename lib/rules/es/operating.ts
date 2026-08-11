@@ -5,11 +5,12 @@
 
 import {
   BANK_FEE,
+  DEFAULT_CADASTRAL_TO_PURCHASE_PRICE_RATIO,
   PROPERTY_TAX_IBI_RATE,
   TOTAL_INSURANCE_ANNUAL,
   TOTAL_UTILITIES_PER_M2_ANNUAL,
 } from "./parameters";
-import type { FixedOperatingCosts } from "./types";
+import type { CadastralValue, FixedOperatingCosts } from "./types";
 
 /** Utilities base €/year: (gas + water + electricity per m²) x living area (H60). */
 export function utilitiesBaseAnnual(livingAreaM2: number): number {
@@ -28,8 +29,14 @@ export function fixedOperatingCosts(args: {
   effectiveInterestRate: number;
   /** PropertyInput.communityFeesAnnual - gastos de comunidad, no default. */
   communityFeesAnnual: number;
+  /** PropertyInput.cadastralValue - when given, IBI is computed over it instead of approximating with purchasePrice (MODEL_SPEC.md §16). */
+  cadastralValue?: CadastralValue;
 }): FixedOperatingCosts {
-  const propertyTaxIBI = args.purchasePrice * PROPERTY_TAX_IBI_RATE.value;
+  const propertyTaxIBI = args.cadastralValue
+    ? (args.cadastralValue.suelo + args.cadastralValue.construccion) * PROPERTY_TAX_IBI_RATE.value
+    : args.purchasePrice *
+      PROPERTY_TAX_IBI_RATE.value *
+      DEFAULT_CADASTRAL_TO_PURCHASE_PRICE_RATIO.value;
   const insurance = TOTAL_INSURANCE_ANNUAL.value;
   const bankAccountFee = BANK_FEE.value;
   const communityFees = args.communityFeesAnnual;

@@ -50,6 +50,7 @@ export function runEngine(input: EngineInput): EngineResult {
     effectiveInterestRate:
       selectedFinancing.interestRate + selectedFinancing.nonResidentSpread,
     communityFeesAnnual: property.communityFeesAnnual,
+    cadastralValue: property.cadastralValue,
   });
 
   const utilitiesBase = utilitiesBaseAnnual(property.livingAreaM2);

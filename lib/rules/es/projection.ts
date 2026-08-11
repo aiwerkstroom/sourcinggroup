@@ -38,6 +38,7 @@ import {
   RENTAL_INCOME_TAX_RATE_NON_EU,
 } from "./parameters";
 import type {
+  CadastralValue,
   FixedOperatingCosts,
   ProjectionYear,
   RenovationStrategyResult,
@@ -68,9 +69,17 @@ export function buildProjectionYears(args: {
    * Building share of the purchase value used for depreciation (3% per
    * year applies to this share, not the full price). Defaults to
    * DEFAULT_BUILDING_SHARE_OF_VALUE - a generic placeholder, not sourced
-   * per property; see the TODO on that constant.
+   * per property; see the TODO on that constant. Ignored when
+   * cadastralValue is given (MODEL_SPEC.md §16).
    */
   buildingShareOfValue?: number;
+  /**
+   * PropertyInput.cadastralValue - when given, the depreciation base is
+   * cadastralValue.construccion directly, not
+   * purchasePrice x buildingShareOfValue (MODEL_SPEC.md §16). Takes
+   * priority over buildingShareOfValue.
+   */
+  cadastralValue?: CadastralValue;
 }): ProjectionYear[] {
   const indexSeries = buildIndexSeries({
     years: args.years,
@@ -87,11 +96,12 @@ export function buildProjectionYears(args: {
     yearsToProject: args.years,
   });
 
-  const buildingShareOfValue = args.buildingShareOfValue ?? DEFAULT_BUILDING_SHARE_OF_VALUE.value;
+  const depreciationBaseValue = args.cadastralValue
+    ? args.cadastralValue.construccion
+    : args.purchasePrice * (args.buildingShareOfValue ?? DEFAULT_BUILDING_SHARE_OF_VALUE.value);
   const depreciationYear1 =
-    args.purchasePrice *
+    depreciationBaseValue *
     DEPRECIATION_RATE.value *
-    buildingShareOfValue *
     DEPRECIATION_SCENARIO_FACTORS[args.scenario].value;
   const taxRate = args.euResident
     ? RENTAL_INCOME_TAX_RATE_EU.value

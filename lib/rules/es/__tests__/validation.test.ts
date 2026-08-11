@@ -73,4 +73,37 @@ describe("input validation (self-serve: reject impossible combinations)", () => 
     };
     expect(validateEngineInput(zero)).toEqual([]);
   });
+
+  it("accepts a valid cadastralValue (MODEL_SPEC.md §16, optional)", () => {
+    const withCadastral = {
+      ...referenceCase,
+      property: {
+        ...referenceCase.property,
+        cadastralValue: { suelo: 120000, construccion: 80000 },
+      },
+    };
+    expect(validateEngineInput(withCadastral)).toEqual([]);
+  });
+
+  it("rejects a negative cadastralValue.suelo or .construccion", () => {
+    const badSuelo = {
+      ...referenceCase,
+      property: {
+        ...referenceCase.property,
+        cadastralValue: { suelo: -1, construccion: 80000 },
+      },
+    };
+    expect(validateEngineInput(badSuelo).join(" ")).toContain("cadastralValue.suelo");
+
+    const badConstruccion = {
+      ...referenceCase,
+      property: {
+        ...referenceCase.property,
+        cadastralValue: { suelo: 120000, construccion: -1 },
+      },
+    };
+    expect(validateEngineInput(badConstruccion).join(" ")).toContain(
+      "cadastralValue.construccion",
+    );
+  });
 });

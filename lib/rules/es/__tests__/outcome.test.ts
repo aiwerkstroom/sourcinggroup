@@ -282,7 +282,7 @@ describe("scenario outcome (reference case, 10-year holding period)", () => {
   });
 
   describe("placeholdersUsed: which unconfirmed assumptions this outcome actually rests on", () => {
-    it("reference case (hybrid, light renovation): occupancy (both), the five light-renovation fields, this scenario's depreciation factor, the building-share and mejora-share defaults", () => {
+    it("reference case (hybrid, light renovation): occupancy (both), the five light-renovation fields, this scenario's depreciation factor, the building-share/mejora-share/cadastral defaults", () => {
       const outcome = outcomeFor("base");
       const names = outcome.placeholdersUsed.map((p) => p.name);
       expect(names).toEqual(
@@ -299,6 +299,9 @@ describe("scenario outcome (reference case, 10-year holding period)", () => {
           "DEPRECIATION_SCENARIO_FACTORS.base",
           "DEFAULT_BUILDING_SHARE_OF_VALUE",
           "DEFAULT_RENOVATION_IMPROVEMENT_SHARE",
+          // referenceCase.property.cadastralValue is not set, so the IBI
+          // approximation's placeholder applies too (MODEL_SPEC.md §16).
+          "DEFAULT_CADASTRAL_TO_PURCHASE_PRICE_RATIO",
         ]),
       );
       // referenceCase.constraints.minRoiTarget is set, so the fallback is
@@ -406,6 +409,52 @@ describe("scenario outcome (reference case, 10-year holding period)", () => {
       const names = outcome.placeholdersUsed.map((p) => p.name);
       expect(names).not.toContain("DEFAULT_BUILDING_SHARE_OF_VALUE");
       expect(names).not.toContain("DEFAULT_RENOVATION_IMPROVEMENT_SHARE");
+    });
+
+    it("an explicit cadastralValue drops DEFAULT_CADASTRAL_TO_PURCHASE_PRICE_RATIO (and, wired through, DEFAULT_BUILDING_SHARE_OF_VALUE) from the list (MODEL_SPEC.md §16)", () => {
+      const scenarioResult = engineResult.scenarios.find((s) => s.id === "base")!;
+      const cadastralValue = { suelo: 120000, construccion: 80000 };
+      const years = buildProjectionYears({
+        years: 1,
+        scenario: "base",
+        scenarioResult,
+        purchasePrice: referenceCase.property.purchasePrice,
+        financing: engineResult.selectedFinancing,
+        fixedCosts: engineResult.fixedOperatingCosts,
+        euResident: true,
+        renovation: engineResult.selectedRenovation,
+        cadastralValue,
+      });
+      const exit = computeExit({
+        scenario: "base",
+        years,
+        purchasePrice: referenceCase.property.purchasePrice,
+        acquisition: engineResult.acquisition,
+        renovation: engineResult.selectedRenovation,
+        assumptions: testAssumptions,
+      });
+      const irr = computeScenarioIrr({
+        equityInvested: engineResult.acquisition.equityRequired,
+        years,
+        exit,
+      });
+      const outcome = buildScenarioOutcome({
+        scenario: "base",
+        purchasePrice: referenceCase.property.purchasePrice,
+        years,
+        exit,
+        irr,
+        equityRequired: engineResult.acquisition.equityRequired,
+        equityAvailable: referenceCase.property.ownMoney,
+        minRequiredReturn: referenceCase.constraints.minRoiTarget,
+        rentalStrategy: referenceCase.selections.rentalStrategy,
+        renovationStrategy: referenceCase.selections.renovationStrategy,
+        cadastralValueProvided: true,
+        buildingShareOfValueProvided: true,
+      });
+      const names = outcome.placeholdersUsed.map((p) => p.name);
+      expect(names).not.toContain("DEFAULT_CADASTRAL_TO_PURCHASE_PRICE_RATIO");
+      expect(names).not.toContain("DEFAULT_BUILDING_SHARE_OF_VALUE");
     });
   });
 });

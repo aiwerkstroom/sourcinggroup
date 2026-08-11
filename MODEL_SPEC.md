@@ -15,7 +15,7 @@ Changelog van v2 al zijn genomen, staan als **[BESLIST]** met de gekozen optie.
 huurtype, woonoppervlak (m²), aantal kamers/slaapkamers/badkamers, huidige
 huurstatus, bouwjaar, energielabel, aankoopprijs, eigen inbreng, hypotheek,
 renovatiebudget, **gastos de comunidad €/jaar (verplicht, geen default —
-§15)**.
+§15)**, **kadastrale waarde suelo/construcción (optioneel — §16)**.
 
 **Uitgangspunten belegger** (`Costs & Income` B4–D26): totaal
 investeringsbudget, max renovatiebudget, gewenste LTV, min LTV, max LTV,
@@ -98,7 +98,8 @@ gecorrigeerd — notaris 0,15%→0,50%, kadaster 0,20%→0,30%, juridisch advies
 
 ## 6. Exploitatiekosten
 
-Vast: IBI 0,4% van aankoopprijs · verzekeringen (opstal 300 + inboedel 180 +
+Vast: IBI 0,4% van aankoopprijs (of van de kadastrale waarde wanneer die is
+ingevuld — §16) · verzekeringen (opstal 300 + inboedel 180 +
 verhuurdersdekking 250 + overlijdensrisico 300 = € 1.030/jaar) · bankkosten
 € 100 · **gastos de comunidad (verplichte invoer per pand, geen default —
 §15)** · hypotheekrente = hypotheek × (geselecteerde rente + opslag).
@@ -701,3 +702,63 @@ methode als fase 1b): `operating.ts`/`engine.ts`/`tax.ts`
 cashflow of vaste lasten, alleen verkoopprijs, cumulatieve afschrijving
 (onaangetast) en restschuld (onaangetast), dus gastos de comunidad raakt
 de exit-berekening niet.
+
+## 16. Kadastrale waarde — optionele invoer, betere IBI- en afschrijvingsgrondslag
+
+**Twee bestaande benaderingen, één echte oplossing.** Twee plekken in het
+model schatten een grondslag die eigenlijk uit de kadastrale waarde (valor
+catastral) hoort te komen, omdat dat gegeven zelden voorhanden is:
+- IBI (§6) wordt berekend als 0,4% van de **aankoopprijs** — feitelijk
+  wordt IBI geheven over de kadastrale waarde, niet over de markt-/
+  aankoopprijs, en die twee lopen in Spanje doorgaans sterk uiteen.
+- De meerjarige afschrijvingsgrondslag (§12) is
+  `aankoopprijs × DEFAULT_BUILDING_SHARE_OF_VALUE (0,70)` — een generieke
+  aanname over het opstalaandeel, terwijl de wet uitgaat van het
+  daadwerkelijke opstalgedeelte van de kadastrale waarde.
+
+`PropertyInput.cadastralValue?: { suelo: number; construccion: number }`
+(optioneel) — de kadastrale waarde zoals het Catastro die zelf al
+uitsplitst in grond (suelo) en opstal (construcción) — lost beide op zodra
+ze bekend is:
+```
+IBI                = (suelo + construcción) × PROPERTY_TAX_IBI_RATE
+afschrijvingsbasis = construcción  (exclusief grond, zoals de wet vereist)
+```
+`fixedOperatingCosts()` (`operating.ts`) en `buildProjectionYears()`
+(`projection.ts`) krijgen elk een optionele `cadastralValue`-parameter die,
+wanneer meegegeven, voorrang heeft boven respectievelijk de
+aankoopprijs-benadering en `buildingShareOfValue` (die laatste wordt dan
+genegeerd, ook als hij expliciet is meegegeven — een pandspecifieke
+kadastrale waarde is sterker bewijs dan een handmatige schatting van het
+opstalaandeel).
+
+**Waar niet ingevuld, blijft de huidige benadering staan — en wordt dat nu
+een aanname die code kan zien.** Vóór dit onderdeel bestond er geen
+PLACEHOLDER voor "IBI over de aankoopprijs benaderd"; alleen de
+afschrijvingskant had er een (`DEFAULT_BUILDING_SHARE_OF_VALUE`, al gedekt
+door onderdeel 2's `placeholdersUsed`-mechanisme). Nieuwe parameter in
+`parameters.ts`:
+```
+DEFAULT_CADASTRAL_TO_PURCHASE_PRICE_RATIO = 1,0   [PLACEHOLDER]
+```
+Geen sourced ratio bestaat tussen kadastrale waarde en markt-/aankoopprijs
+(kadastrale waardes worden administratief vastgesteld en wijken doorgaans
+af van de marktprijs); 1,0 is expliciet géén marktclaim maar een
+identiteits-placeholder die de IBI-schatting berekenbaar houdt zolang er
+geen echte kadastrale waarde is. Deze waarde verandert niets aan de
+rekenuitkomst (× 1,0) maar maakt de aanname zelf inspecteerbaar: hij komt
+in `ALL_PARAMETERS` te staan en wordt door `outcome.ts`'s
+`collectPlaceholders()` in `placeholdersUsed` opgenomen zodra
+`cadastralValueProvided` op `false` staat (default), naast
+`DEFAULT_BUILDING_SHARE_OF_VALUE` wanneer die ook niet is overschreven.
+
+**Referentiecasus ongewijzigd.** Avenida Primado Reig 19 heeft geen
+kadastrale waarde ingevuld, dus alle bestaande golden tests (§11, §12)
+blijven exact staan — dit onderdeel introduceert alleen een nieuw, apart
+pad, geen wijziging van de bestaande uitkomst. Nieuwe golden tests
+(`acquisition.test.ts`, `projection.test.ts`, `outcome.test.ts`,
+`validation.test.ts`) tonen dat pad met een synthetisch voorbeeld
+(suelo € 120.000, construcción € 80.000): IBI € 800 in plaats van € 1.320,
+afschrijvingsbasis € 80.000 (vóór 3%/scenariofactor) in plaats van
+€ 231.000 (330.000 × 0,70), en dat beide defaults uit `placeholdersUsed`
+verdwijnen zodra de kadastrale waarde is doorgegeven.
