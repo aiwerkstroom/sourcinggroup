@@ -32,6 +32,12 @@ export const referenceCase: EngineInput = {
     // this figure exercises the formula only, chosen for round-number
     // clarity in the golden tests, not a claim about the real building.
     communityFeesAnnual: 900,
+    // Rented as student housing, long-term (currentRentStatus above); the
+    // reference case's own selections.rentalStrategy is "hybrid", which
+    // requires a título habilitante - true here so it stays a valid
+    // selection (MODEL_SPEC.md §18). Not a claim about the real building's
+    // licensing status, only what keeps this fixture internally consistent.
+    hasTouristRentalLicense: true,
   },
   constraints: {
     totalBudget: 450_000,

@@ -172,6 +172,18 @@ export interface PropertyInput {
    * purchasePrice x DEFAULT_BUILDING_SHARE_OF_VALUE (MODEL_SPEC.md §16).
    */
   cadastralValue?: CadastralValue;
+  /**
+   * Whether this property holds a valid título habilitante (the license a
+   * Spanish tourist/short-term rental legally requires). Mandatory, no
+   * default: unlike gastos de comunidad this is a plain yes/no fact about
+   * the property, always knowable, never a generic estimate. Gates
+   * ModelSelections.rentalStrategy "shortTerm"/"hybrid" (MODEL_SPEC.md
+   * §18) - selecting either without a valid license is rejected by
+   * validateEngineInput(), and EngineResult.rentalStrategies reports
+   * short-term/hybrid as unavailable with the reason, rather than
+   * silently as zero.
+   */
+  hasTouristRentalLicense: boolean;
 }
 
 /** Valor catastral desglosado - suelo (land) and construcción (building), both in €. */
@@ -548,6 +560,30 @@ export interface ScenarioOutcome {
   placeholdersUsed: Parameter<unknown>[];
 }
 
+/**
+ * A rental strategy this property cannot legally offer right now, and why
+ * - not a zeroed-out result (MODEL_SPEC.md §18). "shortTerm"/"hybrid"
+ * without PropertyInput.hasTouristRentalLicense are reported here rather
+ * than computed: a report reads this to explain why they're missing.
+ */
+export interface UnavailableRentalStrategy {
+  strategy: RentalStrategy;
+  reason: string;
+}
+
+/**
+ * Which rental strategies this property can legally offer (MODEL_SPEC.md
+ * §18). `available` is what a strategy selector may offer; `unavailable`
+ * carries the excluded strategies with their reason, for a report to
+ * explain the absence rather than leave it unexplained. "longTerm" is
+ * always available - only "shortTerm"/"hybrid" require a título
+ * habilitante.
+ */
+export interface RentalStrategyAvailability {
+  available: RentalStrategy[];
+  unavailable: UnavailableRentalStrategy[];
+}
+
 export interface EngineResult {
   income: IncomeModel;
   renovationStrategies: RenovationStrategyResult[];
@@ -559,4 +595,5 @@ export interface EngineResult {
   utilitiesBaseAnnual: number;
   scenarios: ScenarioResult[];
   tax: TaxResult;
+  rentalStrategies: RentalStrategyAvailability;
 }

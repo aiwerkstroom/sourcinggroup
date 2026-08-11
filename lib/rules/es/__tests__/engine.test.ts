@@ -194,3 +194,40 @@ describe("usable vs. built floor area (MODEL_SPEC.md §17)", () => {
     expect(builtOnly.utilitiesBaseAnnual).toBeCloseTo(21.5 * 120, 9);
   });
 });
+
+/**
+ * MODEL_SPEC.md §18: título habilitante gate. The reference case's own
+ * selections.rentalStrategy is "hybrid", which requires the license -
+ * referencecase.ts sets hasTouristRentalLicense: true so the existing
+ * golden run stays valid; these tests exercise the gate itself.
+ */
+describe("título habilitante gate on EngineResult.rentalStrategies (MODEL_SPEC.md §18)", () => {
+  it("reference case (license: true): all three rental strategies available", () => {
+    const result = runEngine(referenceCase);
+    expect(result.rentalStrategies.available).toEqual(["longTerm", "shortTerm", "hybrid"]);
+    expect(result.rentalStrategies.unavailable).toEqual([]);
+  });
+
+  it("without a license, on a longTerm-selected run: shortTerm/hybrid reported as unavailable, not zeroed", () => {
+    const result = runEngine({
+      ...referenceCase,
+      property: { ...referenceCase.property, hasTouristRentalLicense: false },
+      selections: { ...referenceCase.selections, rentalStrategy: "longTerm" },
+    });
+    expect(result.rentalStrategies.available).toEqual(["longTerm"]);
+    expect(result.rentalStrategies.unavailable.map((u) => u.strategy)).toEqual([
+      "shortTerm",
+      "hybrid",
+    ]);
+    result.rentalStrategies.unavailable.forEach((u) => {
+      expect(u.reason).toMatch(/título habilitante/);
+    });
+    // The engine still ran to completion for the selected (available)
+    // longTerm strategy - the gate excludes shortTerm/hybrid from the
+    // availability table, it doesn't block a valid longTerm selection.
+    expect(result.income.selectedGrossAnnualIncome).toBeCloseTo(
+      result.income.longTerm.adjustedAnnualIncome,
+      9,
+    );
+  });
+});

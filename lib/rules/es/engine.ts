@@ -7,6 +7,7 @@
 import { acquisitionCosts } from "./acquisition";
 import { financingStrategyTable, selectFinancing } from "./financing";
 import { buildIncomeModel } from "./income";
+import { rentalStrategyAvailability } from "./licensing";
 import { fixedOperatingCosts, utilitiesBaseAnnual } from "./operating";
 import { DEFAULT_USABLE_TO_BUILT_AREA_RATIO } from "./parameters";
 import { renovationStrategyTable, selectRenovation } from "./renovation";
@@ -23,6 +24,8 @@ export function runEngine(input: EngineInput): EngineResult {
   // directly, derive it from the built area via the PLACEHOLDER ratio.
   const usableAreaM2 =
     property.usableAreaM2 ?? property.builtAreaM2 * DEFAULT_USABLE_TO_BUILT_AREA_RATIO.value;
+
+  const rentalStrategies = rentalStrategyAvailability(property.hasTouristRentalLicense);
 
   const renovationStrategies = renovationStrategyTable(constraints);
   const selectedRenovation = selectRenovation(selections.renovationStrategy, constraints);
@@ -92,5 +95,6 @@ export function runEngine(input: EngineInput): EngineResult {
     utilitiesBaseAnnual: utilitiesBase,
     scenarios,
     tax,
+    rentalStrategies,
   };
 }

@@ -51,6 +51,16 @@ export function validateEngineInput(input: EngineInput): string[] {
       issues.push("cadastralValue.construccion must be zero or positive");
     }
   }
+  if (typeof property.hasTouristRentalLicense !== "boolean") {
+    issues.push("hasTouristRentalLicense must be true or false (no default)");
+  } else if (
+    !property.hasTouristRentalLicense &&
+    (selections.rentalStrategy === "shortTerm" || selections.rentalStrategy === "hybrid")
+  ) {
+    issues.push(
+      `rentalStrategy "${selections.rentalStrategy}" requires a valid título habilitante; hasTouristRentalLicense is false`,
+    );
+  }
   if (!isFiniteNumber(constraints.totalBudget) || constraints.totalBudget <= 0) {
     issues.push("totalBudget must be a positive number");
   }

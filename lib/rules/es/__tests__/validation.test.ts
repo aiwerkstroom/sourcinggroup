@@ -128,4 +128,45 @@ describe("input validation (self-serve: reject impossible combinations)", () => 
       "cadastralValue.construccion",
     );
   });
+
+  it("rejects a missing/non-boolean hasTouristRentalLicense (MODEL_SPEC.md §18: mandatory, no default)", () => {
+    const bad = {
+      ...referenceCase,
+      property: {
+        ...referenceCase.property,
+        hasTouristRentalLicense: undefined as unknown as boolean,
+      },
+    };
+    expect(validateEngineInput(bad).join(" ")).toContain("hasTouristRentalLicense");
+    expect(() => runEngine(bad)).toThrow(ValidationError);
+  });
+
+  it("rejects rentalStrategy 'shortTerm' or 'hybrid' without a valid título habilitante", () => {
+    const noLicense = { ...referenceCase.property, hasTouristRentalLicense: false };
+
+    const shortTerm = {
+      ...referenceCase,
+      property: noLicense,
+      selections: { ...referenceCase.selections, rentalStrategy: "shortTerm" as const },
+    };
+    expect(validateEngineInput(shortTerm).join(" ")).toContain("título habilitante");
+    expect(() => runEngine(shortTerm)).toThrow(ValidationError);
+
+    const hybrid = {
+      ...referenceCase,
+      property: noLicense,
+      selections: { ...referenceCase.selections, rentalStrategy: "hybrid" as const },
+    };
+    expect(validateEngineInput(hybrid).join(" ")).toContain("título habilitante");
+  });
+
+  it("accepts rentalStrategy 'longTerm' regardless of hasTouristRentalLicense", () => {
+    const noLicense = {
+      ...referenceCase,
+      property: { ...referenceCase.property, hasTouristRentalLicense: false },
+      selections: { ...referenceCase.selections, rentalStrategy: "longTerm" as const },
+    };
+    expect(validateEngineInput(noLicense)).toEqual([]);
+    expect(() => runEngine(noLicense)).not.toThrow();
+  });
 });

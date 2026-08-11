@@ -16,7 +16,8 @@ huurtype, **bruikbaar oppervlak en gebouwd oppervlak, m² gescheiden — §17**,
 aantal kamers/slaapkamers/badkamers, huidige huurstatus, bouwjaar,
 energielabel, aankoopprijs, eigen inbreng, hypotheek, renovatiebudget,
 **gastos de comunidad €/jaar (verplicht, geen default — §15)**,
-**kadastrale waarde suelo/construcción (optioneel — §16)**.
+**kadastrale waarde suelo/construcción (optioneel — §16)**,
+**geldig título habilitante ja/nee (verplicht — §18)**.
 
 **Uitgangspunten belegger** (`Costs & Income` B4–D26): totaal
 investeringsbudget, max renovatiebudget, gewenste LTV, min LTV, max LTV,
@@ -831,3 +832,54 @@ conversiefactor correct wordt toegepast wanneer `usableAreaM2` ontbreekt
 bevestigt dat `DEFAULT_USABLE_TO_BUILT_AREA_RATIO` alleen in
 `placeholdersUsed` verschijnt wanneer `usableAreaM2Provided` op `false`
 staat.
+
+## 18. Vergunningspoort — título habilitante voor toeristische verhuur
+
+**Kortetermijn-/toeristische verhuur is in Spanje vergunningsplichtig.**
+Zonder geldig título habilitante (de verhuurvergunning die gemeentes en
+autonome regio's voor toeristische verhuur eisen) mag een eigenaar
+wettelijk niet kortetermijn of hybride (LT/ST-mix) verhuren — alleen
+langetermijn blijft dan toegestaan. `TSG_Model_v3.xlsx` modelleert dit niet:
+het rekent ST/hybride-scenario's door ongeacht vergunningsstatus.
+
+**Nieuwe verplichte invoer.** `PropertyInput.hasTouristRentalLicense:
+boolean` — in tegenstelling tot gastos de comunidad (§15) geen bedrag dat
+per gebouw varieert, maar een simpel, altijd kenbaar ja/nee-feit over het
+pand/de eigenaar. Geen default; `validateEngineInput()` wijst een
+ontbrekende of niet-boolean waarde af.
+
+**Poort, niet een uitkomst op nul.** Twee plekken dwingen dit af:
+- `validateEngineInput()` wijst `selections.rentalStrategy` "shortTerm" of
+  "hybrid" af zodra `hasTouristRentalLicense` `false` is — `runEngine()`
+  compileert/rekent in dat geval helemaal niet door voor die selectie.
+  "longTerm" blijft ongeacht vergunningsstatus toegestaan.
+- `EngineResult.rentalStrategies` (nieuw, `lib/rules/es/licensing.ts`,
+  `rentalStrategyAvailability()`) geeft, onafhankelijk van welke strategie
+  daadwerkelijk is geselecteerd, een overzicht van wat er sowieso mogelijk
+  is voor dit pand:
+  ```
+  available    : RentalStrategy[]                        (bijv. ["longTerm"])
+  unavailable  : { strategy: RentalStrategy; reason: string }[]
+  ```
+  Zonder vergunning bevat `available` alléén `"longTerm"` —
+  `"shortTerm"`/`"hybrid"` staan niet in die lijst met een impliciete
+  nulwaarde, ze **ontbreken volledig**. `unavailable` draagt de reden per
+  uitgesloten strategie (`"Requires a valid título habilitante..."`), zodat
+  een rapport of selector-UI kan uitleggen waarom kortetermijn/hybride niet
+  aangeboden worden, ook al is er nooit een cijfer voor berekend.
+
+**Referentiecasus.** Avenida Primado Reig 19 selecteert `"hybrid"` als
+verhuurstrategie (§11); `hasTouristRentalLicense: true` is daarom vereist
+om die selectie geldig te houden — gezet als een consistentie-eis van deze
+testfixture, geen claim over de werkelijke vergunningsstatus van dit
+specifieke pand. Alle bestaande golden tests blijven daardoor exact staan.
+
+Golden tests: `licensing.test.ts` toetst `rentalStrategyAvailability()`
+puur (met/zonder vergunning, exacte `available`/`unavailable`-inhoud en de
+reden); `validation.test.ts` toetst dat "shortTerm"/"hybrid" zonder
+vergunning worden afgewezen (`runEngine()` gooit `ValidationError`) en dat
+"longTerm" ongeacht vergunningsstatus geldig blijft; `engine.test.ts`
+bevestigt `EngineResult.rentalStrategies` op zowel de referentiecasus (alle
+drie beschikbaar) als een synthetisch geval zonder vergunning (alleen
+langetermijn beschikbaar, de andere twee met reden in `unavailable`, en de
+engine draait gewoon door voor de wél geldige `"longTerm"`-selectie).
