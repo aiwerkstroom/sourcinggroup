@@ -13,13 +13,13 @@ export function acquisitionCosts(args: {
   constraints: Pick<InvestorConstraints, "totalBudget" | "maxRenovationBudget">;
 }): AcquisitionCosts {
   const p = args.purchasePrice;
-  const transferTaxITP = p * ACQUISITION_RATES.transferTaxITP;
-  const stampDutyAJD = p * ACQUISITION_RATES.stampDutyAJD;
-  const notaryFee = p * ACQUISITION_RATES.notaryFee;
-  const registrationFee = p * ACQUISITION_RATES.registrationFee;
-  const legalAdvice = p * LEGAL_ADVICE_FEE;
-  const agencyFees = p * ACQUISITION_RATES.agencyFee;
-  const bankFee = BANK_FEE;
+  const transferTaxITP = p * ACQUISITION_RATES.value.transferTaxITP;
+  const stampDutyAJD = p * ACQUISITION_RATES.value.stampDutyAJD;
+  const notaryFee = p * ACQUISITION_RATES.value.notaryFee;
+  const registrationFee = p * ACQUISITION_RATES.value.registrationFee;
+  const legalAdvice = p * LEGAL_ADVICE_FEE.value;
+  const agencyFees = p * ACQUISITION_RATES.value.agencyFee;
+  const bankFee = BANK_FEE.value;
   const total =
     p +
     args.renovationCosts +

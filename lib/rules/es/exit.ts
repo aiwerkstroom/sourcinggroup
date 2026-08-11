@@ -88,7 +88,7 @@ export function computeExit(args: {
     sellingPrice - sellingCommission - args.assumptions.municipalCapitalGainsTax;
 
   const renovationImprovementShare =
-    args.renovationImprovementShare ?? DEFAULT_RENOVATION_IMPROVEMENT_SHARE;
+    args.renovationImprovementShare ?? DEFAULT_RENOVATION_IMPROVEMENT_SHARE.value;
   const renovationImprovementValue = args.renovation.capex * renovationImprovementShare;
 
   // Exactly what §4's tax layer deducted, summed from its own track - not
@@ -108,7 +108,7 @@ export function computeExit(args: {
   const capitalGain = transferValueForCapitalGainsTax - acquisitionValueForCapitalGainsTax;
   // A loss owes no capital gains tax; it is not a deduction elsewhere, so
   // it is clamped at zero rather than reported as a negative tax.
-  const capitalGainsTax = Math.max(0, capitalGain) * CAPITAL_GAINS_TAX_RATE_NON_RESIDENT;
+  const capitalGainsTax = Math.max(0, capitalGain) * CAPITAL_GAINS_TAX_RATE_NON_RESIDENT.value;
 
   const netSaleProceeds =
     sellingPrice -
@@ -117,7 +117,7 @@ export function computeExit(args: {
     capitalGainsTax -
     finalYear.mortgageBalance;
 
-  const nonResidentWithholdingAdvance = sellingPrice * NON_RESIDENT_WITHHOLDING_RATE;
+  const nonResidentWithholdingAdvance = sellingPrice * NON_RESIDENT_WITHHOLDING_RATE.value;
 
   return {
     scenario: args.scenario,

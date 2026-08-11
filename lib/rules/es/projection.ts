@@ -84,15 +84,15 @@ export function buildProjectionYears(args: {
     yearsToProject: args.years,
   });
 
-  const buildingShareOfValue = args.buildingShareOfValue ?? DEFAULT_BUILDING_SHARE_OF_VALUE;
+  const buildingShareOfValue = args.buildingShareOfValue ?? DEFAULT_BUILDING_SHARE_OF_VALUE.value;
   const depreciationYear1 =
     args.purchasePrice *
-    DEPRECIATION_RATE *
+    DEPRECIATION_RATE.value *
     buildingShareOfValue *
-    DEPRECIATION_SCENARIO_FACTORS[args.scenario];
+    DEPRECIATION_SCENARIO_FACTORS[args.scenario].value;
   const taxRate = args.euResident
-    ? RENTAL_INCOME_TAX_RATE_EU
-    : RENTAL_INCOME_TAX_RATE_NON_EU;
+    ? RENTAL_INCOME_TAX_RATE_EU.value
+    : RENTAL_INCOME_TAX_RATE_NON_EU.value;
 
   // Year 1 only: the property isn't let while it's being renovated, so its
   // rent (and the property management fee, a % of that rent) is prorated
@@ -108,7 +108,7 @@ export function buildProjectionYears(args: {
     const grossIncome = args.scenarioResult.grossIncome * idx.rentIndex * rentProration;
     // Property management is always a fixed % of that year's rent, so it
     // tracks the rent index directly rather than CPI.
-    const propertyManagement = grossIncome * PROPERTY_MANAGEMENT_FEE;
+    const propertyManagement = grossIncome * PROPERTY_MANAGEMENT_FEE.value;
     const maintenance = args.scenarioResult.maintenance * idx.costIndex;
     const utilities = args.scenarioResult.utilities * idx.costIndex;
     // IBI is levied on the cadastral value, which is set administratively

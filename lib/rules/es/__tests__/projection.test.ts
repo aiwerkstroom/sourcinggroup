@@ -250,7 +250,7 @@ describe("multi-year cashflow after tax (reference case)", () => {
   it("defaults the depreciation base to DEFAULT_BUILDING_SHARE_OF_VALUE (0.70), not phase 1's fixed 80%", () => {
     // Base scenario: 330000 x 3% x 0.70 x factor 1.00 = 6930, every year
     // (depreciation is flat, tied to the acquisition cost, not indexed).
-    expect(DEFAULT_BUILDING_SHARE_OF_VALUE).toBe(0.7);
+    expect(DEFAULT_BUILDING_SHARE_OF_VALUE.value).toBe(0.7);
     const years = projectionFor("base");
     expect(years[0]!.depreciation).toBeCloseTo(6930, 6);
     expect(years[9]!.depreciation).toBeCloseTo(6930, 6);

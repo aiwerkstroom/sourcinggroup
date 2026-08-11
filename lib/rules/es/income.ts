@@ -41,8 +41,8 @@ export function incomeLine(
 /** Hybrid gross rental income: LT share x adjusted LT + ST share x adjusted ST (L38). */
 export function hybridGrossIncome(adjustedLongTerm: number, adjustedShortTerm: number): number {
   return (
-    adjustedLongTerm * HYBRID_SHARE_LONG_TERM +
-    adjustedShortTerm * HYBRID_SHARE_SHORT_TERM
+    adjustedLongTerm * HYBRID_SHARE_LONG_TERM.value +
+    adjustedShortTerm * HYBRID_SHARE_SHORT_TERM.value
   );
 }
 
@@ -56,13 +56,13 @@ export function buildIncomeModel(args: {
   const longTerm = incomeLine(
     args.rentPerM2LongTerm,
     args.livingAreaM2,
-    BASE_OCCUPANCY_LONG_TERM,
+    BASE_OCCUPANCY_LONG_TERM.value,
     args.rentMultiplier,
   );
   const shortTerm = incomeLine(
     args.rentPerM2ShortTerm,
     args.livingAreaM2,
-    BASE_OCCUPANCY_SHORT_TERM,
+    BASE_OCCUPANCY_SHORT_TERM.value,
     args.rentMultiplier,
   );
   const hybrid = hybridGrossIncome(
@@ -78,8 +78,8 @@ export function buildIncomeModel(args: {
   return {
     longTerm,
     shortTerm,
-    hybridShareLongTerm: HYBRID_SHARE_LONG_TERM,
-    hybridShareShortTerm: HYBRID_SHARE_SHORT_TERM,
+    hybridShareLongTerm: HYBRID_SHARE_LONG_TERM.value,
+    hybridShareShortTerm: HYBRID_SHARE_SHORT_TERM.value,
     hybridGrossAnnualIncome: hybrid,
     selectedGrossAnnualIncome: selected,
   };

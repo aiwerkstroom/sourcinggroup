@@ -57,7 +57,7 @@ describe("exit (reference case, 10-year holding period)", () => {
   });
 
   it("defaults renovationImprovementShare to 0: no renovation cost raises the acquisition value without justification", () => {
-    expect(DEFAULT_RENOVATION_IMPROVEMENT_SHARE).toBe(0);
+    expect(DEFAULT_RENOVATION_IMPROVEMENT_SHARE.value).toBe(0);
   });
 
   it("accepts an explicit renovationImprovementShare, raising the acquisition value and lowering the taxable gain", () => {

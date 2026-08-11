@@ -85,7 +85,7 @@ export function buildScenarioOutcome(args: {
       args.equityAvailable === undefined ? null : args.equityRequired <= args.equityAvailable,
   };
 
-  const minRequiredReturn = args.minRequiredReturn ?? DEFAULT_MIN_REQUIRED_RETURN;
+  const minRequiredReturn = args.minRequiredReturn ?? DEFAULT_MIN_REQUIRED_RETURN.value;
   const returnRequirement: ReturnRequirementCheck = {
     minRequiredReturn,
     meetsMinRequiredReturn: args.irr.defined ? args.irr.irr >= minRequiredReturn : null,

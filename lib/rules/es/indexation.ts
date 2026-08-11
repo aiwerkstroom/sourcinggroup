@@ -32,7 +32,7 @@ import {
 } from "./parameters";
 import type { ScenarioId } from "./types";
 
-export const DEFAULT_PROJECTION_START_YEAR = CORRECTION_FACTORS_FIRST_ESTIMATE_YEAR;
+export const DEFAULT_PROJECTION_START_YEAR = CORRECTION_FACTORS_FIRST_ESTIMATE_YEAR.value;
 
 /** One projection year with its growth factors and cumulative indices. */
 export interface YearIndex {
@@ -59,11 +59,11 @@ export interface YearIndex {
  * carried forward; the caller learns that from `isExtrapolated`.
  */
 export function rentGrowthFactor(calendarYear: number): number {
-  const clamped = Math.min(calendarYear, CORRECTION_FACTORS_LAST_YEAR);
-  const value = RENT_GROWTH_BY_YEAR[clamped];
+  const clamped = Math.min(calendarYear, CORRECTION_FACTORS_LAST_YEAR.value);
+  const value = RENT_GROWTH_BY_YEAR.value[clamped];
   if (value === undefined) {
     throw new Error(
-      `No rent growth factor for ${calendarYear}: the Correction Factors series starts at ${CORRECTION_FACTORS_FIRST_ESTIMATE_YEAR}`,
+      `No rent growth factor for ${calendarYear}: the Correction Factors series starts at ${CORRECTION_FACTORS_FIRST_ESTIMATE_YEAR.value}`,
     );
   }
   return value;
@@ -71,11 +71,11 @@ export function rentGrowthFactor(calendarYear: number): number {
 
 /** Cost inflation multiplier for a calendar year, derived from the CPI row. */
 export function costInflationFactor(calendarYear: number): number {
-  const clamped = Math.min(calendarYear, CORRECTION_FACTORS_LAST_YEAR);
-  const percent = CPI_PERCENT_BY_YEAR[clamped];
+  const clamped = Math.min(calendarYear, CORRECTION_FACTORS_LAST_YEAR.value);
+  const percent = CPI_PERCENT_BY_YEAR.value[clamped];
   if (percent === undefined) {
     throw new Error(
-      `No CPI value for ${calendarYear}: the Correction Factors series starts at ${CORRECTION_FACTORS_FIRST_ESTIMATE_YEAR}`,
+      `No CPI value for ${calendarYear}: the Correction Factors series starts at ${CORRECTION_FACTORS_FIRST_ESTIMATE_YEAR.value}`,
     );
   }
   return 1 + percent / 100;
@@ -83,7 +83,7 @@ export function costInflationFactor(calendarYear: number): number {
 
 /** Whether a calendar year sits beyond the Correction Factors series. */
 export function isExtrapolated(calendarYear: number): boolean {
-  return calendarYear > CORRECTION_FACTORS_LAST_YEAR;
+  return calendarYear > CORRECTION_FACTORS_LAST_YEAR.value;
 }
 
 /**
@@ -94,7 +94,7 @@ export function isExtrapolated(calendarYear: number): boolean {
  * exact same compounding, not two hand-copied `** ` expressions.
  */
 export function propertyValueIndex(scenario: ScenarioId, years: number): number {
-  return VALUE_GROWTH_ANNUAL[scenario] ** years;
+  return VALUE_GROWTH_ANNUAL[scenario].value ** years;
 }
 
 /**

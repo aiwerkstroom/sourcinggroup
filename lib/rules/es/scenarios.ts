@@ -45,29 +45,31 @@ export function runScenarios(args: {
 }): ScenarioResult[] {
   return SCENARIO_ORDER.map((id) => {
     const s = SCENARIOS[id];
+    const rentLevelMultiplier = s.rentLevelMultiplier.value;
+    const occupancyMultiplier = s.occupancyMultiplier.value;
+    const interestRateDelta = s.interestRateDelta.value;
+    const utilitiesMultiplier = s.utilitiesMultiplier.value;
+    const maintenanceInflationMultiplier = s.maintenanceInflationMultiplier.value;
     // L74: hybrid gross x rent level x occupancy multiplier
-    const grossIncome =
-      args.grossAnnualIncome * s.rentLevelMultiplier * s.occupancyMultiplier;
+    const grossIncome = args.grossAnnualIncome * rentLevelMultiplier * occupancyMultiplier;
     // L78: gross x property management fee
-    const propertyManagement = grossIncome * PROPERTY_MANAGEMENT_FEE;
+    const propertyManagement = grossIncome * PROPERTY_MANAGEMENT_FEE.value;
     // L80: gross x maintenance rate x renovation maintenance factor x inflation multiplier
     const maintenance =
       grossIncome *
-      MAINTENANCE_RATE *
+      MAINTENANCE_RATE.value *
       args.renovation.maintenanceFactor *
-      s.maintenanceInflationMultiplier;
+      maintenanceInflationMultiplier;
     // L84: utilities base x renovation efficiency x scenario multiplier
     const utilities =
-      args.utilitiesBaseAnnual *
-      args.renovation.utilitiesEfficiency *
-      s.utilitiesMultiplier;
+      args.utilitiesBaseAnnual * args.renovation.utilitiesEfficiency * utilitiesMultiplier;
     // L86: NOI, incl. fixed costs since v3
     const fixedCosts = args.fixedAnnualCosts;
     const noi =
       grossIncome - (propertyManagement + maintenance + utilities + fixedCosts);
     // L90: selected rate + scenario delta + non-resident spread
     const interestRate =
-      args.financing.interestRate + s.interestRateDelta + args.financing.nonResidentSpread;
+      args.financing.interestRate + interestRateDelta + args.financing.nonResidentSpread;
     // L94 / L96
     const interestOnly = annualInterestOnly(interestRate, args.financing.mortgageAmount);
     const debtService = annualAnnuityDebtService(
@@ -85,11 +87,11 @@ export function runScenarios(args: {
     const dscr = noi / debtService;
     return {
       id,
-      rentLevelMultiplier: s.rentLevelMultiplier,
-      occupancyMultiplier: s.occupancyMultiplier,
-      interestRateDelta: s.interestRateDelta,
-      utilitiesMultiplier: s.utilitiesMultiplier,
-      maintenanceInflationMultiplier: s.maintenanceInflationMultiplier,
+      rentLevelMultiplier,
+      occupancyMultiplier,
+      interestRateDelta,
+      utilitiesMultiplier,
+      maintenanceInflationMultiplier,
       grossIncome,
       propertyManagement,
       maintenance,

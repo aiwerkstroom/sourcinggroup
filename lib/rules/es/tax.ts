@@ -22,7 +22,7 @@ import type {
 
 /** Annual depreciation base: 3% of 80% of the purchase value (Reference Info H58). */
 export function depreciationBase(purchasePrice: number): number {
-  return purchasePrice * DEPRECIATION_RATE * DEPRECIATION_BUILDING_SHARE;
+  return purchasePrice * DEPRECIATION_RATE.value * DEPRECIATION_BUILDING_SHARE.value;
 }
 
 export function taxCalculator(args: {
@@ -33,7 +33,7 @@ export function taxCalculator(args: {
 }): TaxResult {
   const base = depreciationBase(args.purchasePrice);
   const taxScenarios: TaxScenario[] = args.scenarios.map((sc) => {
-    const depreciation = base * DEPRECIATION_SCENARIO_FACTORS[sc.id];
+    const depreciation = base * DEPRECIATION_SCENARIO_FACTORS[sc.id].value;
     // Reference Info M63/N63/O63
     const deductibleCosts =
       sc.annualInterestOnly +
@@ -52,8 +52,8 @@ export function taxCalculator(args: {
 
   const taxableIncomeBase = baseScenario.grossIncome - baseTax.deductibleCosts;
   const taxRate = args.euResident
-    ? RENTAL_INCOME_TAX_RATE_EU
-    : RENTAL_INCOME_TAX_RATE_NON_EU;
+    ? RENTAL_INCOME_TAX_RATE_EU.value
+    : RENTAL_INCOME_TAX_RATE_NON_EU.value;
   return {
     scenarios: taxScenarios,
     grossRentalIncomeBase: baseScenario.grossIncome,

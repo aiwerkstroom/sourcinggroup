@@ -451,3 +451,65 @@ observatie.
 Golden tests: onafhankelijke Python-doorrekening (er is geen Excel-
 tegenhanger voor fase 1b), vastgelegd in
 `lib/rules/es/__tests__/{indexation,financing,projection,exit,irr,outcome}.test.ts`.
+
+## 13. Herkomstaudit — parameters.ts
+
+Niet elke waarde in dit model weegt even zwaar. Sommige zijn wettelijk
+vastgelegd (belastingtarieven, statutaire percentages), andere zijn TSG's
+eigen, verdedigbare modelkeuze (hoe "conservatief" is gedefinieerd), en
+weer andere zijn plaatsvervangers uit de oorspronkelijke Excel zonder
+feitelijke onderbouwing. Elke parameter in `lib/rules/es/parameters.ts`
+draagt daarom een expliciet herkomstlabel — **onderdeel van het type**
+(`Parameter<T>` in `types.ts`), niet van het commentaar, zodat code erop
+kan reageren (zie `ALL_PARAMETERS`, gebruikt door
+`lib/rules/es/__tests__/parameters.test.ts` en door de per-uitkomst
+placeholder-lijst in §7).
+
+```
+SOURCED     — een genoemde externe bron met datum
+ESTIMATE    — geen externe bron, maar een bewuste, verdedigbare model-
+              conventie (bijv. hoe "hybride" wordt gedefinieerd), geen
+              claim over een verifieerbaar extern feit
+PLACEHOLDER — gepresenteerd als feit maar niet extern geverifieerd; moet
+              worden vervangen door echte, pand-specifieke of
+              geverifieerde data vóór productiegebruik
+```
+
+Bij twijfel tussen ESTIMATE en PLACEHOLDER is PLACEHOLDER gekozen — nooit
+het gunstiger label. Optelling (`ALL_PARAMETERS`, `parameters.test.ts`):
+**25 SOURCED · 41 ESTIMATE · 14 PLACEHOLDER** van de 80 geaudite waarden.
+
+**PLACEHOLDER** (moeten vóór productiegebruik worden vervangen of
+onderbouwd): `RENT_MATRIX_LONG_TERM_PER_M2`/`_SHORT_TERM_PER_M2` (geen
+externe bron voor deze specifieke prijspunten), `MAINTENANCE_RATE`,
+`BANK_FEE` (Excel-only, geen externe bron), CapEx per renovatiestrategie
+(`RENOVATION_STRATEGIES.{minimal,light,heavy}.capex` — al [BESLISSING] in
+§3), `DEFAULT_RENOVATION_IMPROVEMENT_SHARE`, `DEFAULT_MIN_REQUIRED_RETURN`,
+`DEFAULT_BUILDING_SHARE_OF_VALUE` (alle drie al [BESLISSING] elders in dit
+document), `DEPRECIATION_BUILDING_SHARE` (bestaat uitsluitend voor
+fase-1-Excel-pariteit, geen claim over een echt pand) en
+`DEPRECIATION_SCENARIO_FACTORS` per scenario (uit de Excel gerepliceerd
+zonder toegelichte afleiding — bij twijfel dus PLACEHOLDER, niet ESTIMATE).
+
+**ESTIMATE** (TSG's eigen modelkeuzes, geen externe claim): de
+scenariomultipliers (`SCENARIOS`), de hybride-verdeling
+(`HYBRID_SHARE_LONG_TERM`/`_SHORT_TERM`), de bezettingsbaselines
+(`BASE_OCCUPANCY_LONG_TERM`/`_SHORT_TERM`), de renovatiemultipliers
+(rentMultiplier/maintenanceFactor/utilitiesEfficiency/timeToRentMonths per
+strategie), de financieringstiers (`ltv`/`loanTermYears` per strategie —
+de rente zelf is wel SOURCED), en de projectiehorizon
+(`PROJECTION_YEARS`/`PROJECTION_INTERIM_YEAR`, MODEL_SPEC_FASE1B §2's
+eigen aanbeveling).
+
+**SOURCED**: belastingtarieven (IBI, huurinkomsten, vermogenswinst,
+afschrijving, niet-ingezetenenopslag), aankoopkosten (ITP/AJD/notaris/
+kadaster/courtage), de wijktabellen, verzekeringen, nutskosten,
+financieringsrentes, en de Correction Factors-reeksen (huurgroei, CPI,
+waardegroei) — elk met een genoemde bron en datum, zie de commentaren bij
+elke waarde in `parameters.ts` voor het volledige citaat.
+
+Bestaande golden tests die op een nu-PLACEHOLDER waarde steunen (bijv. de
+80%-afschrijvingsbasis of de CapEx-bedragen) zijn ongewijzigd gebleven —
+ze toetsen dat de rekenlogica de waarde correct gebruikt, niet dat de
+waarde zelf juist is. Dat blijft zo totdat een PLACEHOLDER wordt vervangen
+door een geverifieerd cijfer.

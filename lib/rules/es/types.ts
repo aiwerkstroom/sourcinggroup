@@ -18,6 +18,53 @@ export type ScenarioId = "conservative" | "base" | "optimistic";
 
 export type Residency = "resident" | "nonResident";
 
+/**
+ * Provenance audit (herkomstaudit) for every value in parameters.ts. Not
+ * every number backing this model carries the same weight: some are
+ * statutory rates or cited market data, some are TSG's own deliberate
+ * modeling conventions, and some are stand-ins that were never verified
+ * against a real source and must be replaced before a report ships for an
+ * actual property. The label lives on the value's type, not in a comment,
+ * so a computation can inspect which parameters it drew on and whether
+ * any of them are still PLACEHOLDER (see outcome.ts, ScenarioOutcome.provenance).
+ *
+ * - SOURCED: a named external source with a date backs this number.
+ * - ESTIMATE: no external citation, but the number is a deliberate,
+ *   defensible modeling/product convention (e.g. how "conservative" is
+ *   defined) rather than a claim about a verifiable external fact.
+ * - PLACEHOLDER: presented as if it were a real-world fact (a cost rate,
+ *   a market price, a property attribute) but not externally verified;
+ *   must be replaced with real, deal-specific or verified data before
+ *   production use. Any value where SOURCED vs ESTIMATE was genuinely in
+ *   doubt was assigned PLACEHOLDER, not the more flattering label.
+ */
+export type ParameterProvenance = "SOURCED" | "ESTIMATE" | "PLACEHOLDER";
+
+interface ParameterBase<T> {
+  /** Stable identifier for provenance tooling, e.g. collecting every PLACEHOLDER a computation touched. */
+  name: string;
+  value: T;
+}
+
+export interface SourcedParameter<T> extends ParameterBase<T> {
+  provenance: "SOURCED";
+  source: string;
+  date: string;
+}
+
+export interface EstimateParameter<T> extends ParameterBase<T> {
+  provenance: "ESTIMATE";
+  reasoning: string;
+}
+
+export interface PlaceholderParameter<T> extends ParameterBase<T> {
+  provenance: "PLACEHOLDER";
+  reasoning: string;
+}
+
+/** A single value with its provenance audit trail attached. */
+export type Parameter<T> = SourcedParameter<T> | EstimateParameter<T> | PlaceholderParameter<T>;
+
 /** "Property Input" sheet. */
 export interface PropertyInput {
   name: string;

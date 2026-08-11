@@ -57,11 +57,11 @@ export function selectInterestRate(
   strategy: FinancingStrategyId,
 ): number {
   if (preferredLtv !== undefined) {
-    if (preferredLtv <= FINANCING_STRATEGIES.low.ltv) return FINANCING_STRATEGIES.low.interestRate;
-    if (preferredLtv <= FINANCING_STRATEGIES.medium.ltv) return FINANCING_STRATEGIES.medium.interestRate;
-    return FINANCING_STRATEGIES.high.interestRate;
+    if (preferredLtv <= FINANCING_STRATEGIES.low.ltv.value) return FINANCING_STRATEGIES.low.interestRate.value;
+    if (preferredLtv <= FINANCING_STRATEGIES.medium.ltv.value) return FINANCING_STRATEGIES.medium.interestRate.value;
+    return FINANCING_STRATEGIES.high.interestRate.value;
   }
-  return FINANCING_STRATEGIES[strategy].interestRate;
+  return FINANCING_STRATEGIES[strategy].interestRate.value;
 }
 
 /** Per-strategy compliance table (B101:H112). */
@@ -71,17 +71,20 @@ export function financingStrategyTable(
 ): FinancingStrategyResult[] {
   return (Object.keys(FINANCING_STRATEGIES) as FinancingStrategyId[]).map((id) => {
     const s = FINANCING_STRATEGIES[id];
+    const ltv = s.ltv.value;
+    const loanTermYears = s.loanTermYears.value;
+    const interestRate = s.interestRate.value;
     const monthly =
-      annualAnnuityDebtService(s.interestRate, s.loanTermYears, purchasePrice * s.ltv) /
+      annualAnnuityDebtService(interestRate, loanTermYears, purchasePrice * ltv) /
       MONTHS_PER_YEAR;
     return {
       id,
       label: s.label,
-      ltv: s.ltv,
-      loanTermYears: s.loanTermYears,
-      interestRate: s.interestRate,
+      ltv,
+      loanTermYears,
+      interestRate,
       loanType: s.loanType,
-      withinAllowedLtv: s.ltv >= constraints.minLtv && s.ltv <= constraints.maxLtv,
+      withinAllowedLtv: ltv >= constraints.minLtv && ltv <= constraints.maxLtv,
       monthlyDebtService: monthly,
       monthlyDebtWithinLimit: monthly <= constraints.maxMonthlyDebt,
     };
@@ -149,14 +152,14 @@ export function selectFinancing(args: {
   residency: Residency;
 }): SelectedFinancing {
   const strategyDef = FINANCING_STRATEGIES[args.strategy];
-  const ltv = clampLtv(args.constraints, strategyDef.ltv);
+  const ltv = clampLtv(args.constraints, strategyDef.ltv.value);
   const interestRate = selectInterestRate(args.constraints.preferredLtv, args.strategy);
   const nonResidentSpread =
-    args.residency === "nonResident" ? NON_RESIDENT_INTEREST_SPREAD : 0;
+    args.residency === "nonResident" ? NON_RESIDENT_INTEREST_SPREAD.value : 0;
   return {
     strategy: args.strategy,
     ltv,
-    loanTermYears: strategyDef.loanTermYears,
+    loanTermYears: strategyDef.loanTermYears.value,
     interestRate,
     nonResidentSpread,
     mortgageAmount: args.purchasePrice * ltv,

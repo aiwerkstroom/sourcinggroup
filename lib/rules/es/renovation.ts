@@ -15,15 +15,16 @@ export function renovationStrategyTable(
 ): RenovationStrategyResult[] {
   return (Object.keys(RENOVATION_STRATEGIES) as RenovationStrategyId[]).map((id) => {
     const s = RENOVATION_STRATEGIES[id];
+    const capex = s.capex.value;
     return {
       id,
       label: s.label,
-      capex: s.capex,
-      rentMultiplier: s.rentMultiplier,
-      maintenanceFactor: s.maintenanceFactor,
-      utilitiesEfficiency: s.utilitiesEfficiency,
-      timeToRentMonths: s.timeToRentMonths,
-      withinMaxRenovationBudget: s.capex <= constraints.maxRenovationBudget,
+      capex,
+      rentMultiplier: s.rentMultiplier.value,
+      maintenanceFactor: s.maintenanceFactor.value,
+      utilitiesEfficiency: s.utilitiesEfficiency.value,
+      timeToRentMonths: s.timeToRentMonths.value,
+      withinMaxRenovationBudget: capex <= constraints.maxRenovationBudget,
     };
   });
 }

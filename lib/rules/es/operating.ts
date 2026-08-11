@@ -13,7 +13,7 @@ import type { FixedOperatingCosts } from "./types";
 
 /** Utilities base €/year: (gas + water + electricity per m²) x living area (H60). */
 export function utilitiesBaseAnnual(livingAreaM2: number): number {
-  return TOTAL_UTILITIES_PER_M2_ANNUAL * livingAreaM2;
+  return TOTAL_UTILITIES_PER_M2_ANNUAL.value * livingAreaM2;
 }
 
 /**
@@ -27,9 +27,9 @@ export function fixedOperatingCosts(args: {
   /** Selected rate + non-resident spread, Excel D165 = D149*(D123+D124). */
   effectiveInterestRate: number;
 }): FixedOperatingCosts {
-  const propertyTaxIBI = args.purchasePrice * PROPERTY_TAX_IBI_RATE;
-  const insurance = TOTAL_INSURANCE_ANNUAL;
-  const bankAccountFee = BANK_FEE;
+  const propertyTaxIBI = args.purchasePrice * PROPERTY_TAX_IBI_RATE.value;
+  const insurance = TOTAL_INSURANCE_ANNUAL.value;
+  const bankAccountFee = BANK_FEE.value;
   const mortgageInterest = args.mortgageAmount * args.effectiveInterestRate;
   return {
     propertyTaxIBI,
