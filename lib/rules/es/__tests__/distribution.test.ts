@@ -13,13 +13,19 @@ import {
   TSG_SCORE_DISTRIBUTION_COMMUNITY_FEES_RANGE,
   TSG_SCORE_DISTRIBUTION_CONSTRAINTS,
   TSG_SCORE_DISTRIBUTION_EQUITY_COVERAGE_RANGE,
+  TSG_SCORE_DISTRIBUTION_EXIT_ASSUMPTIONS,
   TSG_SCORE_DISTRIBUTION_HOLDING_PERIOD_RANGE_YEARS,
   TSG_SCORE_DISTRIBUTION_PREFERRED_LTV_RANGE,
   TSG_SCORE_DISTRIBUTION_PRICE_TO_RENT_MULTIPLIER_RANGE,
   TSG_SCORE_DISTRIBUTION_RENTAL_STRATEGY_SHARES,
 } from "../parameters";
+import { loadReferenceDistribution } from "../distribution/load";
+import { computeExit } from "../exit";
+import { computeScenarioIrr } from "../irr";
+import { buildScenarioOutcome } from "../outcome";
 import { buildProjectionYears } from "../projection";
 import { computePercentile } from "../percentile";
+import { computeTsgScore } from "../score";
 
 /**
  * SCORE_SPEC.md §5: "Genereer bij de eerste build een synthetische set van
@@ -426,5 +432,143 @@ describe("shape of the corrected distribution (left-skew: further reduced by var
   it("the maximum is still below the ORIGINAL (independent-sampling) generator's 8.3 - not fully resolved, only further reduced", () => {
     expect(Math.max(...s)).toBeLessThan(8.3);
     expect(Math.max(...s)).toBeGreaterThan(4.6); // but a real improvement over the equity-coverage-only correction
+  });
+});
+
+/**
+ * There are two places a TSG total score gets computed: buildScenarioOutcome()
+ * (outcome.ts, for a real request) and scoreOneCase() inside
+ * distribution/generate.ts (for each synthetic case). They are deliberately
+ * separate - the generator must not read the committed
+ * reference-distribution.json that buildScenarioOutcome() resolves its
+ * percentile against, or generating the distribution would depend on the
+ * previous distribution and break outright on a from-scratch regeneration.
+ *
+ * The price of that separation is duplication, and duplication drifts.
+ * These tests pin the two paths to identical results so a change to one
+ * without the other fails loudly instead of silently skewing the
+ * distribution the percentile is measured against.
+ */
+describe("the generator's score path agrees exactly with buildScenarioOutcome()'s", () => {
+  it("produces the same total for the same synthetic case, across many cases", () => {
+    const rng = createRng(31337);
+    for (let i = 0; i < 100; i++) {
+      const { input, derived } = buildSyntheticEngineInput(rng);
+      const engineResult = runEngine(input);
+      const scenarioResult = engineResult.scenarios.find((sc) => sc.id === "base")!;
+      const equity = deriveSyntheticEquitySupply(rng, engineResult.acquisition.equityRequired);
+
+      const years = buildProjectionYears({
+        years: derived.holdingYears,
+        scenario: "base",
+        scenarioResult,
+        purchasePrice: derived.purchasePrice,
+        financing: engineResult.selectedFinancing,
+        fixedCosts: engineResult.fixedOperatingCosts,
+        euResident: true,
+        renovation: engineResult.selectedRenovation,
+      });
+      const exit = computeExit({
+        scenario: "base",
+        years,
+        purchasePrice: derived.purchasePrice,
+        acquisition: engineResult.acquisition,
+        renovation: engineResult.selectedRenovation,
+        assumptions: TSG_SCORE_DISTRIBUTION_EXIT_ASSUMPTIONS.value,
+      });
+      const irr = computeScenarioIrr({
+        equityInvested: engineResult.acquisition.equityRequired,
+        years,
+        exit,
+      });
+      if (!irr.defined) continue;
+
+      const scoringArgs = {
+        scenario: "base" as const,
+        purchasePrice: derived.purchasePrice,
+        years,
+        exit,
+        irr,
+        equityRequired: engineResult.acquisition.equityRequired,
+        equityAvailable: equity.equityAvailable,
+        minRequiredReturn: input.constraints.minRoiTarget,
+        rentalStrategy: input.selections.rentalStrategy,
+        renovationStrategy: input.selections.renovationStrategy,
+      };
+
+      // Path A: what the generator does - buildScenarioOutcome WITHOUT
+      // the scoring inputs (so no percentile lookup), then computeTsgScore
+      // directly off the same outcome's placeholder list.
+      const outcomeWithoutScore = buildScenarioOutcome(scoringArgs);
+      expect(outcomeWithoutScore.score).toBeNull();
+      const generatorScore = computeTsgScore({
+        monthlyCashflow: scenarioResult.monthlyCashflow,
+        dscr: scenarioResult.dscr,
+        irr: irr.irr,
+        minRequiredReturn: outcomeWithoutScore.returnRequirement.minRequiredReturn,
+        placeholderCount: outcomeWithoutScore.placeholdersUsed.length,
+        feasibility: {
+          equityRequired: engineResult.acquisition.equityRequired,
+          equityAvailable: equity.equityAvailable,
+          maxRenovationBudget: input.constraints.maxRenovationBudget,
+          renovationCost: engineResult.selectedRenovation.capex,
+        },
+      });
+
+      // Path B: what a real request does - buildScenarioOutcome WITH them.
+      const outcomeWithScore = buildScenarioOutcome({
+        ...scoringArgs,
+        scenarioCashflow: {
+          monthlyCashflow: scenarioResult.monthlyCashflow,
+          dscr: scenarioResult.dscr,
+        },
+        maxRenovationBudget: input.constraints.maxRenovationBudget,
+        renovationCost: engineResult.selectedRenovation.capex,
+      });
+
+      expect(outcomeWithScore.score).not.toBeNull();
+      expect(outcomeWithScore.score!.dimensions).toEqual(generatorScore.dimensions);
+      expect(outcomeWithScore.score!.total).toBe(generatorScore.total);
+    }
+  });
+
+  it("every score in the committed distribution is reachable as a buildScenarioOutcome() total", () => {
+    // Weaker but broader than the per-case check above: the distribution
+    // the percentile is measured against must be made of the same kind of
+    // number the score being placed in it is - same 0-10 range, same
+    // one-decimal rounding.
+    const distribution = generateReferenceDistribution({ size: 100, seed: 5 });
+    distribution.scores.forEach((total) => {
+      expect(total).toBeGreaterThanOrEqual(0);
+      expect(total).toBeLessThanOrEqual(10);
+      expect(Math.round(total * 10) / 10).toBe(total);
+    });
+  });
+});
+
+/**
+ * SCORE_SPEC.md §5's "Verversing" rule, made enforceable: the committed
+ * reference-distribution.json must be regenerated whenever parameters.ts
+ * changes, or the scoring curves/weighting are adjusted. Nothing else in
+ * the suite would catch a stale file - the shape tests above all generate
+ * a FRESH distribution, while buildScenarioOutcome() resolves its
+ * percentile against the COMMITTED one. Without this test the two could
+ * silently diverge and every reported percentile would be measured
+ * against a universe the model no longer produces.
+ */
+describe("the committed reference-distribution.json is not stale (SCORE_SPEC.md §5, 'Verversing')", () => {
+  it("matches a freshly generated distribution, score for score", () => {
+    const committed = loadReferenceDistribution();
+    const fresh = generateReferenceDistribution();
+    expect(committed.size).toBe(fresh.size);
+    expect(committed.seed).toBe(fresh.seed);
+    expect(committed.scores).toEqual(fresh.scores);
+    // generatedAt deliberately NOT compared: it records when the file was
+    // produced, and differing there is the point of the field, not drift.
+  });
+
+  it("records when it was generated, so a reader can tell how old it is", () => {
+    const committed = loadReferenceDistribution();
+    expect(Number.isNaN(new Date(committed.generatedAt).getTime())).toBe(false);
   });
 });

@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
+import { loadReferenceDistribution } from "../distribution/load";
 import { computeExit } from "../exit";
 import { runEngine } from "../engine";
 import { computeScenarioIrr } from "../irr";
 import { buildScenarioOutcome } from "../outcome";
+import { computePercentile } from "../percentile";
 import { buildProjectionYears } from "../projection";
+import { dataCertaintyScore } from "../score";
 import type { ExitAssumptions, ScenarioId } from "../types";
 import { referenceCase } from "./referencecase";
 
@@ -62,6 +65,15 @@ describe("scenario outcome (reference case, 10-year holding period)", () => {
       rentalStrategy: referenceCase.selections.rentalStrategy,
       renovationStrategy: referenceCase.selections.renovationStrategy,
       usableAreaM2Provided: true,
+      // SCORE_SPEC.md §2.1/§2.2/§2.4 inputs - read live from the engine,
+      // never hardcoded, so the score tracks the engine rather than
+      // freezing a snapshot of it.
+      scenarioCashflow: {
+        monthlyCashflow: scenarioResult.monthlyCashflow,
+        dscr: scenarioResult.dscr,
+      },
+      maxRenovationBudget: referenceCase.constraints.maxRenovationBudget,
+      renovationCost: engineResult.selectedRenovation.capex,
     });
   }
 
@@ -509,6 +521,306 @@ describe("scenario outcome (reference case, 10-year holding period)", () => {
       const names = outcome.placeholdersUsed.map((p) => p.name);
       expect(names).not.toContain("DEFAULT_CADASTRAL_TO_PURCHASE_PRICE_RATIO");
       expect(names).not.toContain("DEFAULT_BUILDING_SHARE_OF_VALUE");
+    });
+  });
+
+  /**
+   * SCORE_SPEC.md §1-§6: the score and percentile now ride along per
+   * scenario, exactly as placeholdersUsed already does.
+   *
+   * Golden values from an independent re-derivation in Python of the §2
+   * curves, the §3 weighting and the §5 percentile lookup - run against
+   * the committed reference-distribution.json, not against this module's
+   * own output. Every engine input the score reads is taken live from
+   * runEngine(referenceCase) in outcomeFor() above, so these tests track
+   * the engine rather than freezing a snapshot of it; only the expected
+   * scores are golden.
+   */
+  describe("TSG score and percentile per scenario (SCORE_SPEC.md §1-§6)", () => {
+    const goldenScores: Record<
+      ScenarioId,
+      { dimensions: Record<string, number>; total: number; percentile: number }
+    > = {
+      conservative: {
+        dimensions: {
+          cashflow: 0.0, // -799.46/month, at or below the -500 anchor
+          debtResilience: 0.8, // DSCR 0.583, just above the 0.50 floor
+          returnVsRequirement: 2.3, // IRR 2.175% - 4% = -1.825pp
+          feasibility: 3.0, // equity short (197.990 vs 115.000), budget fine
+          dataCertainty: 2.8, // 13 placeholders
+        },
+        total: 1.8,
+        percentile: 22,
+      },
+      base: {
+        dimensions: {
+          cashflow: 1.5, // -311.14/month
+          debtResilience: 3.3, // DSCR 0.832
+          returnVsRequirement: 6.5, // IRR 5.544% - 4% = +1.544pp
+          feasibility: 3.0,
+          dataCertainty: 2.8,
+        },
+        total: 3.8,
+        percentile: 70,
+      },
+      optimistic: {
+        dimensions: {
+          cashflow: 5.4, // +172.06/month
+          debtResilience: 5.9, // DSCR 1.094
+          returnVsRequirement: 8.7, // IRR 8.640% - 4% = +4.640pp
+          feasibility: 3.0,
+          dataCertainty: 2.8,
+        },
+        total: 5.6,
+        percentile: 94,
+      },
+    };
+
+    (Object.keys(goldenScores) as ScenarioId[]).forEach((scenario) => {
+      it(`${scenario}: five dimensions, weighted total and percentile match the independent doorrekening`, () => {
+        const outcome = outcomeFor(scenario);
+        const expected = goldenScores[scenario];
+        expect(outcome.score).not.toBeNull();
+        expect(outcome.score!.dimensions).toEqual(expected.dimensions);
+        expect(outcome.score!.total).toBe(expected.total);
+        expect(outcome.percentile).toBe(expected.percentile);
+      });
+    });
+
+    it("the score rises with the scenario: conservative < base < optimistic, on total and percentile alike", () => {
+      const c = outcomeFor("conservative");
+      const b = outcomeFor("base");
+      const o = outcomeFor("optimistic");
+      expect(c.score!.total).toBeLessThan(b.score!.total);
+      expect(b.score!.total).toBeLessThan(o.score!.total);
+      expect(c.percentile!).toBeLessThan(b.percentile!);
+      expect(b.percentile!).toBeLessThan(o.percentile!);
+    });
+
+    it("the two dimensions that do not depend on the scenario are identical across all three", () => {
+      const c = outcomeFor("conservative");
+      const b = outcomeFor("base");
+      const o = outcomeFor("optimistic");
+      // Feasibility reads equity/budget, not the scenario; data certainty
+      // counts placeholders, and all three scenarios rest on 13 (each on
+      // its own DEPRECIATION_SCENARIO_FACTORS entry, so the count matches
+      // even though the specific parameter differs).
+      expect(c.score!.dimensions.feasibility).toBe(b.score!.dimensions.feasibility);
+      expect(b.score!.dimensions.feasibility).toBe(o.score!.dimensions.feasibility);
+      expect(c.score!.dimensions.dataCertainty).toBe(b.score!.dimensions.dataCertainty);
+      expect(b.score!.dimensions.dataCertainty).toBe(o.score!.dimensions.dataCertainty);
+    });
+
+    it("the data-certainty dimension is driven by this outcome's own placeholdersUsed, not a global tally", () => {
+      const outcome = outcomeFor("base");
+      expect(outcome.placeholdersUsed).toHaveLength(13);
+      // Same count the dimension was scored from - the score reads the
+      // list this outcome built, not a second, independent count.
+      expect(outcome.score!.dimensions.dataCertainty).toBe(dataCertaintyScore(13));
+    });
+
+    it("the percentile is resolved against the committed distribution, not a freshly generated one", () => {
+      const outcome = outcomeFor("base");
+      const distribution = loadReferenceDistribution();
+      expect(outcome.percentile).toBe(computePercentile(distribution, outcome.score!.total));
+      // The committed file is the 1.000-case set SCORE_SPEC.md §5 defines.
+      expect(distribution.size).toBe(1000);
+    });
+
+    it("renders the §5 presentation sentence for the reference case", () => {
+      const outcome = outcomeFor("base");
+      expect(
+        `Deze investering scoort in het ${outcome.percentile}ste percentiel van ons modelbereik.`,
+      ).toBe("Deze investering scoort in het 70ste percentiel van ons modelbereik.");
+    });
+
+    it("a different investor scores the same property differently: the hurdle rate moves the return dimension", () => {
+      // SCORE_SPEC.md §2.3's stated intent ("twee beleggers met
+      // verschillende eisen krijgen een verschillende score op hetzelfde
+      // pand, en dat is correct") - verified end to end through
+      // buildScenarioOutcome, not just on the curve in isolation.
+      const scenarioResult = engineResult.scenarios.find((s) => s.id === "base")!;
+      const years = buildProjectionYears({
+        years: 10,
+        scenario: "base",
+        scenarioResult,
+        purchasePrice: referenceCase.property.purchasePrice,
+        financing: engineResult.selectedFinancing,
+        fixedCosts: engineResult.fixedOperatingCosts,
+        euResident: true,
+        renovation: engineResult.selectedRenovation,
+      });
+      const exit = computeExit({
+        scenario: "base",
+        years,
+        purchasePrice: referenceCase.property.purchasePrice,
+        acquisition: engineResult.acquisition,
+        renovation: engineResult.selectedRenovation,
+        assumptions: testAssumptions,
+      });
+      const irr = computeScenarioIrr({
+        equityInvested: engineResult.acquisition.equityRequired,
+        years,
+        exit,
+      });
+      const demanding = buildScenarioOutcome({
+        scenario: "base",
+        purchasePrice: referenceCase.property.purchasePrice,
+        years,
+        exit,
+        irr,
+        equityRequired: engineResult.acquisition.equityRequired,
+        equityAvailable: referenceCase.property.ownMoney,
+        minRequiredReturn: 0.08, // twice the reference case's 4%
+        rentalStrategy: referenceCase.selections.rentalStrategy,
+        renovationStrategy: referenceCase.selections.renovationStrategy,
+        usableAreaM2Provided: true,
+        scenarioCashflow: {
+          monthlyCashflow: scenarioResult.monthlyCashflow,
+          dscr: scenarioResult.dscr,
+        },
+        maxRenovationBudget: referenceCase.constraints.maxRenovationBudget,
+        renovationCost: engineResult.selectedRenovation.capex,
+      });
+      // IRR 5.544% against an 8% hurdle is a -2.456pp shortfall: 1.5, not
+      // the 6.5 the reference case's 4% hurdle produced. Total 2.3.
+      expect(demanding.score!.dimensions.returnVsRequirement).toBe(1.5);
+      expect(demanding.score!.total).toBe(2.3);
+      // Every other dimension is untouched - the hurdle only enters §2.3.
+      const reference = outcomeFor("base");
+      expect(demanding.score!.dimensions.cashflow).toBe(
+        reference.score!.dimensions.cashflow,
+      );
+      expect(demanding.score!.dimensions.debtResilience).toBe(
+        reference.score!.dimensions.debtResilience,
+      );
+      expect(demanding.score!.dimensions.feasibility).toBe(
+        reference.score!.dimensions.feasibility,
+      );
+    });
+
+    it("score and percentile are null - not zero - when the IRR is undefined", () => {
+      // SCORE_SPEC.md §2.3 has nothing to score against without a defined
+      // IRR. An absent answer must not be reported as a bad one; the
+      // reason lives on outcome.irr, not duplicated onto the score.
+      const outcome = buildScenarioOutcome({
+        scenario: "base",
+        purchasePrice: referenceCase.property.purchasePrice,
+        years: buildProjectionYears({
+          years: 10,
+          scenario: "base",
+          scenarioResult: engineResult.scenarios.find((s) => s.id === "base")!,
+          purchasePrice: referenceCase.property.purchasePrice,
+          financing: engineResult.selectedFinancing,
+          fixedCosts: engineResult.fixedOperatingCosts,
+          euResident: true,
+          renovation: engineResult.selectedRenovation,
+        }),
+        exit: outcomeFor("base").exit,
+        irr: { defined: false, reason: "synthetic: no sign change" },
+        equityRequired: engineResult.acquisition.equityRequired,
+        equityAvailable: referenceCase.property.ownMoney,
+        minRequiredReturn: referenceCase.constraints.minRoiTarget,
+        rentalStrategy: referenceCase.selections.rentalStrategy,
+        renovationStrategy: referenceCase.selections.renovationStrategy,
+        usableAreaM2Provided: true,
+        scenarioCashflow: { monthlyCashflow: -311, dscr: 0.83 },
+        maxRenovationBudget: referenceCase.constraints.maxRenovationBudget,
+        renovationCost: engineResult.selectedRenovation.capex,
+      });
+      expect(outcome.score).toBeNull();
+      expect(outcome.percentile).toBeNull();
+      expect(outcome.irr.defined).toBe(false);
+    });
+
+    it("score and percentile are null when the caller does not supply the scenario's cashflow/DSCR", () => {
+      // Scoring is opt-in: a caller that has no ScenarioResult to hand
+      // gets no score rather than one built on invented cashflow figures.
+      // (This is what every pre-existing call site in this file does.)
+      const outcome = buildScenarioOutcome({
+        scenario: "base",
+        purchasePrice: referenceCase.property.purchasePrice,
+        years: buildProjectionYears({
+          years: 10,
+          scenario: "base",
+          scenarioResult: engineResult.scenarios.find((s) => s.id === "base")!,
+          purchasePrice: referenceCase.property.purchasePrice,
+          financing: engineResult.selectedFinancing,
+          fixedCosts: engineResult.fixedOperatingCosts,
+          euResident: true,
+          renovation: engineResult.selectedRenovation,
+        }),
+        exit: outcomeFor("base").exit,
+        irr: outcomeFor("base").irr,
+        equityRequired: engineResult.acquisition.equityRequired,
+        equityAvailable: referenceCase.property.ownMoney,
+        minRequiredReturn: referenceCase.constraints.minRoiTarget,
+        rentalStrategy: referenceCase.selections.rentalStrategy,
+        renovationStrategy: referenceCase.selections.renovationStrategy,
+        usableAreaM2Provided: true,
+        // scenarioCashflow omitted deliberately.
+      });
+      expect(outcome.score).toBeNull();
+      expect(outcome.percentile).toBeNull();
+      // Everything else is still computed as before - scoring is additive.
+      expect(outcome.placeholdersUsed.length).toBeGreaterThan(0);
+      expect(outcome.totalReturn).toBeCloseTo(0.769539, 4);
+    });
+
+    it("omitting the hurdle rate lowers data certainty but raises the return score, and both land in the total", () => {
+      // Two effects at once, in opposite directions:
+      // DEFAULT_MIN_REQUIRED_RETURN joins placeholdersUsed (13 -> 14, so
+      // dataCertainty 2.8 -> 2.4), while the 0% fallback hurdle turns the
+      // 5.544% IRR into a +5.544pp surplus (returnVsRequirement 6.5 ->
+      // 9.1). Net: total 3.8 -> 4.5, percentile 70 -> 83.
+      const scenarioResult = engineResult.scenarios.find((s) => s.id === "base")!;
+      const years = buildProjectionYears({
+        years: 10,
+        scenario: "base",
+        scenarioResult,
+        purchasePrice: referenceCase.property.purchasePrice,
+        financing: engineResult.selectedFinancing,
+        fixedCosts: engineResult.fixedOperatingCosts,
+        euResident: true,
+        renovation: engineResult.selectedRenovation,
+      });
+      const exit = computeExit({
+        scenario: "base",
+        years,
+        purchasePrice: referenceCase.property.purchasePrice,
+        acquisition: engineResult.acquisition,
+        renovation: engineResult.selectedRenovation,
+        assumptions: testAssumptions,
+      });
+      const irr = computeScenarioIrr({
+        equityInvested: engineResult.acquisition.equityRequired,
+        years,
+        exit,
+      });
+      const outcome = buildScenarioOutcome({
+        scenario: "base",
+        purchasePrice: referenceCase.property.purchasePrice,
+        years,
+        exit,
+        irr,
+        equityRequired: engineResult.acquisition.equityRequired,
+        equityAvailable: referenceCase.property.ownMoney,
+        // minRequiredReturn omitted deliberately.
+        rentalStrategy: referenceCase.selections.rentalStrategy,
+        renovationStrategy: referenceCase.selections.renovationStrategy,
+        usableAreaM2Provided: true,
+        scenarioCashflow: {
+          monthlyCashflow: scenarioResult.monthlyCashflow,
+          dscr: scenarioResult.dscr,
+        },
+        maxRenovationBudget: referenceCase.constraints.maxRenovationBudget,
+        renovationCost: engineResult.selectedRenovation.capex,
+      });
+      expect(outcome.placeholdersUsed).toHaveLength(14);
+      expect(outcome.score!.dimensions.dataCertainty).toBe(2.4);
+      expect(outcome.score!.dimensions.returnVsRequirement).toBe(9.1);
+      expect(outcome.score!.total).toBe(4.5);
+      expect(outcome.percentile).toBe(83);
     });
   });
 });

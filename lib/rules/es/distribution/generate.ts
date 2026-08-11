@@ -320,6 +320,18 @@ function scoreOneCase(rng: () => number): number | null {
   });
   if (!irr.defined) return null;
 
+  // Deliberately WITHOUT scenarioCashflow/maxRenovationBudget/renovationCost,
+  // so this outcome's own `score`/`percentile` stay null and the score is
+  // computed directly below instead. buildScenarioOutcome() resolves
+  // `percentile` against the COMMITTED reference-distribution.json
+  // (distribution/load.ts) - reading that here would make generating the
+  // distribution depend on the previous distribution, and would break
+  // outright on a from-scratch regeneration with no JSON present.
+  // The generator must not consume its own output.
+  //
+  // The cost of that separation is two code paths computing the same
+  // score; distribution.test.ts pins them to identical results so they
+  // cannot drift apart silently.
   const outcome = buildScenarioOutcome({
     scenario: "base",
     purchasePrice,
