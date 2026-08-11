@@ -20,8 +20,16 @@
  * from equity paid down and appreciation realised at sale, not from
  * operating cashflow. This structure reports both views side by side
  * instead of collapsing to a single pass/fail.
+ *
+ * It also carries this scenario's TSG score and percentile (SCORE_SPEC.md
+ * §1-§5), per scenario, the same way placeholdersUsed already runs
+ * alongside - so a report can show conservative/base/optimistic each with
+ * their own score rather than only scoring one of the three. The score is
+ * a summary of the figures above it, not a replacement for them: UI_SPEC.md
+ * §5's whole point is that the dimensions stay visible next to the total.
  */
 
+import { loadReferenceDistribution } from "./distribution/load";
 import { propertyValueIndex } from "./indexation";
 import {
   BANK_FEE,
@@ -36,6 +44,8 @@ import {
   MAINTENANCE_RATE,
   RENOVATION_STRATEGIES,
 } from "./parameters";
+import { computePercentile } from "./percentile";
+import { computeTsgScore } from "./score";
 import type {
   EquityFitCheck,
   ExitResult,
@@ -48,6 +58,7 @@ import type {
   ScenarioId,
   ScenarioOutcome,
   ScenarioProjectionYear,
+  TsgScore,
 } from "./types";
 
 /**
@@ -151,6 +162,19 @@ export function buildScenarioOutcome(args: {
   cadastralValueProvided?: boolean;
   /** True when the caller passed PropertyInput.usableAreaM2 directly to buildIncomeModel (income.ts, via engine.ts) instead of relying on DEFAULT_USABLE_TO_BUILT_AREA_RATIO to derive it from builtAreaM2. */
   usableAreaM2Provided?: boolean;
+  /**
+   * This scenario's own ScenarioResult.monthlyCashflow and .dscr, needed
+   * by SCORE_SPEC.md §2.1/§2.2. Passed in rather than recomputed: they are
+   * steady-state figures from scenarios.ts, not derivable from the
+   * projection years this function already receives (year 1 is prorated
+   * for renovation lease-up vacancy, so `years[0]` is not the same
+   * quantity). Omit both to skip scoring entirely - `score` and
+   * `percentile` then come back null.
+   */
+  scenarioCashflow?: { monthlyCashflow: number; dscr: number };
+  /** The selected renovation strategy's capex and the investor's renovation budget, for SCORE_SPEC.md §2.4's second feasibility check. Omitting either skips that check; the equity check then governs on its own. */
+  maxRenovationBudget?: number;
+  renovationCost?: number;
 }): ScenarioOutcome {
   if (args.years.length === 0) {
     throw new Error("buildScenarioOutcome needs at least one projection year");
@@ -207,6 +231,31 @@ export function buildScenarioOutcome(args: {
     usableAreaM2Provided: args.usableAreaM2Provided ?? false,
   });
 
+  // SCORE_SPEC.md §1-§5. Null on an undefined IRR (§2.3 has nothing to
+  // score against) or when the caller did not supply this scenario's
+  // cashflow/DSCR - never a fabricated stand-in for either.
+  let score: TsgScore | null = null;
+  let percentile: number | null = null;
+  if (args.scenarioCashflow !== undefined && args.irr.defined) {
+    score = computeTsgScore({
+      monthlyCashflow: args.scenarioCashflow.monthlyCashflow,
+      dscr: args.scenarioCashflow.dscr,
+      irr: args.irr.irr,
+      minRequiredReturn,
+      // Exactly the list built above, so the data-certainty dimension
+      // scores this outcome's own unconfirmed assumptions - not a global
+      // tally, and not a second, independently derived count.
+      placeholderCount: placeholdersUsed.length,
+      feasibility: {
+        equityRequired: args.equityRequired,
+        equityAvailable: args.equityAvailable,
+        maxRenovationBudget: args.maxRenovationBudget,
+        renovationCost: args.renovationCost,
+      },
+    });
+    percentile = computePercentile(loadReferenceDistribution(), score.total);
+  }
+
   return {
     scenario: args.scenario,
     years,
@@ -217,5 +266,7 @@ export function buildScenarioOutcome(args: {
     equityFit,
     returnRequirement,
     placeholdersUsed,
+    score,
+    percentile,
   };
 }

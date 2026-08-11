@@ -558,6 +558,28 @@ export interface ScenarioOutcome {
    * unconfirmed assumptions (MODEL_SPEC.md §14).
    */
   placeholdersUsed: Parameter<unknown>[];
+  /**
+   * This scenario's TSG score - the five dimensions and their weighted
+   * total (SCORE_SPEC.md §1-§3) - carried per scenario, alongside
+   * placeholdersUsed, so the report can show a score for each of
+   * conservative/base/optimistic rather than only for one.
+   *
+   * `null` when the score cannot be computed, which happens for exactly
+   * one reason: SCORE_SPEC.md §2.3's return dimension needs a defined
+   * IRR, and `irr.defined === false` means no rate exists that zeroes this
+   * series' NPV. That is not a bad return - it is the absence of an
+   * answer - so no score is reported rather than a fabricated one. The
+   * reason is not duplicated here; `irr.reason` on this same outcome
+   * already carries it.
+   */
+  score: TsgScore | null;
+  /**
+   * Where this outcome's total score falls in the synthetic reference
+   * distribution, 0-99 (SCORE_SPEC.md §5): the share of the 1.000
+   * reference cases scoring strictly lower. `null` exactly when `score`
+   * is null - there is nothing to place without a total.
+   */
+  percentile: number | null;
 }
 
 /**

@@ -17,3 +17,4 @@ export { runEngine } from "./engine";
 export * from "./score";
 export * from "./percentile";
 export * from "./distribution/generate";
+export * from "./distribution/load";
