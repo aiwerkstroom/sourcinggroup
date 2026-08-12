@@ -19,3 +19,4 @@ export * from "./percentile";
 export * from "./distribution/generate";
 export * from "./distribution/load";
 export * from "./free-tier/band";
+export * from "./free-tier/indicative-score";

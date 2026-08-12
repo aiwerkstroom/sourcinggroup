@@ -20,6 +20,7 @@ import {
   SCENARIOS,
   TSG_SCORE_DISTRIBUTION_COMMUNITY_FEES_RANGE,
 } from "../parameters";
+import { ALL_FREE_TIER_DISCLOSURE_KEYS } from "../types";
 
 /**
  * Golden values: independent recomputation in Python, written from the
@@ -279,9 +280,19 @@ describe("free indication band - Dutch copy (lib/copy/es/free-tier-disclosures.t
     // TypeScript's Record<FreeTierDisclosureKey, string> already enforces
     // this at compile time (a missing or extra key fails to compile); this
     // is the runtime mirror so the guarantee shows up in the test suite too.
+    // Checked against the full union, not the band's own five: the sixth
+    // key (indicativeScoreScope) is emitted by indicative-score.ts and
+    // still has to be translatable.
     expect(Object.keys(FREE_TIER_DISCLOSURE_COPY_NL).sort()).toEqual(
-      [...FREE_TIER_DISCLOSURE_KEYS].sort(),
+      [...ALL_FREE_TIER_DISCLOSURE_KEYS].sort(),
     );
+  });
+
+  it("the band emits a strict subset of the union - it does not claim the score's key", () => {
+    for (const key of FREE_TIER_DISCLOSURE_KEYS) {
+      expect(ALL_FREE_TIER_DISCLOSURE_KEYS).toContain(key);
+    }
+    expect(FREE_TIER_DISCLOSURE_KEYS).not.toContain("indicativeScoreScope");
   });
 
   it("says the band is not a probability interval", () => {

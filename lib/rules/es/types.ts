@@ -809,13 +809,43 @@ export interface FreeTierBandEnd {
  *   form (UI_SPEC.md §3) but, per FreeTierBandInput's own docstring above,
  *   enter no calculation here - this key makes that limitation as visible
  *   to the customer as the PLACEHOLDER assumptions are.
+ * - `indicativeScoreScope`: the indicative score rests on two of the five
+ *   dimensions the paid report scores (SCORE_SPEC.md §8.3). Emitted by
+ *   indicative-score.ts, not by the band - the first five above apply to
+ *   the band whether or not a score is shown alongside it.
  */
 export type FreeTierDisclosureKey =
   | "band"
   | "shortTermLicence"
   | "financing"
   | "unverified"
-  | "unmodeledFields";
+  | "unmodeledFields"
+  | "indicativeScoreScope";
+
+/**
+ * Every FreeTierDisclosureKey, as a runtime list. The Record below exists
+ * only to make that list provably exhaustive: a key added to the union
+ * without a matching entry here fails to compile, so this can be trusted
+ * as the complete set rather than a hand-maintained copy that silently
+ * falls behind.
+ *
+ * Not the same thing as the keys any one result emits - the band emits
+ * five (FREE_TIER_DISCLOSURE_KEYS in free-tier/band.ts) and the indicative
+ * score emits the sixth. This is the union of everything the copy layer
+ * must be able to translate.
+ */
+const FREE_TIER_DISCLOSURE_KEY_SET: Readonly<Record<FreeTierDisclosureKey, true>> = {
+  band: true,
+  shortTermLicence: true,
+  financing: true,
+  unverified: true,
+  unmodeledFields: true,
+  indicativeScoreScope: true,
+};
+
+export const ALL_FREE_TIER_DISCLOSURE_KEYS: readonly FreeTierDisclosureKey[] = Object.keys(
+  FREE_TIER_DISCLOSURE_KEY_SET,
+) as FreeTierDisclosureKey[];
 
 /**
  * The free indication's result: one simplified calculation run at both
@@ -831,6 +861,40 @@ export interface FreeTierBand {
   monthlyCashflowBeforeFinancing: { low: number; high: number };
   /** Union of both ends' placeholdersUsed, de-duplicated by name. */
   placeholdersUsed: Parameter<unknown>[];
-  /** Every disclosure that applies to this band - currently all of FreeTierDisclosureKey, unconditionally. */
+  /** The disclosures that apply to the band itself - the five in FREE_TIER_DISCLOSURE_KEYS, unconditionally. */
+  disclosures: readonly FreeTierDisclosureKey[];
+}
+
+/**
+ * The indicative score's three grades (SCORE_SPEC.md §8.2). Deliberately
+ * not a 0-10 number: a coarse label cannot be laid next to a paid TSG
+ * score and read as the same measurement.
+ *
+ * English in the calculation layer; the Dutch Laag/Gemiddeld/Hoog a page
+ * shows lives in lib/copy/es/free-tier-disclosures.ts, the same split the
+ * disclosure keys use.
+ */
+export type IndicativeLabel = "low" | "medium" | "high";
+
+/**
+ * The free indication's score (SCORE_SPEC.md §8): two dimensions, not the
+ * five of §2, because without investor input there is no DSCR, no IRR and
+ * no equity test to score.
+ *
+ * The 0-10 scores behind the two labels are deliberately absent from this
+ * type. SCORE_SPEC.md §8.2 is explicit that they are "nergens getoond -
+ * alleen gebruikt om het label te bepalen"; leaving them off the result
+ * makes that structural rather than a rule a page has to remember.
+ */
+export interface IndicativeScore {
+  /** Graded from the midpoint of the band's monthly cashflow (SCORE_SPEC.md §8.1/§8.2). */
+  cashflowLabel: IndicativeLabel;
+  /** Graded from the number of PLACEHOLDER parameters the band rests on. */
+  dataConfidenceLabel: IndicativeLabel;
+  /**
+   * SCORE_SPEC.md §8.3's mandatory scope disclosure. Additive to the
+   * band's own five keys, not a replacement: a page showing both renders
+   * FreeTierBand.disclosures and this list together.
+   */
   disclosures: readonly FreeTierDisclosureKey[];
 }

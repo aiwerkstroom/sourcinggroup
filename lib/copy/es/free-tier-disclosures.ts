@@ -13,7 +13,7 @@
  * render.
  */
 
-import type { FreeTierDisclosureKey } from "../../rules/es/types";
+import type { FreeTierDisclosureKey, IndicativeLabel } from "../../rules/es/types";
 
 export const FREE_TIER_DISCLOSURE_COPY_NL: Readonly<Record<FreeTierDisclosureKey, string>> = {
   band:
@@ -37,6 +37,10 @@ export const FREE_TIER_DISCLOSURE_COPY_NL: Readonly<Record<FreeTierDisclosureKey
   unmodeledFields:
     "Pandtype en aantal eenheden zijn in dit formulier gevraagd, maar tellen nog " +
     "niet mee in deze berekening.",
+  indicativeScoreScope:
+    "Deze indicatie is gebaseerd op twee van de vijf factoren die het volledige " +
+    "rapport beoordeelt. Rendement, schuldbestendigheid en haalbaarheid worden pas " +
+    "berekend zodra u uw financieringsgegevens invult.",
 };
 
 /**
@@ -58,6 +62,8 @@ export function translateFreeTierDisclosure(key: FreeTierDisclosureKey): string 
       return FREE_TIER_DISCLOSURE_COPY_NL.unverified;
     case "unmodeledFields":
       return FREE_TIER_DISCLOSURE_COPY_NL.unmodeledFields;
+    case "indicativeScoreScope":
+      return FREE_TIER_DISCLOSURE_COPY_NL.indicativeScoreScope;
     default: {
       const exhaustive: never = key;
       throw new Error(`Missing Dutch copy for free-tier disclosure key: ${String(exhaustive)}`);
@@ -70,4 +76,32 @@ export function translateFreeTierDisclosures(
   keys: readonly FreeTierDisclosureKey[],
 ): string[] {
   return keys.map(translateFreeTierDisclosure);
+}
+
+/**
+ * Dutch for the indicative score's three grades (SCORE_SPEC.md §8.2).
+ * Same split as the disclosures above: the calculation layer grades in
+ * English ("low" / "medium" / "high"), this file is the only place those
+ * become the words a customer reads.
+ */
+export const INDICATIVE_LABEL_COPY_NL: Readonly<Record<IndicativeLabel, string>> = {
+  low: "Laag",
+  medium: "Gemiddeld",
+  high: "Hoog",
+};
+
+/** Translates one indicative-score grade, with the same exhaustiveness guard as the disclosures. */
+export function translateIndicativeLabel(label: IndicativeLabel): string {
+  switch (label) {
+    case "low":
+      return INDICATIVE_LABEL_COPY_NL.low;
+    case "medium":
+      return INDICATIVE_LABEL_COPY_NL.medium;
+    case "high":
+      return INDICATIVE_LABEL_COPY_NL.high;
+    default: {
+      const exhaustive: never = label;
+      throw new Error(`Missing Dutch copy for indicative label: ${String(exhaustive)}`);
+    }
+  }
 }

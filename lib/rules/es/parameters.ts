@@ -1495,6 +1495,36 @@ export const FREE_TIER_BAND_RENOVATION_TIER_FAVOURABLE: EstimateParameter<Renova
     "Selection rule, not a new figure: 'heavy' is the highest-cashflow renovation tier RENOVATION_STRATEGIES already defines (rentMultiplier 1.10, maintenanceFactor 0.85, utilitiesEfficiency 0.90), so it marks the band's favourable end for an unknown state of repair. Its underlying multipliers remain PLACEHOLDER.",
 };
 
+/**
+ * Where the indicative score's three grades begin (SCORE_SPEC.md §8.2).
+ * A 0-10 score from the §2.1 or §2.5 curve at or above `high` reads as
+ * "Hoog", at or above `medium` as "Gemiddeld", below it as "Laag".
+ *
+ * SCORE_SPEC.md §8.5 says the indicative score needs no new parameters,
+ * and it is right that the curves and anchors are all reused - but §8.2's
+ * two cut-offs are themselves numbers that exist nowhere else, and
+ * CLAUDE.md §6 does not allow those to sit inline in a calculation. So
+ * they live here, which is the only difference from what §8.5 describes.
+ *
+ * ESTIMATE, and this is the label the reality-vs-model test in types.ts
+ * actually calls for: "where TSG chooses to stop calling a cashflow
+ * average and start calling it high" defines the product, and no external
+ * source could confirm or refute it. §8.2 gives the reasoning for the
+ * lower cut-off in particular - break-even scores 4.0 on the §2.1 curve,
+ * so "Gemiddeld" starting at 4.0 makes the indication read break-even the
+ * same way the full score does, rather than drawing an unrelated line.
+ */
+export const FREE_TIER_INDICATIVE_LABEL_THRESHOLDS: EstimateParameter<{
+  medium: number;
+  high: number;
+}> = {
+  name: "FREE_TIER_INDICATIVE_LABEL_THRESHOLDS",
+  value: { medium: 4.0, high: 7.0 },
+  provenance: "ESTIMATE",
+  reasoning:
+    "SCORE_SPEC.md §8.2's Laag/Gemiddeld/Hoog cut-offs on the underlying 0-10 score. A product definition (where TSG draws the line between grades), not a claim about the world: the 4.0 boundary is chosen to coincide with what break-even scores on the §2.1 cashflow curve, so the indication reads break-even the same way the full five-dimension score does.",
+};
+
 /** All parameters in this file, for provenance tooling (e.g. collecting every PLACEHOLDER). */
 export const ALL_PARAMETERS: ReadonlyArray<Parameter<unknown>> = [
   RENT_MATRIX_LONG_TERM_PER_M2,
@@ -1574,4 +1604,5 @@ export const ALL_PARAMETERS: ReadonlyArray<Parameter<unknown>> = [
   FREE_TIER_BAND_COMMUNITY_FEES_FAVOURABLE,
   FREE_TIER_BAND_RENOVATION_TIER_UNFAVOURABLE,
   FREE_TIER_BAND_RENOVATION_TIER_FAVOURABLE,
+  FREE_TIER_INDICATIVE_LABEL_THRESHOLDS,
 ];
