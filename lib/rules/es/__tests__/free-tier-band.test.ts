@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
+import {
+  FREE_TIER_DISCLOSURE_COPY_NL,
+  translateFreeTierDisclosure,
+  translateFreeTierDisclosures,
+} from "../../../copy/es/free-tier-disclosures";
 import { runEngine } from "../engine";
-import { FREE_TIER_DISCLOSURES, computeFreeTierBand } from "../free-tier/band";
+import { FREE_TIER_DISCLOSURE_KEYS, computeFreeTierBand } from "../free-tier/band";
 import {
   BASE_OCCUPANCY_LONG_TERM,
   DEFAULT_CADASTRAL_TO_PURCHASE_PRICE_RATIO,
@@ -233,40 +238,88 @@ describe("free indication band - provenance (CLAUDE.md §6)", () => {
   });
 });
 
-describe("free indication band - the disclosures travel with the number", () => {
+describe("free indication band - disclosures are keys, not text (CLAUDE.md §6)", () => {
   const band = computeFreeTierBand({
     neighborhood: "Ruzafa",
     purchasePrice: 350_000,
     builtAreaM2: 90,
   });
 
-  it("attaches all four lines to the result", () => {
-    expect(band.disclosures).toBe(FREE_TIER_DISCLOSURES);
-    for (const line of Object.values(band.disclosures)) {
+  it("attaches exactly the five known keys, in order", () => {
+    expect(band.disclosures).toBe(FREE_TIER_DISCLOSURE_KEYS);
+    expect(band.disclosures).toEqual([
+      "band",
+      "shortTermLicence",
+      "financing",
+      "unverified",
+      "unmodeledFields",
+    ]);
+  });
+
+  it("carries no Dutch text in the calculation layer's result", () => {
+    // The whole point of moving to keys: nothing on FreeTierBand or its
+    // disclosures should ever be a rendered sentence.
+    for (const key of band.disclosures) {
+      expect(key).not.toMatch(/[a-z] [a-z]/); // no key contains a space-separated phrase
+      expect(key.length).toBeLessThan(20);
+    }
+  });
+});
+
+describe("free indication band - Dutch copy (lib/copy/es/free-tier-disclosures.ts)", () => {
+  it("translates every key FREE_TIER_DISCLOSURE_KEYS emits", () => {
+    const translated = translateFreeTierDisclosures(FREE_TIER_DISCLOSURE_KEYS);
+    expect(translated).toHaveLength(FREE_TIER_DISCLOSURE_KEYS.length);
+    for (const line of translated) {
       expect(line.length).toBeGreaterThan(0);
     }
+  });
+
+  it("has exactly one Record entry per FreeTierDisclosureKey - none missing, none stray", () => {
+    // TypeScript's Record<FreeTierDisclosureKey, string> already enforces
+    // this at compile time (a missing or extra key fails to compile); this
+    // is the runtime mirror so the guarantee shows up in the test suite too.
+    expect(Object.keys(FREE_TIER_DISCLOSURE_COPY_NL).sort()).toEqual(
+      [...FREE_TIER_DISCLOSURE_KEYS].sort(),
+    );
   });
 
   it("says the band is not a probability interval", () => {
     // The one framing CLAUDE.md §1 makes non-negotiable: the report does
     // not forecast. Pinning the substance, not the wording.
-    expect(band.disclosures.band).toContain("niet de kans dat het zo uitpakt");
-    expect(band.disclosures.band).toContain("dichter bij het midden");
+    const text = translateFreeTierDisclosure("band");
+    expect(text).toContain("niet de kans dat het zo uitpakt");
+    expect(text).toContain("dichter bij het midden");
   });
 
   it("says short-term rental needs a permit and is not in the figure", () => {
-    expect(band.disclosures.shortTermLicence).toContain("título habilitante");
-    expect(band.disclosures.shortTermLicence).toContain("niet in dit bedrag verwerkt");
+    const text = translateFreeTierDisclosure("shortTermLicence");
+    expect(text).toContain("título habilitante");
+    expect(text).toContain("niet in dit bedrag verwerkt");
   });
 
   it("says the figure is before financing", () => {
-    expect(band.disclosures.financing).toContain("vóór financiering");
+    expect(translateFreeTierDisclosure("financing")).toContain("vóór financiering");
   });
 
   it("names the three assumptions held fixed for lack of a documented range", () => {
-    expect(band.disclosures.unverified).toContain("bruikbaar oppervlak");
-    expect(band.disclosures.unverified).toContain("kadastrale waarde");
-    expect(band.disclosures.unverified).toContain("bezettingsgraad");
+    const text = translateFreeTierDisclosure("unverified");
+    expect(text).toContain("bruikbaar oppervlak");
+    expect(text).toContain("kadastrale waarde");
+    expect(text).toContain("bezettingsgraad");
+  });
+
+  it("says pandtype and aantal eenheden are asked but do not enter the calculation", () => {
+    const text = translateFreeTierDisclosure("unmodeledFields");
+    expect(text).toContain("Pandtype");
+    expect(text).toContain("aantal eenheden");
+    expect(text).toContain("tellen nog niet mee");
+  });
+
+  it("throws rather than silently returning empty text for an unknown key", () => {
+    expect(() =>
+      translateFreeTierDisclosure("nonexistent" as unknown as never),
+    ).toThrow(/Missing Dutch copy/);
   });
 });
 

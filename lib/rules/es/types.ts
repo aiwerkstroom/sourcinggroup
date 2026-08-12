@@ -750,7 +750,9 @@ export interface EngineResult {
  * Accepting them here and quietly ignoring them would suggest they moved
  * the number; giving them an effect would mean inventing one. Neither is
  * acceptable under CLAUDE.md §6, so they stay out of this type until a
- * module actually models them.
+ * module actually models them. FreeTierBand.disclosures carries the
+ * "unmodeledFields" key so the customer sees this limitation too, not
+ * only the parameters that stand in for a missing value.
  */
 export interface FreeTierBandInput {
   /** Key into NEIGHBORHOOD_RENT_LONG_TERM - one of the 13 wijken the free form offers as a dropdown. */
@@ -787,21 +789,33 @@ export interface FreeTierBandEnd {
 }
 
 /**
- * The Dutch copy that must travel with the number. These are not comments:
- * a band shown without them reads as a forecast, and the permit and
- * financing caveats are load-bearing rather than decorative. They live on
- * the result so a UI cannot render the figure and forget the framing.
+ * The disclosures that must travel with the band, as keys rather than
+ * text: CLAUDE.md §6 keeps the calculation layer in English, so the Dutch
+ * copy a page renders lives outside lib/rules/es entirely, in a copy
+ * module that maps every key below to text (with a compiler-enforced
+ * guarantee that none is missing - see lib/copy/es/free-tier-disclosures.ts).
+ * The coupling between a key and its text is exactly as hard as when the
+ * text lived here: a key with no translation fails to compile, not just
+ * fails to render.
+ *
+ * - `band`: what the band is - an envelope over unknown inputs, not a
+ *   probability interval.
+ * - `shortTermLicence`: why short-term rental is absent from the figure
+ *   (UI_SPEC.md §4).
+ * - `financing`: why financing is absent from the figure.
+ * - `unverified`: which assumptions were held fixed because no documented
+ *   range exists (UI_SPEC.md §6.9).
+ * - `unmodeledFields`: pandtype and aantal eenheden are asked on the free
+ *   form (UI_SPEC.md §3) but, per FreeTierBandInput's own docstring above,
+ *   enter no calculation here - this key makes that limitation as visible
+ *   to the customer as the PLACEHOLDER assumptions are.
  */
-export interface FreeTierDisclosures {
-  /** What the band is - an envelope over unknown inputs, not a probability interval. */
-  band: string;
-  /** Why short-term rental is absent from the figure (UI_SPEC.md §4). */
-  shortTermLicence: string;
-  /** Why financing is absent from the figure. */
-  financing: string;
-  /** Which assumptions were held fixed because no documented range exists (UI_SPEC.md §6.9). */
-  unverified: string;
-}
+export type FreeTierDisclosureKey =
+  | "band"
+  | "shortTermLicence"
+  | "financing"
+  | "unverified"
+  | "unmodeledFields";
 
 /**
  * The free indication's result: one simplified calculation run at both
@@ -817,5 +831,6 @@ export interface FreeTierBand {
   monthlyCashflowBeforeFinancing: { low: number; high: number };
   /** Union of both ends' placeholdersUsed, de-duplicated by name. */
   placeholdersUsed: Parameter<unknown>[];
-  disclosures: FreeTierDisclosures;
+  /** Every disclosure that applies to this band - currently all of FreeTierDisclosureKey, unconditionally. */
+  disclosures: readonly FreeTierDisclosureKey[];
 }

@@ -27,17 +27,25 @@
  * sliding scale, and a band whose ends were "without permit" and "with
  * permit" would put two incomparable products on one axis. The free
  * indication therefore always computes long-term rental - the assumption
- * that is valid whatever the permit situation turns out to be - and says
- * so in `disclosures.shortTermLicence`.
+ * that is valid whatever the permit situation turns out to be - and flags
+ * this via the "shortTermLicence" disclosure key (see below).
  *
  * Relationship to the main engine: the cost structure here is the base
  * scenario's, with debt service removed. Every rate and cost line is the
  * same parameter scenarios.ts uses, and the base scenario's own
  * multipliers are all 1.0 by definition, so this path does not
- * re-multiply by them. A drift test pins that (band.test.ts): if any base
- * multiplier ever moves off 1.0, this module's silence about the scenario
- * layer stops being harmless and the test fails rather than letting the
- * two paths quietly diverge.
+ * re-multiply by them. A drift test pins that (free-tier-band.test.ts): if
+ * any base multiplier ever moves off 1.0, this module's silence about the
+ * scenario layer stops being harmless and the test fails rather than
+ * letting the two paths quietly diverge.
+ *
+ * Disclosures ship as keys, not text (CLAUDE.md §6: this module stays
+ * English). FreeTierBand.disclosures is a list of FreeTierDisclosureKey;
+ * the Dutch sentence each one maps to lives in
+ * lib/copy/es/free-tier-disclosures.ts, outside the calculation layer, so
+ * a page can only show the band by resolving every key through that
+ * translation - there is no path that renders the figure and skips the
+ * framing.
  */
 
 import { incomeLine } from "../income";
@@ -61,7 +69,7 @@ import type {
   FreeTierBand,
   FreeTierBandEnd,
   FreeTierBandInput,
-  FreeTierDisclosures,
+  FreeTierDisclosureKey,
   Parameter,
   RenovationStrategyId,
 } from "../types";
@@ -69,32 +77,21 @@ import type {
 const MONTHS_PER_YEAR = 12;
 
 /**
- * The Dutch copy that ships with the number (CLAUDE.md §6: Nederlands in
- * de UI). Kept next to the calculation and attached to its result rather
- * than left to the page that renders it, because each line explains a
- * limitation of this specific figure - a band rendered without them says
- * something the model does not support.
+ * Every disclosure that applies to this band, as keys - not text. The
+ * Dutch copy each key maps to (CLAUDE.md §6: Nederlands in de UI, Engels
+ * in de code en commentaar) lives in lib/copy/es/free-tier-disclosures.ts,
+ * outside the calculation layer, so this module and everything under
+ * lib/rules/es stay English. All five currently apply unconditionally -
+ * none is specific to a wijk, a price or an area - so this is a constant,
+ * not something computeFreeTierBand derives per call.
  */
-export const FREE_TIER_DISCLOSURES: FreeTierDisclosures = {
-  band:
-    "Deze bandbreedte laat zien wat we nog niet van uw pand weten — servicekosten, " +
-    "staat van onderhoud en hoe de huur zich verhoudt tot het wijkgemiddelde. De " +
-    "uiteinden zijn de gunstigste en ongunstigste combinatie van die drie, niet de " +
-    "kans dat het zo uitpakt. De werkelijke uitkomst ligt waarschijnlijk dichter bij " +
-    "het midden dan bij de randen.",
-  shortTermLicence:
-    "Kortetermijnverhuur vereist sinds 31 maart 2026 een título habilitante in " +
-    "Valencia. Deze indicatie rekent met langetermijnverhuur; met vergunning kan het " +
-    "rendement hoger uitvallen. Dat is niet in dit bedrag verwerkt.",
-  financing:
-    "Dit bedrag is de cashflow vóór financiering. De gratis indicatie vraagt geen " +
-    "hypotheek- of vermogensgegevens, dus rente en aflossing zijn er niet van " +
-    "afgetrokken.",
-  unverified:
-    "Niet geverifieerd in deze indicatie: het bruikbaar oppervlak (afgeleid uit het " +
-    "gebouwde oppervlak), de kadastrale waarde (benaderd met de vraagprijs) en de " +
-    "bezettingsgraad. In het betaalde rapport vult u deze zelf in.",
-};
+export const FREE_TIER_DISCLOSURE_KEYS: readonly FreeTierDisclosureKey[] = [
+  "band",
+  "shortTermLicence",
+  "financing",
+  "unverified",
+  "unmodeledFields",
+];
 
 /**
  * The PLACEHOLDER parameters one end of the band actually rests on.
@@ -272,6 +269,6 @@ export function computeFreeTierBand(input: FreeTierBandInput): FreeTierBand {
       unfavourable.placeholdersUsed,
       favourable.placeholdersUsed,
     ),
-    disclosures: FREE_TIER_DISCLOSURES,
+    disclosures: FREE_TIER_DISCLOSURE_KEYS,
   };
 }
