@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+/*
+ * Visuele richting: UI_SPEC.md §1 - donker, dicht, functioneel, data
+ * eerst. Grotesk/monospace voor cijfers, strakke tabellen, kleur
+ * uitsluitend als signaal (drempel gehaald/niet gehaald), geen
+ * schijnprecisie, geen superlatieven.
+ *
+ * Tailwind v4 CSS-first config: tokens hier, geen tailwind.config.ts.
+ */
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  --color-bg: #0b0d10;
+  --color-surface: #14171b;
+  --color-surface-raised: #1b1f24;
+  --color-border: #2a2f36;
+  --color-border-strong: #3a4048;
+
+  --color-text: #e8eaed;
+  --color-text-muted: #9aa1ab;
+  --color-text-faint: #6b7280;
+
+  /* Signaal, niet decoratie: alleen gebruikt waar een drempel gehaald of
+     niet gehaald is (UI_SPEC.md §1). */
+  --color-signal-positive: #4ade80;
+  --color-signal-negative: #f87171;
+  --color-signal-neutral: #fbbf24;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+}
+
+/* Cijfers krijgen tabular-nums standaard, zodat bedragen in tabellen
+   uitlijnen (UI_SPEC.md §1: "strakke tabellen"). */
+.tabular {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}

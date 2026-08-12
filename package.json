@@ -2,15 +2,32 @@
   "name": "tsg-yield-engine",
   "version": "0.1.0",
   "private": true,
-  "description": "TSG Yield Engine - rekenlaag (Fase 1). Pure TypeScript, replicates the corrected TSG_Model_v2.xlsx.",
+  "description": "TSG Yield Engine. Rekenlaag (lib/rules/es, pure TypeScript) + Next.js app (fase 2: invoer en resultaat).",
   "type": "module",
   "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3.3.6",
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^26.2.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.3.0",
+    "tailwindcss": "^4.3.3",
     "typescript": "^5.6.0",
     "vitest": "^2.1.0"
+  },
+  "dependencies": {
+    "next": "^16.3.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
   }
 }
