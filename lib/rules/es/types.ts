@@ -736,3 +736,86 @@ export interface EngineResult {
    */
   scenarioOutcomes: ScenarioOutcome[] | null;
 }
+
+// ---------------------------------------------------------------------------
+// Free indication band (UI_SPEC.md §2/§3, CLAUDE.md §4/§6)
+// ---------------------------------------------------------------------------
+
+/**
+ * The five first-order fields of UI_SPEC.md §3, minus the two that no
+ * module in this engine currently models.
+ *
+ * `pandtype` and `aantal eenheden` are collected by the free form per the
+ * spec, but nothing in the calculation layer consumes either one today.
+ * Accepting them here and quietly ignoring them would suggest they moved
+ * the number; giving them an effect would mean inventing one. Neither is
+ * acceptable under CLAUDE.md §6, so they stay out of this type until a
+ * module actually models them.
+ */
+export interface FreeTierBandInput {
+  /** Key into NEIGHBORHOOD_RENT_LONG_TERM - one of the 13 wijken the free form offers as a dropdown. */
+  neighborhood: string;
+  /** Vraagprijs, €. */
+  purchasePrice: number;
+  /** Woonoppervlak (superficie construida), m². The free form asks for built area only. */
+  builtAreaM2: number;
+}
+
+/** One end of the band: a complete run of the simplified calculation at one corner of the unknowns. */
+export interface FreeTierBandEnd {
+  end: "unfavourable" | "favourable";
+  /** Neighbourhood reference rent after FREE_TIER_BAND_RENT_MARGIN, €/m²/month. */
+  rentPerM2: number;
+  /** Derived from builtAreaM2 - the free tier never has a measured usable area. */
+  usableAreaM2: number;
+  grossAnnualRent: number;
+  propertyManagement: number;
+  maintenance: number;
+  utilities: number;
+  propertyTaxIBI: number;
+  insurance: number;
+  bankAccountFee: number;
+  communityFees: number;
+  /** IBI + insurance + bank fee + community fees. No debt service: the free tier has no financing input. */
+  fixedCosts: number;
+  annualCashflowBeforeFinancing: number;
+  monthlyCashflowBeforeFinancing: number;
+  /** The renovation tier standing in for an unknown state of repair at this end. */
+  renovationStrategy: RenovationStrategyId;
+  /** The PLACEHOLDER parameters this end's number actually rests on (CLAUDE.md §6). */
+  placeholdersUsed: Parameter<unknown>[];
+}
+
+/**
+ * The Dutch copy that must travel with the number. These are not comments:
+ * a band shown without them reads as a forecast, and the permit and
+ * financing caveats are load-bearing rather than decorative. They live on
+ * the result so a UI cannot render the figure and forget the framing.
+ */
+export interface FreeTierDisclosures {
+  /** What the band is - an envelope over unknown inputs, not a probability interval. */
+  band: string;
+  /** Why short-term rental is absent from the figure (UI_SPEC.md §4). */
+  shortTermLicence: string;
+  /** Why financing is absent from the figure. */
+  financing: string;
+  /** Which assumptions were held fixed because no documented range exists (UI_SPEC.md §6.9). */
+  unverified: string;
+}
+
+/**
+ * The free indication's result: one simplified calculation run at both
+ * corners of what the first-order form does not ask.
+ */
+export interface FreeTierBand {
+  neighborhood: string;
+  /** NEIGHBORHOOD_RENT_LONG_TERM's value for this wijk, before the margin. */
+  referenceRentPerM2: number;
+  unfavourable: FreeTierBandEnd;
+  favourable: FreeTierBandEnd;
+  /** The two ends as one figure, for display: € low - € high per month. */
+  monthlyCashflowBeforeFinancing: { low: number; high: number };
+  /** Union of both ends' placeholdersUsed, de-duplicated by name. */
+  placeholdersUsed: Parameter<unknown>[];
+  disclosures: FreeTierDisclosures;
+}

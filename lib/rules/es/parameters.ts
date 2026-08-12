@@ -1395,6 +1395,106 @@ export const TSG_SCORE_DISTRIBUTION_CONSTRAINTS: EstimateParameter<{
     "SCORE_SPEC.md §5's 'overige invoer: de defaults uit parameters.ts', applied to the InvestorConstraints fields that do not scale with equityRequired or vary per case (totalBudget does now - see TSG_SCORE_DISTRIBUTION_EQUITY_COVERAGE_RANGE - and minLtv is lowered from referencecase.ts's 0.6 to 0 so TSG_SCORE_DISTRIBUTION_PREFERRED_LTV_RANGE's per-case draw is not clamped away). The remaining fields reuse referencecase.ts's TEST FIXTURE constraints for consistency with the rest of the golden-test suite.",
 };
 
+// ---------------------------------------------------------------------------
+// Free indication band (UI_SPEC.md §2, CLAUDE.md §4/§6)
+// ---------------------------------------------------------------------------
+
+/**
+ * The free indication runs on the five first-order fields only (UI_SPEC.md
+ * §3) and must never be the full runEngine() topped up with invented
+ * second-order values (CLAUDE.md §6). What it shows instead is a band: the
+ * same simplified calculation run twice, once with the least favourable and
+ * once with the most favourable standing-in value for each second-order
+ * field the customer has not been asked for yet.
+ *
+ * Three fields span the band, and each end is a value that already exists
+ * in this file rather than a newly invented margin - except the rent
+ * margin below, which is the one genuinely new number in the design and is
+ * labelled accordingly.
+ *
+ * Deliberately NOT band drivers, because no documented range exists for
+ * them and inventing one would be the same mistake in a different place:
+ * DEFAULT_CADASTRAL_TO_PURCHASE_PRICE_RATIO, DEFAULT_USABLE_TO_BUILT_AREA_RATIO
+ * and BASE_OCCUPANCY_LONG_TERM are held at their single value in both runs
+ * and reported as unverified instead (UI_SPEC.md §6.9).
+ */
+
+/**
+ * Symmetric margin around a neighbourhood's reference rent.
+ * NEIGHBORHOOD_RENT_LONG_TERM is a per-wijk average; the individual
+ * property sits above or below it depending on floor, light, layout,
+ * outdoor space and finish - none of which the five first-order fields
+ * capture. Without this margin the band would express cost uncertainty
+ * only, leaving the single largest driver of the outcome fixed at an
+ * average.
+ *
+ * PLACEHOLDER, not ESTIMATE: "properties vary by ±8% within one
+ * neighbourhood" is a claim about the real dispersion of rents, not a
+ * definition of how this model works, and no source backs this specific
+ * figure. Per the reality-claim test in types.ts that leaves PLACEHOLDER
+ * as the only permitted label. Replace it with a measured spread (e.g. the
+ * interquartile range of the listings the wijk averages were built from)
+ * before it carries a paying customer's number.
+ */
+export const FREE_TIER_BAND_RENT_MARGIN: PlaceholderParameter<number> = {
+  name: "FREE_TIER_BAND_RENT_MARGIN",
+  value: 0.08,
+  provenance: "PLACEHOLDER",
+  reasoning:
+    "Symmetric ±8% around NEIGHBORHOOD_RENT_LONG_TERM's per-wijk average, standing in for how far an individual property's achievable rent sits from that average. A claim about real rent dispersion with no source behind this specific figure; must be replaced by a measured spread from the underlying listings before production use.",
+};
+
+/**
+ * Least favourable gastos de comunidad for the band's low end. Value is
+ * read from TSG_SCORE_DISTRIBUTION_COMMUNITY_FEES_RANGE rather than
+ * restated, and the provenance is derived from it rather than hand-typed -
+ * so if that range is ever re-sourced or downgraded, this end of the band
+ * follows automatically instead of keeping a stale label.
+ */
+export const FREE_TIER_BAND_COMMUNITY_FEES_UNFAVOURABLE: Parameter<number> = deriveParameter(
+  "FREE_TIER_BAND_COMMUNITY_FEES_UNFAVOURABLE",
+  TSG_SCORE_DISTRIBUTION_COMMUNITY_FEES_RANGE.value.max,
+  [TSG_SCORE_DISTRIBUTION_COMMUNITY_FEES_RANGE],
+);
+
+/** Most favourable gastos de comunidad for the band's high end - see the unfavourable end above. */
+export const FREE_TIER_BAND_COMMUNITY_FEES_FAVOURABLE: Parameter<number> = deriveParameter(
+  "FREE_TIER_BAND_COMMUNITY_FEES_FAVOURABLE",
+  TSG_SCORE_DISTRIBUTION_COMMUNITY_FEES_RANGE.value.min,
+  [TSG_SCORE_DISTRIBUTION_COMMUNITY_FEES_RANGE],
+);
+
+/**
+ * Which renovation tier stands in for "staat van onderhoud" at each end of
+ * the band. The three tiers order monotonically on cashflow - minimal
+ * (rent x0.95, maintenance x1.20, utilities x1.05) is worst, heavy (x1.10,
+ * x0.85, x0.90) is best, and light sits exactly in between at 1.00 on all
+ * three - so the outer two bracket the model's own range without a single
+ * new multiplier being invented.
+ *
+ * ESTIMATE covers the selection rule only ("the band spans the outermost
+ * tiers this model already defines"), which is a modelling choice. The
+ * multipliers it pulls in stay PLACEHOLDER on RENOVATION_STRATEGIES and
+ * travel to the customer through placeholdersUsed; the ESTIMATE label here
+ * does not launder them.
+ */
+export const FREE_TIER_BAND_RENOVATION_TIER_UNFAVOURABLE: EstimateParameter<RenovationStrategyId> = {
+  name: "FREE_TIER_BAND_RENOVATION_TIER_UNFAVOURABLE",
+  value: "minimal",
+  provenance: "ESTIMATE",
+  reasoning:
+    "Selection rule, not a new figure: 'minimal' is the lowest-cashflow renovation tier RENOVATION_STRATEGIES already defines (rentMultiplier 0.95, maintenanceFactor 1.20, utilitiesEfficiency 1.05), so it marks the band's unfavourable end for an unknown state of repair. Its underlying multipliers remain PLACEHOLDER.",
+};
+
+/** Most favourable renovation tier for the band's high end - see the unfavourable end above. */
+export const FREE_TIER_BAND_RENOVATION_TIER_FAVOURABLE: EstimateParameter<RenovationStrategyId> = {
+  name: "FREE_TIER_BAND_RENOVATION_TIER_FAVOURABLE",
+  value: "heavy",
+  provenance: "ESTIMATE",
+  reasoning:
+    "Selection rule, not a new figure: 'heavy' is the highest-cashflow renovation tier RENOVATION_STRATEGIES already defines (rentMultiplier 1.10, maintenanceFactor 0.85, utilitiesEfficiency 0.90), so it marks the band's favourable end for an unknown state of repair. Its underlying multipliers remain PLACEHOLDER.",
+};
+
 /** All parameters in this file, for provenance tooling (e.g. collecting every PLACEHOLDER). */
 export const ALL_PARAMETERS: ReadonlyArray<Parameter<unknown>> = [
   RENT_MATRIX_LONG_TERM_PER_M2,
@@ -1469,4 +1569,9 @@ export const ALL_PARAMETERS: ReadonlyArray<Parameter<unknown>> = [
   TSG_SCORE_DISTRIBUTION_COMMUNITY_FEES_RANGE,
   TSG_SCORE_DISTRIBUTION_EXIT_ASSUMPTIONS,
   TSG_SCORE_DISTRIBUTION_CONSTRAINTS,
+  FREE_TIER_BAND_RENT_MARGIN,
+  FREE_TIER_BAND_COMMUNITY_FEES_UNFAVOURABLE,
+  FREE_TIER_BAND_COMMUNITY_FEES_FAVOURABLE,
+  FREE_TIER_BAND_RENOVATION_TIER_UNFAVOURABLE,
+  FREE_TIER_BAND_RENOVATION_TIER_FAVOURABLE,
 ];

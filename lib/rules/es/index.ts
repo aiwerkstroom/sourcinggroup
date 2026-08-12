@@ -18,3 +18,4 @@ export * from "./score";
 export * from "./percentile";
 export * from "./distribution/generate";
 export * from "./distribution/load";
+export * from "./free-tier/band";

@@ -81,10 +81,10 @@ describe("parameter provenance audit", () => {
     expect(placeholders).toContain("RENOVATION_STRATEGIES.light.capex");
   });
 
-  it("distribution: 25 SOURCED / 45 ESTIMATE / 30 PLACEHOLDER (SCORE_SPEC.md adds 7 scoring-curve + 11 distribution-generation ESTIMATEs)", () => {
+  it("distribution: 25 SOURCED / 49 ESTIMATE / 31 PLACEHOLDER (SCORE_SPEC.md adds 7 scoring-curve + 11 distribution-generation ESTIMATEs; the free indication band adds 4 ESTIMATE + 1 PLACEHOLDER)", () => {
     const counts = { SOURCED: 0, ESTIMATE: 0, PLACEHOLDER: 0 };
     for (const p of ALL_PARAMETERS) counts[p.provenance]++;
-    expect(counts).toEqual({ SOURCED: 25, ESTIMATE: 45, PLACEHOLDER: 30 });
+    expect(counts).toEqual({ SOURCED: 25, ESTIMATE: 49, PLACEHOLDER: 31 });
     expect(counts.SOURCED + counts.ESTIMATE + counts.PLACEHOLDER).toBe(ALL_PARAMETERS.length);
   });
 
