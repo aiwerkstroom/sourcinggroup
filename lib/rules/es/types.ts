@@ -735,6 +735,15 @@ export interface EngineResult {
    * a score from, and none of those may be guessed.
    */
   scenarioOutcomes: ScenarioOutcome[] | null;
+  /**
+   * Provenance of the rent rate(s) actually used (interview round 2/3
+   * follow-up). Unconditional, unlike scenarioOutcomes - it needs only
+   * PropertyInput.neighborhood and the selected rentPerM2 rates, both
+   * always present, so this is computed for every runEngine() call
+   * including the reference case (which carries no neighborhood and so
+   * reports "noReference" on both rates).
+   */
+  rentInputProvenance: RentInputProvenanceReport;
 }
 
 // ---------------------------------------------------------------------------
@@ -898,3 +907,81 @@ export interface IndicativeScore {
    */
   disclosures: readonly FreeTierDisclosureKey[];
 }
+
+// ---------------------------------------------------------------------------
+// Paid-form selection derivation (UI_SPEC.md §3, interview round 1)
+// ---------------------------------------------------------------------------
+
+/**
+ * Values for the "staat van onderhoud" field the paid form asks for
+ * (UI_SPEC.md §3), used to derive ModelSelections.renovationStrategy
+ * (RENOVATION_TIER_BY_MAINTENANCE_CONDITION in parameters.ts) so the
+ * customer is not asked to pick a renovation tier directly.
+ *
+ * Deliberately independent of constructionYear and energyLabel, which the
+ * form asks for separately: a 1970 building can be fully renovated and a
+ * 2015 one neglected, so this is the customer's own condition assessment,
+ * not derived from the other two fields.
+ */
+export type MaintenanceCondition = "good" | "average" | "poor";
+
+// ---------------------------------------------------------------------------
+// Rent input provenance (UI_SPEC.md §3, interview round 2/3)
+// ---------------------------------------------------------------------------
+
+/** Where a rate the engine actually used for income stands relative to its neighbourhood reference. */
+export type RentReferenceStatus = "matchesReference" | "customerOverride" | "noReference";
+
+/**
+ * Provenance of one rate (long-term or short-term rent per m²) actually
+ * used by the selected rentalStrategy. Computed by comparing what was
+ * supplied (ModelSelections.rentPerM2LongTerm/ShortTerm) against
+ * NEIGHBORHOOD_RENT_LONG_TERM/SHORT_TERM[neighborhood] - no separate "did
+ * the customer touch this field" signal from the form is needed, because
+ * the comparison itself carries the same information.
+ */
+export interface RentInputProvenance {
+  status: RentReferenceStatus;
+  /** NEIGHBORHOOD_RENT_LONG_TERM/SHORT_TERM's value for this neighbourhood. Null under "noReference". */
+  referenceRentPerM2: number | null;
+  /** The rate actually fed into the calculation. */
+  suppliedRentPerM2: number;
+  /** (supplied - reference) / reference. Null under "noReference". */
+  deviationFraction: number | null;
+  /** |deviationFraction| >= RENT_OVERRIDE_SIGNIFICANT_DEVIATION_THRESHOLD.value. Always false under "matchesReference"/"noReference". */
+  significantDeviation: boolean;
+}
+
+/**
+ * Provenance for the rate(s) the selected rentalStrategy actually uses.
+ * "longTerm" carries a value only for the longTerm/hybrid strategies,
+ * "shortTerm" only for shortTerm/hybrid - the unused rate stays null
+ * rather than reporting on a figure that never entered the outcome
+ * (income.ts always computes both IncomeLines, but only the selected
+ * strategy's figure feeds scenarios.ts onward).
+ */
+export interface RentInputProvenanceReport {
+  longTerm: RentInputProvenance | null;
+  shortTerm: RentInputProvenance | null;
+}
+
+/**
+ * The two disclosure keys a rent override can trigger in the paid report
+ * (interview round 2/3 follow-up). Unlike FreeTierDisclosureKey these are
+ * not unconditional - RentInputProvenance.status must be
+ * "customerOverride" for either to apply, and which of the two depends on
+ * significantDeviation. matchesReference/noReference emit neither: §6.1
+ * carries nothing about rent provenance unless the customer's own figure
+ * is in play.
+ *
+ * "rentOverrideSignificant" belongs in §6.1 ("Uitkomst in één regel")
+ * itself, not only in the §6.8 assumptions appendix - a materially
+ * different input deserves visibility where the headline figures are, not
+ * only in the fine print. "rentOverrideMinor" is a lighter mention; both
+ * keys carry no Dutch text here (CLAUDE.md §6) - see
+ * lib/copy/es/rent-override-disclosures.ts, which also does the number
+ * interpolation these keys' text needs (the supplied rate, the deviation
+ * percentage, the reference) since that data is not static per key the
+ * way the free-tier disclosures are.
+ */
+export type RentOverrideDisclosureKey = "rentOverrideSignificant" | "rentOverrideMinor";

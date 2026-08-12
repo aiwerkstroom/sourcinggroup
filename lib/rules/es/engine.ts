@@ -11,6 +11,13 @@
  * included. No new logic: every step here is an existing function from
  * projection.ts/exit.ts/irr.ts/outcome.ts, called with the same arguments
  * a manual caller already passes them.
+ *
+ * Unconditionally, this also reports EngineResult.rentInputProvenance
+ * (rent-provenance.ts): whether the rate(s) the selected rentalStrategy
+ * used came from the neighbourhood reference table or were supplied by
+ * the customer, and by how much - needed for every call, not only when
+ * exitPlanning is given, since it depends on nothing but
+ * property.neighborhood and the selected rates.
  */
 
 import { acquisitionCosts } from "./acquisition";
@@ -24,6 +31,7 @@ import { fixedOperatingCosts, utilitiesBaseAnnual } from "./operating";
 import { DEFAULT_USABLE_TO_BUILT_AREA_RATIO, PROJECTION_YEARS, SCENARIO_ORDER } from "./parameters";
 import { buildProjectionYears } from "./projection";
 import { renovationStrategyTable, selectRenovation } from "./renovation";
+import { computeRentInputProvenance } from "./rent-provenance";
 import { runScenarios } from "./scenarios";
 import { taxCalculator } from "./tax";
 import { assertValidEngineInput } from "./validation";
@@ -158,6 +166,13 @@ export function runEngine(input: EngineInput): EngineResult {
       })
     : null;
 
+  const rentInputProvenance = computeRentInputProvenance({
+    neighborhood: property.neighborhood,
+    rentPerM2LongTerm: selections.rentPerM2LongTerm,
+    rentPerM2ShortTerm: selections.rentPerM2ShortTerm,
+    rentalStrategy: selections.rentalStrategy,
+  });
+
   return {
     income,
     renovationStrategies,
@@ -171,5 +186,6 @@ export function runEngine(input: EngineInput): EngineResult {
     tax,
     rentalStrategies,
     scenarioOutcomes,
+    rentInputProvenance,
   };
 }

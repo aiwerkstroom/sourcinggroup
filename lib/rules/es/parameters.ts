@@ -23,6 +23,7 @@ import type {
   EstimateParameter,
   FeasibilityScoreLevels,
   FinancingStrategyId,
+  MaintenanceCondition,
   Parameter,
   PlaceholderParameter,
   RenovationStrategyId,
@@ -1525,6 +1526,94 @@ export const FREE_TIER_INDICATIVE_LABEL_THRESHOLDS: EstimateParameter<{
     "SCORE_SPEC.md §8.2's Laag/Gemiddeld/Hoog cut-offs on the underlying 0-10 score. A product definition (where TSG draws the line between grades), not a claim about the world: the 4.0 boundary is chosen to coincide with what break-even scores on the §2.1 cashflow curve, so the indication reads break-even the same way the full five-dimension score does.",
 };
 
+// ---------------------------------------------------------------------------
+// Paid-form selection derivation (interview round 1)
+// ---------------------------------------------------------------------------
+
+/**
+ * Maps the paid form's "staat van onderhoud" field onto a renovation tier
+ * (derive-selections.ts), so the customer answers one question about the
+ * property's current condition instead of picking a renovation strategy
+ * directly.
+ *
+ * PLACEHOLDER, not ESTIMATE: this claims a real-world consequence of a
+ * property's condition (how much renovation work it needs to reach
+ * rentable standard) - the reality-claim test in types.ts applies, and no
+ * external source ties a specific condition label to a specific capex
+ * tier. Deliberately 1:1 with RENOVATION_STRATEGIES' three existing tiers
+ * rather than a finer scale: a finer scale would need a second, invented
+ * rule for which conditions collapse onto which tier, layering one
+ * unverified assumption on another. This way there is exactly one
+ * assumption, inspectable as a three-row table.
+ *
+ * Deliberately does not read constructionYear or energyLabel, which the
+ * form asks for separately: a 1970 building can be fully renovated and a
+ * 2015 one neglected, so condition is the customer's own assessment, not
+ * derived from age or label.
+ */
+export const RENOVATION_TIER_BY_MAINTENANCE_CONDITION: PlaceholderParameter<
+  Record<MaintenanceCondition, RenovationStrategyId>
+> = {
+  name: "RENOVATION_TIER_BY_MAINTENANCE_CONDITION",
+  value: { good: "minimal", average: "light", poor: "heavy" },
+  provenance: "PLACEHOLDER",
+  reasoning:
+    "Claims a real-world consequence of a property's current condition (how much renovation work it needs to reach rentable standard) - no external source ties a specific condition label to a specific capex tier. Deliberately 1:1 with the three existing RENOVATION_STRATEGIES tiers rather than a finer scale, so no second, invented collapsing rule sits between the customer's self-assessment and the tier.",
+};
+
+/**
+ * Which financing tier wins when the customer's preferredLtv sits exactly
+ * midway between two of FINANCING_STRATEGIES' three LTVs (0.6/0.7/0.75) -
+ * at 0.65 and 0.725. Off the midpoint, "nearest LTV" needs no further rule
+ * and adds no new real-world claim (the three LTVs it compares against
+ * are already ESTIMATE product-tier definitions in FINANCING_STRATEGIES).
+ *
+ * ESTIMATE: a tie-break is a product convention (which way TSG rounds an
+ * ambiguous preference), not a claim about the world. "higher": offering
+ * more leverage on an exact tie costs the customer nothing to be shown
+ * and matches how a person reading "0.65" would round it.
+ */
+export const FINANCING_TIER_SELECTION_TIE_BREAK: EstimateParameter<"lower" | "higher"> = {
+  name: "FINANCING_TIER_SELECTION_TIE_BREAK",
+  value: "higher",
+  provenance: "ESTIMATE",
+  reasoning:
+    "Which of the two equidistant financing tiers wins when preferredLtv sits exactly at a midpoint (0.65 or 0.725) between FINANCING_STRATEGIES' three LTVs. A product convention, not a real-world claim: 'higher' offers the customer more leverage on an exact tie.",
+};
+
+// ---------------------------------------------------------------------------
+// Rent input provenance (interview round 2/3 follow-up)
+// ---------------------------------------------------------------------------
+
+/**
+ * How far a customer-supplied rent rate must deviate from its
+ * neighbourhood reference (NEIGHBORHOOD_RENT_LONG_TERM/SHORT_TERM) before
+ * the paid report's §6.1 headline carries an explicit, prominent mention
+ * of the deviation rather than a lighter one.
+ *
+ * ESTIMATE: this is a product decision about where "significant" begins,
+ * not a claim about the world - the same category as
+ * FREE_TIER_INDICATIVE_LABEL_THRESHOLDS and
+ * TSG_SCORE_FEASIBILITY_MARGIN_THRESHOLD. 20%, chosen per the product
+ * brief that introduced this check: material enough that a customer
+ * comparing their figure to a specific nearby listing would still expect
+ * to see it called out, without flagging the ordinary variation within
+ * one wijk that the free-tier rent margin (FREE_TIER_BAND_RENT_MARGIN,
+ * 8%) already treats as unremarkable.
+ *
+ * Inclusive at the boundary (>=), matching every other threshold in this
+ * file (TSG_SCORE_FEASIBILITY_MARGIN_THRESHOLD, both cut-offs in
+ * FREE_TIER_INDICATIVE_LABEL_THRESHOLDS): reaching the threshold counts as
+ * reaching it, rather than requiring one euro-cent more.
+ */
+export const RENT_OVERRIDE_SIGNIFICANT_DEVIATION_THRESHOLD: EstimateParameter<number> = {
+  name: "RENT_OVERRIDE_SIGNIFICANT_DEVIATION_THRESHOLD",
+  value: 0.2,
+  provenance: "ESTIMATE",
+  reasoning:
+    "Where a customer-supplied rent rate's deviation from its neighbourhood reference becomes 'significant' enough for a prominent §6.1 mention rather than a lighter one. A product decision, not a claim about the world - the same category as FREE_TIER_INDICATIVE_LABEL_THRESHOLDS. 20% is material enough to flag a figure diverging from a specific comparable, without flagging the ordinary within-wijk variation FREE_TIER_BAND_RENT_MARGIN (8%) already treats as unremarkable. Inclusive at the boundary, matching every other threshold in this file.",
+};
+
 /** All parameters in this file, for provenance tooling (e.g. collecting every PLACEHOLDER). */
 export const ALL_PARAMETERS: ReadonlyArray<Parameter<unknown>> = [
   RENT_MATRIX_LONG_TERM_PER_M2,
@@ -1605,4 +1694,7 @@ export const ALL_PARAMETERS: ReadonlyArray<Parameter<unknown>> = [
   FREE_TIER_BAND_RENOVATION_TIER_UNFAVOURABLE,
   FREE_TIER_BAND_RENOVATION_TIER_FAVOURABLE,
   FREE_TIER_INDICATIVE_LABEL_THRESHOLDS,
+  RENOVATION_TIER_BY_MAINTENANCE_CONDITION,
+  FINANCING_TIER_SELECTION_TIE_BREAK,
+  RENT_OVERRIDE_SIGNIFICANT_DEVIATION_THRESHOLD,
 ];
