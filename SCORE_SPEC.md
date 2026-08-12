@@ -176,3 +176,70 @@ Geen externe afhankelijkheden. De scoring is deterministisch: dezelfde invoer ge
 - Geen advies. Een score van 8 is geen koopadvies. Een score van 3 is geen verkoopadvies.
 
 Dit moet letterlijk in het rapport staan, niet in de kleine letters.
+
+---
+
+## 8. Indicatieve score (gratis indicatie)
+
+Aanvulling, vastgesteld nadat de free-tier band (zie FREE_TIER_BAND_* in parameters.ts) gereed was. Dit is een eigen, kleinere functie — geen uitgeklede computeTsgScore(). Zonder beleggersinvoer bestaan DSCR, IRR en de eigen-vermogentoets niet; drie van de vijf dimensies uit §2 vallen dus weg.
+
+### 8.1 Twee dimensies, niet vijf
+
+| Dimensie | Basis |
+|---|---|
+| Cashflow-indicatie | Middelpunt van de free-tier band |
+| Datazekerheid | Aantal PLACEHOLDER-parameters in de band-berekening |
+
+Rendement, schuldbestendigheid en haalbaarheid ontbreken. Dat wordt niet gecompenseerd door de resterende twee zwaarder te wegen — een indicatie met twee dimensies claimt niet hetzelfde te meten als de volledige score met vijf, alleen lichter. Zie §8.3.
+
+### 8.2 Grove schaal, bewust anders dan §2
+
+Geen 0–10 getal. Drie labels: **Laag / Gemiddeld / Hoog**, zodat niemand een indicatiescore naast een betaalde TSG-score legt en ze als vergelijkbare getallen leest.
+
+**Cashflow-indicatie — omzetting vanuit §2.1-ankerpunten.**
+
+Bereken eerst de onderliggende 0–10 score op het middelpunt van de band (`(unfavourable + favourable) / 2`), met exact dezelfde piecewiseLinear-curve als §2.1. Zet die vervolgens om:
+
+| §2.1-score | Label |
+|---|---|
+| 0,0 – 3,9 | Laag |
+| 4,0 – 6,9 | Gemiddeld |
+| 7,0 – 10,0 | Hoog |
+
+De drempel bij 4,0 sluit aan op §2.1 zelf: een cashflow van € 0 (break-even) geeft daar al een 4,0, dus "Gemiddeld" begint bij break-even, niet eronder. Dat is inhoudelijk consistent met hoe de volledige score break-even leest.
+
+**Datazekerheid — omzetting vanuit §2.5-ankerpunten**, dezelfde drempels toegepast op de onderliggende 0–10 score.
+
+De onderliggende getallen worden nergens getoond — alleen gebruikt om het label te bepalen. Dit voorkomt dat iemand "6,4" ziet, het onthoudt, en het later naast een betaalde score van "6,4" legt alsof het dezelfde meting is.
+
+> **Randgeval bij de 4,0-drempel.** De omzetting gradeert de afgeronde score (§1: één decimaal), want de tabel hierboven is over één-decimaalwaarden geschreven. Gevolg: "Gemiddeld" houdt ook enkele euro's onder break-even stand. Op het §2.1-segment van −€ 250 (2,0) naar € 0 (4,0) rondt een ruwe score pas bij −€ 6,25 naar 3,9 af; dáár begint Laag feitelijk. Het alternatief — graderen op de ruwe interpolatie — legt de grens exact op € 0, maar wijkt dan af van de één-decimaalbanden in deze tabel én van de afgeronde dimensiescore die het betaalde rapport voor hetzelfde pand publiceert.
+
+### 8.3 Verplichte disclosure
+
+De indicatieve score krijgt een zesde sleutel naast de vijf uit §free-tier band (zie `FreeTierDisclosureKey`): `indicativeScoreScope`. Tekst (copy-laag, niet in de rekenlaag):
+
+> Deze indicatie is gebaseerd op twee van de vijf factoren die het volledige rapport beoordeelt. Rendement, schuldbestendigheid en haalbaarheid worden pas berekend zodra u uw financieringsgegevens invult.
+
+Deze sleutel is onvoorwaardelijk aanwezig zodra er een indicatieve score wordt getoond — geen uitzondering, net als de andere vijf.
+
+### 8.4 Referentiecasus
+
+Ruzafa, € 350.000, 90 m² (dezelfde als de band-golden-test): band € 350 – € 831/maand, middelpunt € 590,24.
+
+**Cashflow-indicatie:** op het middelpunt ligt de §2.1-curve tussen € 500 (7,5) en € 1.000 (9,0) → interpolatie geeft 7,8 → label **Hoog**.
+
+**Datazekerheid:** 12 placeholders → 3,2 → label **Laag**.
+
+Die twaalf zijn de `placeholdersUsed` van het band-resultaat: zes die voor beide uiteinden gelden (huurmarge, bruikbaar/gebouwd-ratio, kadastrale ratio, langetermijnbezetting, onderhoudstarief, bankkosten) plus drie renovatiemultipliers per tier, voor beide tiers.
+
+De unie van beide tiers, niet één tier, is het punt. De band spant `minimal` tegen `heavy` op; het middelpunt van die band heeft geen eigen renovatietier, dus er is geen enkele tier die je zou kunnen aanwijzen als "de" aanname waar dit getal op rust. Beide zijn gebruikt om het te produceren, dus beide tellen. Vandaar twaalf en niet vijf: capex en doorlooptijd tellen niet mee (die raken een maandcashflow vóór financiering niet), maar de zes multipliers wél.
+
+> **Voetnoot:** een eerdere versie van deze paragraaf verwachtte "Gemiddeld" op basis van een opsomming van vijf parameters, die de bankkosten en alle zes renovatiemultipliers oversloeg. Vijf placeholders zou 6,7 geven en dus Gemiddeld; de werkelijke twaalf geven 3,2 en dus Laag. Bevestigd tegen de code bij implementatie — zie `lib/rules/es/__tests__/free-tier-indicative-score.test.ts`.
+
+### 8.5 Implementatie
+
+`/lib/rules/es/free-tier/indicative-score.ts` — leest een `FreeTierBand`-resultaat, retourneert `{ cashflowLabel, dataConfidenceLabel }` plus de disclosure-sleutel. Hergebruikt de §2.1- en §2.5-curves en -ankerpunten uit score.ts; alleen de omzetting naar labels is nieuw.
+
+De twee drempelwaarden uit §8.2 (4,0 en 7,0) staan als één ESTIMATE-parameter in parameters.ts (`FREE_TIER_INDICATIVE_LABEL_THRESHOLDS`), niet inline in de rekenlaag — CLAUDE.md §6 laat geen hardgecodeerde getallen toe, ook niet als ze verder nergens vandaan komen. Ze zijn een productdefinitie (waar TSG de grens tussen de labels legt), wat precies is waar ESTIMATE voor bedoeld is.
+
+De labels zelf zijn Engels in de rekenlaag (`"low" | "medium" | "high"`); de Nederlandse woorden Laag/Gemiddeld/Hoog staan in `lib/copy/es/free-tier-disclosures.ts`, dezelfde splitsing die de disclosure-sleutels gebruiken.
