@@ -1,7 +1,10 @@
-import { StepPlaceholder } from "../_components/step-placeholder";
+import { ExitForm } from "./exit-form";
 
+/**
+ * Step 4 - de verkoop (UI_SPEC.md §3's exit assumptions), and the step
+ * that runs the engine. Server Component; the calculation itself happens
+ * in the Server Action the form calls.
+ */
 export default function ExitPage() {
-  return (
-    <StepPlaceholder title="Exit" stepNumber={4} previousHref="/rapport/nieuw/belegger" />
-  );
+  return <ExitForm />;
 }

@@ -17,7 +17,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { WIZARD_STEPS } from "./_lib/steps";
-import { WizardProvider, useWizard } from "./_state/wizard-state";
+import { useWizard } from "./_state/wizard-state";
 
 function StepIndicator() {
   const pathname = usePathname();
@@ -73,15 +73,13 @@ function StepIndicator() {
 
 export default function WizardLayout({ children }: { children: React.ReactNode }) {
   return (
-    <WizardProvider>
-      <div className="mx-auto min-h-screen max-w-2xl px-6 py-10">
-        <header className="mb-6">
-          <p className="text-text-faint text-xs tracking-widest uppercase">Betaald rapport</p>
-          <h1 className="mt-1 text-xl font-semibold">Rendementsrapport aanvragen</h1>
-        </header>
-        <StepIndicator />
-        <main className="py-8">{children}</main>
-      </div>
-    </WizardProvider>
+    <div className="mx-auto min-h-screen max-w-2xl px-6 py-10">
+      <header className="mb-6">
+        <p className="text-text-faint text-xs tracking-widest uppercase">Betaald rapport</p>
+        <h1 className="mt-1 text-xl font-semibold">Rendementsrapport aanvragen</h1>
+      </header>
+      <StepIndicator />
+      <main className="py-8">{children}</main>
+    </div>
   );
 }

@@ -20,6 +20,7 @@
  */
 
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import type { EngineResult } from "@/lib/rules/es/types";
 
 /** Step 1. Mirrors UI_SPEC.md §3's first- and second-order property fields. */
 export interface PandStepData {
@@ -89,10 +90,26 @@ export interface BeleggerStepData {
   rentPrefilled: boolean;
 }
 
+/**
+ * Step 4. Both figures are exit assumptions the engine gives no default
+ * (MODEL_SPEC_FASE1B §5) - they have to come from the customer or the
+ * report cannot compute an exit at all.
+ *
+ * The commission is pre-filled because a Spanish selling commission has a
+ * conventional range and 4% is the figure the golden tests are anchored
+ * on; the plusvalía is not, because it is a municipal levy that varies per
+ * town and per holding period and no generic figure would be honest.
+ */
+export interface ExitStepData {
+  sellingCommissionPercent: string;
+  municipalCapitalGainsTax: string;
+}
+
 export interface WizardData {
   pand: PandStepData;
   staatEnLasten: StaatEnLastenStepData;
   belegger: BeleggerStepData;
+  exit: ExitStepData;
 }
 
 /**
@@ -147,11 +164,28 @@ export const EMPTY_BELEGGER: BeleggerStepData = {
   rentPrefilled: false,
 };
 
+/**
+ * Pre-filled selling commission, as a percentage. Not a parameter in
+ * parameters.ts: it is a starting value for a field the customer is
+ * expected to confirm or change, not a figure any calculation falls back
+ * on. Whatever ends up in the field is what the engine receives.
+ */
+export const DEFAULT_SELLING_COMMISSION_PERCENT = "4";
+
+export const EMPTY_EXIT: ExitStepData = {
+  sellingCommissionPercent: DEFAULT_SELLING_COMMISSION_PERCENT,
+  municipalCapitalGainsTax: "",
+};
+
 interface WizardContextValue {
   data: WizardData;
   setPand: (patch: Partial<PandStepData>) => void;
   setStaatEnLasten: (patch: Partial<StaatEnLastenStepData>) => void;
   setBelegger: (patch: Partial<BeleggerStepData>) => void;
+  setExit: (patch: Partial<ExitStepData>) => void;
+  /** The engine's output, once step 4 has run it. Held here so the result page can render it - nothing is persisted. */
+  result: EngineResult | null;
+  setResult: (result: EngineResult | null) => void;
   /** Slugs of steps submitted successfully - later steps use this to detect a cold entry. */
   completedSteps: ReadonlySet<string>;
   markCompleted: (slug: string) => void;
@@ -164,7 +198,9 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
     pand: EMPTY_PAND,
     staatEnLasten: EMPTY_STAAT_EN_LASTEN,
     belegger: EMPTY_BELEGGER,
+    exit: EMPTY_EXIT,
   });
+  const [result, setResult] = useState<EngineResult | null>(null);
   const [completedSteps, setCompletedSteps] = useState<ReadonlySet<string>>(new Set());
 
   const setPand = useCallback((patch: Partial<PandStepData>) => {
@@ -191,9 +227,23 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
     setData((current) => ({ ...current, belegger: { ...current.belegger, ...patch } }));
   }, []);
 
+  const setExit = useCallback((patch: Partial<ExitStepData>) => {
+    setData((current) => ({ ...current, exit: { ...current.exit, ...patch } }));
+  }, []);
+
   const value = useMemo<WizardContextValue>(
-    () => ({ data, setPand, setStaatEnLasten, setBelegger, completedSteps, markCompleted }),
-    [data, setPand, setStaatEnLasten, setBelegger, completedSteps, markCompleted],
+    () => ({
+      data,
+      setPand,
+      setStaatEnLasten,
+      setBelegger,
+      setExit,
+      result,
+      setResult,
+      completedSteps,
+      markCompleted,
+    }),
+    [data, setPand, setStaatEnLasten, setBelegger, setExit, result, completedSteps, markCompleted],
   );
 
   return <WizardContext.Provider value={value}>{children}</WizardContext.Provider>;
