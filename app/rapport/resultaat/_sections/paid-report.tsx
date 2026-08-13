@@ -12,6 +12,7 @@ import { CashflowBreakdownSection } from "./cashflow-breakdown-section";
 import { OneLineOutcomeSection } from "./one-line-outcome-section";
 import type { ScenarioRow } from "./scenarios-section";
 import { ScenariosSection } from "./scenarios-section";
+import { TenYearSection } from "./ten-year-section";
 import { TsgScoreSection } from "./tsg-score-section";
 
 export interface PaidReportProps {
@@ -63,9 +64,22 @@ export function PaidReport({ result }: PaidReportProps) {
         annualIncomeTax={result.tax.taxDueBase}
       />
 
+      {result.scenarioOutcomes !== null ? (
+        <TenYearSection outcomes={result.scenarioOutcomes} />
+      ) : (
+        <section aria-labelledby="sectie-tienjarige-reeks" className="flex flex-col gap-3">
+          <h2 id="sectie-tienjarige-reeks" className="text-text-faint text-xs tracking-widest uppercase">
+            5. De tienjarige reeks
+          </h2>
+          <p className="text-text-muted max-w-prose text-sm leading-relaxed">
+            Zonder exitaannames (verkoopkosten, plusvalía) kan het model geen jaarreeks doorrekenen
+            - dezelfde aannames die de IRR nodig heeft.
+          </p>
+        </section>
+      )}
+
       <p className="border-border text-text-muted rounded-md border border-dashed px-4 py-3 text-xs leading-relaxed">
-        Secties 5 t/m 9 (tienjarige reeks, exit, toetsing, aannames, wat niet geverifieerd is)
-        volgen hierna.
+        Secties 6 t/m 9 (exit, toetsing, aannames, wat niet geverifieerd is) volgen hierna.
       </p>
     </div>
   );

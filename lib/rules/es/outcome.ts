@@ -192,6 +192,9 @@ export function buildScenarioOutcome(args: {
     return {
       yearNumber: y.yearNumber,
       calendarYear: y.calendarYear,
+      extrapolated: y.extrapolated,
+      grossIncome: y.grossIncome,
+      noi: y.noi,
       cashflowAfterTax: y.cashflowAfterTax,
       cumulativeCashflow,
       propertyValue,

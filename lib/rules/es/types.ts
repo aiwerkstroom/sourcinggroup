@@ -532,6 +532,12 @@ export type IrrResult =
 export interface ScenarioProjectionYear {
   yearNumber: number;
   calendarYear: number;
+  /** True beyond the sourced Correction Factors series (indexation.ts's isExtrapolated) - UI_SPEC.md §6.5 marks these years as such rather than presenting them as equally sourced. */
+  extrapolated: boolean;
+  /** This year's gross rental income - year 1 is prorated for the renovation's lease-up vacancy (projection.ts), every later year is not. */
+  grossIncome: number;
+  /** This year's net operating income: grossIncome minus property management, maintenance, utilities and fixed costs - before debt service and tax. */
+  noi: number;
   cashflowAfterTax: number;
   /** Running sum of cashflowAfterTax through this year - operating cashflow only, the sale is not included. */
   cumulativeCashflow: number;
