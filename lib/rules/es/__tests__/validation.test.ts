@@ -34,7 +34,7 @@ describe("input validation (self-serve: reject impossible combinations)", () => 
   });
 
   it("accepts a property without usableAreaM2 (derived from builtAreaM2)", () => {
-    const { usableAreaM2, ...propertyWithoutUsableArea } = referenceCase.property;
+    const { usableAreaM2: _usableAreaM2, ...propertyWithoutUsableArea } = referenceCase.property;
     const ok = { ...referenceCase, property: propertyWithoutUsableArea };
     expect(validateEngineInput(ok)).toEqual([]);
   });

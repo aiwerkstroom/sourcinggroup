@@ -2,8 +2,22 @@
  * Input validation. The product is fully self-serve: every input must be
  * validated and impossible combinations must be rejected before any
  * calculation runs (TSG Yield Engine project spec, section 1).
+ *
+ * The field-level rules that a multi-step form also needs (area, price)
+ * live in field-validation.ts as keys, and this module calls them rather
+ * than restating them - so the wizard's step 1 and validateEngineInput()
+ * cannot disagree about what a valid built area is. The English strings
+ * below are this module's own rendering of those keys; the Dutch the UI
+ * shows comes from lib/copy/es/validation.ts, off the same keys.
  */
 
+import {
+  checkBuiltAreaM2,
+  checkPurchasePrice,
+  checkUsableAreaM2,
+  isFiniteNumber,
+} from "./field-validation";
+import type { FieldValidationKey } from "./field-validation";
 import type { EngineInput } from "./types";
 
 export class ValidationError extends Error {
@@ -13,30 +27,33 @@ export class ValidationError extends Error {
   }
 }
 
-function isFiniteNumber(v: unknown): v is number {
-  return typeof v === "number" && Number.isFinite(v);
-}
+/**
+ * English rendering of the shared field-validation keys, kept identical to
+ * the strings this function returned before the rules moved into
+ * field-validation.ts. "required" and "mustBeANumber" are form-only - a
+ * typed EngineInput cannot produce them - but are mapped so the record
+ * stays exhaustive over the union.
+ */
+const FIELD_ISSUE_EN: Record<FieldValidationKey, string> = {
+  required: "value is required",
+  mustBeANumber: "value must be a number",
+  builtAreaMustBePositive: "builtAreaM2 must be a positive number",
+  usableAreaMustBePositive: "usableAreaM2 must be a positive number",
+  usableAreaCannotExceedBuiltArea: "usableAreaM2 cannot exceed builtAreaM2",
+  purchasePriceMustBePositive: "purchasePrice must be a positive number",
+};
 
 export function validateEngineInput(input: EngineInput): string[] {
   const issues: string[] = [];
   const { property, constraints, selections } = input;
 
-  if (!isFiniteNumber(property.builtAreaM2) || property.builtAreaM2 <= 0) {
-    issues.push("builtAreaM2 must be a positive number");
-  }
-  if (property.usableAreaM2 !== undefined) {
-    if (!isFiniteNumber(property.usableAreaM2) || property.usableAreaM2 <= 0) {
-      issues.push("usableAreaM2 must be a positive number");
-    } else if (
-      isFiniteNumber(property.builtAreaM2) &&
-      property.usableAreaM2 > property.builtAreaM2
-    ) {
-      issues.push("usableAreaM2 cannot exceed builtAreaM2");
-    }
-  }
-  if (!isFiniteNumber(property.purchasePrice) || property.purchasePrice <= 0) {
-    issues.push("purchasePrice must be a positive number");
-  }
+  const pushField = (key: FieldValidationKey | null): void => {
+    if (key !== null) issues.push(FIELD_ISSUE_EN[key]);
+  };
+
+  pushField(checkBuiltAreaM2(property.builtAreaM2));
+  pushField(checkUsableAreaM2(property.usableAreaM2, property.builtAreaM2));
+  pushField(checkPurchasePrice(property.purchasePrice));
   if (!isFiniteNumber(property.communityFeesAnnual) || property.communityFeesAnnual < 0) {
     issues.push("communityFeesAnnual must be zero or positive (no default: enter the real gastos de comunidad for this building)");
   }

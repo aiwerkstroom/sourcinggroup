@@ -296,7 +296,7 @@ describe("EngineResult.scenarioOutcomes: runEngine() wired end to end to score a
   });
 
   it("is null when EngineInput.exitPlanning is not supplied - never a guessed selling commission or plusvalía", () => {
-    const { exitPlanning, ...withoutExitPlanning } = referenceCase;
+    const { exitPlanning: _exitPlanning, ...withoutExitPlanning } = referenceCase;
     const result = runEngine(withoutExitPlanning);
     expect(result.scenarioOutcomes).toBeNull();
     // Every other field is computed as before - this is additive, not a
