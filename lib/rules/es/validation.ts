@@ -13,6 +13,9 @@
 
 import {
   checkBuiltAreaM2,
+  checkCadastralConstruccion,
+  checkCadastralSuelo,
+  checkCommunityFeesAnnual,
   checkPurchasePrice,
   checkUsableAreaM2,
   isFiniteNumber,
@@ -41,6 +44,11 @@ const FIELD_ISSUE_EN: Record<FieldValidationKey, string> = {
   usableAreaMustBePositive: "usableAreaM2 must be a positive number",
   usableAreaCannotExceedBuiltArea: "usableAreaM2 cannot exceed builtAreaM2",
   purchasePriceMustBePositive: "purchasePrice must be a positive number",
+  communityFeesMustBeZeroOrPositive:
+    "communityFeesAnnual must be zero or positive (no default: enter the real gastos de comunidad for this building)",
+  cadastralSueloMustBeZeroOrPositive: "cadastralValue.suelo must be zero or positive",
+  cadastralConstruccionMustBeZeroOrPositive:
+    "cadastralValue.construccion must be zero or positive",
 };
 
 export function validateEngineInput(input: EngineInput): string[] {
@@ -54,19 +62,10 @@ export function validateEngineInput(input: EngineInput): string[] {
   pushField(checkBuiltAreaM2(property.builtAreaM2));
   pushField(checkUsableAreaM2(property.usableAreaM2, property.builtAreaM2));
   pushField(checkPurchasePrice(property.purchasePrice));
-  if (!isFiniteNumber(property.communityFeesAnnual) || property.communityFeesAnnual < 0) {
-    issues.push("communityFeesAnnual must be zero or positive (no default: enter the real gastos de comunidad for this building)");
-  }
+  pushField(checkCommunityFeesAnnual(property.communityFeesAnnual));
   if (property.cadastralValue !== undefined) {
-    if (!isFiniteNumber(property.cadastralValue.suelo) || property.cadastralValue.suelo < 0) {
-      issues.push("cadastralValue.suelo must be zero or positive");
-    }
-    if (
-      !isFiniteNumber(property.cadastralValue.construccion) ||
-      property.cadastralValue.construccion < 0
-    ) {
-      issues.push("cadastralValue.construccion must be zero or positive");
-    }
+    pushField(checkCadastralSuelo(property.cadastralValue.suelo));
+    pushField(checkCadastralConstruccion(property.cadastralValue.construccion));
   }
   if (typeof property.hasTouristRentalLicense !== "boolean") {
     issues.push("hasTouristRentalLicense must be true or false (no default)");

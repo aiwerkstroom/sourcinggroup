@@ -186,6 +186,79 @@ export function SelectField({
   );
 }
 
+interface RadioGroupProps {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: ReadonlyArray<{ value: string; label: string; description?: string }>;
+  hint?: string;
+  error?: string;
+}
+
+/**
+ * Radios rather than a select for the answers that change what the rest
+ * of the form offers - the permit gate above all. A select hides its
+ * options behind a click; these two questions decide whether short-term
+ * rental exists at all for this property (UI_SPEC.md §4) and which
+ * renovation tier the model will assume, so both stay visible with their
+ * consequences written out.
+ */
+export function RadioGroup({ label, value, onChange, options, hint, error }: RadioGroupProps) {
+  const name = useId();
+  const hintId = `${name}-hint`;
+  const errorId = `${name}-error`;
+
+  return (
+    <fieldset
+      aria-describedby={
+        [hint ? hintId : null, error ? errorId : null].filter(Boolean).join(" ") || undefined
+      }
+    >
+      <legend className="text-sm font-medium">{label}</legend>
+      {hint ? (
+        <p id={hintId} className="text-text-muted mt-1.5 max-w-prose text-xs leading-relaxed">
+          {hint}
+        </p>
+      ) : null}
+      <div className="mt-3 flex flex-col gap-2">
+        {options.map((option) => {
+          const selected = value === option.value;
+          return (
+            <label
+              key={option.value}
+              className={`flex cursor-pointer gap-3 rounded-md border px-3 py-2.5 ${
+                selected ? "border-border-strong bg-surface-raised" : "border-border hover:bg-white/5"
+              } ${error ? "border-signal-negative" : ""}`}
+            >
+              <input
+                type="radio"
+                name={name}
+                value={option.value}
+                checked={selected}
+                onChange={() => onChange(option.value)}
+                className="mt-1 accent-white"
+              />
+              <span className="flex flex-col gap-0.5">
+                <span className="text-sm">{option.label}</span>
+                {option.description ? (
+                  <span className="text-text-muted text-xs leading-relaxed">
+                    {option.description}
+                  </span>
+                ) : null}
+              </span>
+            </label>
+          );
+        })}
+      </div>
+      {error ? (
+        <p id={errorId} role="alert" className="text-signal-negative mt-2 text-xs">
+          {error}
+        </p>
+      ) : null}
+    </fieldset>
+  );
+}
+
 /** Groups related fields under a heading, keeping a long step scannable. */
 export function FieldGroup({ title, children }: { title: string; children: React.ReactNode }) {
   return (

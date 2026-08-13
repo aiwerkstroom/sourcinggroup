@@ -33,7 +33,10 @@ export type FieldValidationKey =
   | "builtAreaMustBePositive"
   | "usableAreaMustBePositive"
   | "usableAreaCannotExceedBuiltArea"
-  | "purchasePriceMustBePositive";
+  | "purchasePriceMustBePositive"
+  | "communityFeesMustBeZeroOrPositive"
+  | "cadastralSueloMustBeZeroOrPositive"
+  | "cadastralConstruccionMustBeZeroOrPositive";
 
 export function isFiniteNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
@@ -69,4 +72,28 @@ export function checkUsableAreaM2(
 /** Vraagprijs: must be a positive number. */
 export function checkPurchasePrice(value: unknown): FieldValidationKey | null {
   return !isFiniteNumber(value) || value <= 0 ? "purchasePriceMustBePositive" : null;
+}
+
+/**
+ * Gastos de comunidad: zero or positive, and mandatory - MODEL_SPEC.md
+ * §15 gives it no default anywhere in the engine, because the figure
+ * varies too much per building to estimate generically. Zero is allowed
+ * (a building genuinely without a comunidad), but an absent value is not:
+ * the form must ask, and the caller must not guess.
+ */
+export function checkCommunityFeesAnnual(value: unknown): FieldValidationKey | null {
+  return !isFiniteNumber(value) || value < 0 ? "communityFeesMustBeZeroOrPositive" : null;
+}
+
+/**
+ * Valor catastral, per component. Optional as a whole (MODEL_SPEC.md
+ * §16), but once supplied each half must be zero or positive - a suelo of
+ * zero is plausible for some titles, a negative one never is.
+ */
+export function checkCadastralSuelo(value: unknown): FieldValidationKey | null {
+  return !isFiniteNumber(value) || value < 0 ? "cadastralSueloMustBeZeroOrPositive" : null;
+}
+
+export function checkCadastralConstruccion(value: unknown): FieldValidationKey | null {
+  return !isFiniteNumber(value) || value < 0 ? "cadastralConstruccionMustBeZeroOrPositive" : null;
 }

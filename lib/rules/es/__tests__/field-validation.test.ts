@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 import { FIELD_VALIDATION_COPY_NL, translateFieldValidation } from "../../../copy/es/validation";
 import {
   checkBuiltAreaM2,
+  checkCadastralConstruccion,
+  checkCadastralSuelo,
+  checkCommunityFeesAnnual,
   checkPurchasePrice,
   checkUsableAreaM2,
 } from "../field-validation";
@@ -66,6 +69,35 @@ describe("checkPurchasePrice", () => {
   });
 });
 
+describe("checkCommunityFeesAnnual", () => {
+  it("accepts zero - a building genuinely without a comunidad", () => {
+    expect(checkCommunityFeesAnnual(0)).toBeNull();
+    expect(checkCommunityFeesAnnual(900)).toBeNull();
+  });
+
+  it("rejects negatives and non-numbers, including absence", () => {
+    // MODEL_SPEC.md §15: mandatory, no default anywhere in the engine.
+    expect(checkCommunityFeesAnnual(-1)).toBe("communityFeesMustBeZeroOrPositive");
+    expect(checkCommunityFeesAnnual(undefined)).toBe("communityFeesMustBeZeroOrPositive");
+    expect(checkCommunityFeesAnnual(Number.NaN)).toBe("communityFeesMustBeZeroOrPositive");
+  });
+});
+
+describe("checkCadastralSuelo / checkCadastralConstruccion", () => {
+  it("accept zero and positive values", () => {
+    expect(checkCadastralSuelo(0)).toBeNull();
+    expect(checkCadastralSuelo(40_000)).toBeNull();
+    expect(checkCadastralConstruccion(0)).toBeNull();
+    expect(checkCadastralConstruccion(60_000)).toBeNull();
+  });
+
+  it("reject negatives and non-numbers", () => {
+    expect(checkCadastralSuelo(-1)).toBe("cadastralSueloMustBeZeroOrPositive");
+    expect(checkCadastralConstruccion(-1)).toBe("cadastralConstruccionMustBeZeroOrPositive");
+    expect(checkCadastralSuelo(undefined)).toBe("cadastralSueloMustBeZeroOrPositive");
+  });
+});
+
 describe("validateEngineInput delegates to the same rules - one definition, not two", () => {
   it("still reports the reference case as valid", () => {
     expect(validateEngineInput(referenceCase)).toEqual([]);
@@ -105,6 +137,9 @@ describe("Dutch copy covers every field-validation key", () => {
     "usableAreaMustBePositive",
     "usableAreaCannotExceedBuiltArea",
     "purchasePriceMustBePositive",
+    "communityFeesMustBeZeroOrPositive",
+    "cadastralSueloMustBeZeroOrPositive",
+    "cadastralConstruccionMustBeZeroOrPositive",
   ];
 
   it("has exactly one Record entry per key", () => {

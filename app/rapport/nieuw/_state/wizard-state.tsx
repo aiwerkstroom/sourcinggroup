@@ -38,8 +38,34 @@ export interface PandStepData {
   energyLabel: string;
 }
 
+/**
+ * Step 2. The permit answer lives here on purpose: it is asked before the
+ * rentalStrategy choice in step 3, so the gate from UI_SPEC.md §4 can
+ * close before short-term and hybrid are ever offered (interview round 1).
+ *
+ * `hasTouristRentalLicense` is a tri-state string rather than a boolean
+ * because "" means "not answered yet". PropertyInput's own field is a
+ * mandatory boolean with no default (MODEL_SPEC.md §18), which is exactly
+ * why the form must not start it at false: an unanswered question would
+ * silently read as "no licence".
+ */
+export interface StaatEnLastenStepData {
+  /** "" until answered; otherwise a MaintenanceCondition. Drives renovationStrategy via deriveRenovationStrategy(). */
+  maintenanceCondition: string;
+  communityFeesAnnual: string;
+  /** Both cadastral halves are optional, but supplying one without the other is not (MODEL_SPEC.md §16). */
+  cadastralSuelo: string;
+  cadastralConstruccion: string;
+  currentRentStatus: string;
+  /** Only meaningful when currentRentStatus is "rented". Collected per UI_SPEC.md §3; no engine field consumes it yet. */
+  currentRentMonthly: string;
+  /** "" (unanswered) | "yes" | "no". Never defaulted - see the note above. */
+  hasTouristRentalLicense: string;
+}
+
 export interface WizardData {
   pand: PandStepData;
+  staatEnLasten: StaatEnLastenStepData;
 }
 
 /**
@@ -66,10 +92,21 @@ export const EMPTY_PAND: PandStepData = {
   energyLabel: "",
 };
 
+export const EMPTY_STAAT_EN_LASTEN: StaatEnLastenStepData = {
+  maintenanceCondition: "",
+  communityFeesAnnual: "",
+  cadastralSuelo: "",
+  cadastralConstruccion: "",
+  currentRentStatus: "",
+  currentRentMonthly: "",
+  hasTouristRentalLicense: "",
+};
+
 interface WizardContextValue {
   data: WizardData;
   setPand: (patch: Partial<PandStepData>) => void;
-  /** True once step 1 has been submitted successfully - later steps use it to detect a cold entry. */
+  setStaatEnLasten: (patch: Partial<StaatEnLastenStepData>) => void;
+  /** Slugs of steps submitted successfully - later steps use this to detect a cold entry. */
   completedSteps: ReadonlySet<string>;
   markCompleted: (slug: string) => void;
 }
@@ -77,11 +114,21 @@ interface WizardContextValue {
 const WizardContext = createContext<WizardContextValue | null>(null);
 
 export function WizardProvider({ children }: { children: React.ReactNode }) {
-  const [data, setData] = useState<WizardData>({ pand: EMPTY_PAND });
+  const [data, setData] = useState<WizardData>({
+    pand: EMPTY_PAND,
+    staatEnLasten: EMPTY_STAAT_EN_LASTEN,
+  });
   const [completedSteps, setCompletedSteps] = useState<ReadonlySet<string>>(new Set());
 
   const setPand = useCallback((patch: Partial<PandStepData>) => {
     setData((current) => ({ ...current, pand: { ...current.pand, ...patch } }));
+  }, []);
+
+  const setStaatEnLasten = useCallback((patch: Partial<StaatEnLastenStepData>) => {
+    setData((current) => ({
+      ...current,
+      staatEnLasten: { ...current.staatEnLasten, ...patch },
+    }));
   }, []);
 
   const markCompleted = useCallback((slug: string) => {
@@ -94,8 +141,8 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value = useMemo<WizardContextValue>(
-    () => ({ data, setPand, completedSteps, markCompleted }),
-    [data, setPand, completedSteps, markCompleted],
+    () => ({ data, setPand, setStaatEnLasten, completedSteps, markCompleted }),
+    [data, setPand, setStaatEnLasten, completedSteps, markCompleted],
   );
 
   return <WizardContext.Provider value={value}>{children}</WizardContext.Provider>;

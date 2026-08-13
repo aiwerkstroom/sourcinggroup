@@ -23,6 +23,11 @@ export const FIELD_VALIDATION_COPY_NL: Readonly<Record<FieldValidationKey, strin
   usableAreaCannotExceedBuiltArea:
     "Het bruikbaar oppervlak kan niet groter zijn dan het gebouwde oppervlak.",
   purchasePriceMustBePositive: "Vul een vraagprijs groter dan € 0 in.",
+  communityFeesMustBeZeroOrPositive:
+    "Vul de gastos de comunidad in — € 0 mag, maar leeg laten niet. Dit bedrag verschilt te sterk per gebouw om te schatten.",
+  cadastralSueloMustBeZeroOrPositive: "De waarde van de grond kan niet negatief zijn.",
+  cadastralConstruccionMustBeZeroOrPositive:
+    "De waarde van de opstal kan niet negatief zijn.",
 };
 
 /** Translates one validation key, with the same exhaustiveness guard the disclosure copy uses. */
@@ -40,6 +45,12 @@ export function translateFieldValidation(key: FieldValidationKey): string {
       return FIELD_VALIDATION_COPY_NL.usableAreaCannotExceedBuiltArea;
     case "purchasePriceMustBePositive":
       return FIELD_VALIDATION_COPY_NL.purchasePriceMustBePositive;
+    case "communityFeesMustBeZeroOrPositive":
+      return FIELD_VALIDATION_COPY_NL.communityFeesMustBeZeroOrPositive;
+    case "cadastralSueloMustBeZeroOrPositive":
+      return FIELD_VALIDATION_COPY_NL.cadastralSueloMustBeZeroOrPositive;
+    case "cadastralConstruccionMustBeZeroOrPositive":
+      return FIELD_VALIDATION_COPY_NL.cadastralConstruccionMustBeZeroOrPositive;
     default: {
       const exhaustive: never = key;
       throw new Error(`Missing Dutch copy for field validation key: ${String(exhaustive)}`);
