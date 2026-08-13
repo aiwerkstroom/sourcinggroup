@@ -8,9 +8,11 @@
  */
 
 import type { EngineResult } from "@/lib/rules/es/types";
+import { AssumptionsSection } from "./assumptions-section";
 import { CashflowBreakdownSection } from "./cashflow-breakdown-section";
 import { ExitSection } from "./exit-section";
 import { OneLineOutcomeSection } from "./one-line-outcome-section";
+import { PlaceholdersSection } from "./placeholders-section";
 import type { ScenarioRow } from "./scenarios-section";
 import { ScenariosSection } from "./scenarios-section";
 import { TenYearSection } from "./ten-year-section";
@@ -117,9 +119,17 @@ export function PaidReport({ result }: PaidReportProps) {
         <NoExitPlanningNotice sectionNumber={7} title="Toetsing aan de randvoorwaarden" />
       )}
 
-      <p className="border-border text-text-muted rounded-md border border-dashed px-4 py-3 text-xs leading-relaxed">
-        Secties 8 t/m 9 (aannames, wat niet geverifieerd is) volgen hierna.
-      </p>
+      {base !== null ? (
+        <AssumptionsSection assumptionsUsed={base.assumptionsUsed} />
+      ) : (
+        <NoExitPlanningNotice sectionNumber={8} title="Aannames en bronnen" />
+      )}
+
+      {base !== null ? (
+        <PlaceholdersSection placeholdersUsed={base.placeholdersUsed} />
+      ) : (
+        <NoExitPlanningNotice sectionNumber={9} title="Wat niet geverifieerd is" />
+      )}
     </div>
   );
 }

@@ -606,6 +606,17 @@ export interface ScenarioOutcome {
    */
   placeholdersUsed: Parameter<unknown>[];
   /**
+   * Every named parameter (SOURCED, ESTIMATE and PLACEHOLDER alike) this
+   * outcome's calculation chain actually draws on - UI_SPEC.md §6.8's
+   * "Aannames en bronnen", the full-provenance counterpart to
+   * placeholdersUsed above. Built by assumptions.ts's
+   * collectUsedParameters() independently of collectPlaceholders() (see
+   * that module's own docstring for why); always a superset of
+   * placeholdersUsed, since every PLACEHOLDER used is also a parameter
+   * used.
+   */
+  assumptionsUsed: Parameter<unknown>[];
+  /**
    * This scenario's TSG score - the five dimensions and their weighted
    * total (SCORE_SPEC.md §1-§3) - carried per scenario, alongside
    * placeholdersUsed, so the report can show a score for each of

@@ -150,6 +150,9 @@ export function runEngine(input: EngineInput): EngineResult {
           minRequiredReturn: constraints.minRoiTarget,
           rentalStrategy: selections.rentalStrategy,
           renovationStrategy: selections.renovationStrategy,
+          financingStrategy: selections.financingStrategy,
+          residency: selections.residency,
+          euResident: selections.euResident ?? true,
           usableAreaM2Provided: property.usableAreaM2 !== undefined,
           cadastralValueProvided: property.cadastralValue !== undefined,
           // cadastralValue, when given, also replaces the building-share

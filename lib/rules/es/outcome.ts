@@ -29,6 +29,7 @@
  * §5's whole point is that the dimensions stay visible next to the total.
  */
 
+import { collectUsedParameters } from "./assumptions";
 import { loadReferenceDistribution } from "./distribution/load";
 import { propertyValueIndex } from "./indexation";
 import {
@@ -49,11 +50,13 @@ import { computeTsgScore } from "./score";
 import type {
   EquityFitCheck,
   ExitResult,
+  FinancingStrategyId,
   IrrResult,
   Parameter,
   ProjectionYear,
   RentalStrategy,
   RenovationStrategyId,
+  Residency,
   ReturnRequirementCheck,
   ScenarioId,
   ScenarioOutcome,
@@ -154,6 +157,12 @@ export function buildScenarioOutcome(args: {
   rentalStrategy: RentalStrategy;
   /** The renovation strategy actually used - determines which RENOVATION_STRATEGIES PLACEHOLDER group applies. */
   renovationStrategy: RenovationStrategyId;
+  /** The resolved financing tier (ModelSelections.financingStrategy) - determines which FINANCING_STRATEGIES group applies in assumptionsUsed. Omitted entirely from assumptionsUsed when not given, rather than guessed. */
+  financingStrategy?: FinancingStrategyId;
+  /** ModelSelections.residency - whether NON_RESIDENT_INTEREST_SPREAD applies in assumptionsUsed. Treated as resident (spread not applied) when not given. */
+  residency?: Residency;
+  /** ModelSelections.euResident - which rental income tax rate applies in assumptionsUsed. Defaults to true (EU resident), matching engine.ts's own default. */
+  euResident?: boolean;
   /** True when the caller passed an explicit buildingShareOfValue OR a cadastralValue to buildProjectionYears (projection.ts) instead of relying on DEFAULT_BUILDING_SHARE_OF_VALUE. */
   buildingShareOfValueProvided?: boolean;
   /** True when the caller passed an explicit renovationImprovementShare to computeExit (exit.ts) instead of relying on DEFAULT_RENOVATION_IMPROVEMENT_SHARE. */
@@ -234,6 +243,20 @@ export function buildScenarioOutcome(args: {
     usableAreaM2Provided: args.usableAreaM2Provided ?? false,
   });
 
+  const assumptionsUsed = collectUsedParameters({
+    scenario: args.scenario,
+    rentalStrategy: args.rentalStrategy,
+    renovationStrategy: args.renovationStrategy,
+    financingStrategy: args.financingStrategy,
+    residency: args.residency,
+    euResident: args.euResident,
+    buildingShareOfValueProvided: args.buildingShareOfValueProvided ?? false,
+    renovationImprovementShareProvided: args.renovationImprovementShareProvided ?? false,
+    minRequiredReturnProvided: args.minRequiredReturn !== undefined,
+    cadastralValueProvided: args.cadastralValueProvided ?? false,
+    usableAreaM2Provided: args.usableAreaM2Provided ?? false,
+  });
+
   // SCORE_SPEC.md §1-§5. Null on an undefined IRR (§2.3 has nothing to
   // score against) or when the caller did not supply this scenario's
   // cashflow/DSCR - never a fabricated stand-in for either.
@@ -269,6 +292,7 @@ export function buildScenarioOutcome(args: {
     equityFit,
     returnRequirement,
     placeholdersUsed,
+    assumptionsUsed,
     score,
     percentile,
   };
