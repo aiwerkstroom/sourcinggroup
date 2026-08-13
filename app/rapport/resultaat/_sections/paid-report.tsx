@@ -8,6 +8,7 @@
  */
 
 import type { EngineResult } from "@/lib/rules/es/types";
+import { CashflowBreakdownSection } from "./cashflow-breakdown-section";
 import { OneLineOutcomeSection } from "./one-line-outcome-section";
 import type { ScenarioRow } from "./scenarios-section";
 import { ScenariosSection } from "./scenarios-section";
@@ -56,9 +57,15 @@ export function PaidReport({ result }: PaidReportProps) {
 
       <ScenariosSection rows={rows} />
 
+      <CashflowBreakdownSection
+        scenario={baseScenario}
+        fixedCosts={result.fixedOperatingCosts}
+        annualIncomeTax={result.tax.taxDueBase}
+      />
+
       <p className="border-border text-text-muted rounded-md border border-dashed px-4 py-3 text-xs leading-relaxed">
-        Secties 4 t/m 9 (cashflowopbouw, tienjarige reeks, exit, toetsing, aannames, wat niet
-        geverifieerd is) volgen hierna.
+        Secties 5 t/m 9 (tienjarige reeks, exit, toetsing, aannames, wat niet geverifieerd is)
+        volgen hierna.
       </p>
     </div>
   );
