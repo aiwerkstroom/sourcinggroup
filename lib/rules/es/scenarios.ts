@@ -104,6 +104,7 @@ export function runScenarios(args: {
       totalOpexInclDebtService: totalOpex,
       annualCashflow,
       monthlyCashflow,
+      minMonthlyCashflow: args.constraints.minMonthlyCashflow,
       meetsMinMonthlyCashflow: monthlyCashflow >= args.constraints.minMonthlyCashflow,
       dscr,
       dscrVerdict: dscrVerdict(dscr),

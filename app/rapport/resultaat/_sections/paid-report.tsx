@@ -9,10 +9,12 @@
 
 import type { EngineResult } from "@/lib/rules/es/types";
 import { CashflowBreakdownSection } from "./cashflow-breakdown-section";
+import { ExitSection } from "./exit-section";
 import { OneLineOutcomeSection } from "./one-line-outcome-section";
 import type { ScenarioRow } from "./scenarios-section";
 import { ScenariosSection } from "./scenarios-section";
 import { TenYearSection } from "./ten-year-section";
+import { ThresholdsSection } from "./thresholds-section";
 import { TsgScoreSection } from "./tsg-score-section";
 
 export interface PaidReportProps {
@@ -20,6 +22,30 @@ export interface PaidReportProps {
 }
 
 const NO_EXIT_PLANNED = { defined: false, reason: "No exit was planned for this scenario." } as const;
+
+/**
+ * Sections 5-7 all read from EngineResult.scenarioOutcomes, which is null
+ * exactly when EngineInput.exitPlanning was not supplied (MODEL_SPEC_FASE1B
+ * §5 gives those assumptions no default). The wizard always collects them
+ * in step 4 before calling the engine, so this path is a defensive
+ * fallback for a directly-constructed EngineResult, not a state a customer
+ * reaches - but the report must still say something true rather than
+ * render nothing or crash.
+ */
+function NoExitPlanningNotice({ sectionNumber, title }: { sectionNumber: number; title: string }) {
+  const headingId = `sectie-${sectionNumber}-geen-exit`;
+  return (
+    <section aria-labelledby={headingId} className="flex flex-col gap-3">
+      <h2 id={headingId} className="text-text-faint text-xs tracking-widest uppercase">
+        {sectionNumber}. {title}
+      </h2>
+      <p className="text-text-muted max-w-prose text-sm leading-relaxed">
+        Zonder exitaannames (verkoopkosten, plusvalía) kan het model dit onderdeel niet
+        doorrekenen - dezelfde aannames die de IRR nodig heeft.
+      </p>
+    </section>
+  );
+}
 
 export function PaidReport({ result }: PaidReportProps) {
   const base = result.scenarioOutcomes?.find((o) => o.scenario === "base") ?? null;
@@ -67,19 +93,32 @@ export function PaidReport({ result }: PaidReportProps) {
       {result.scenarioOutcomes !== null ? (
         <TenYearSection outcomes={result.scenarioOutcomes} />
       ) : (
-        <section aria-labelledby="sectie-tienjarige-reeks" className="flex flex-col gap-3">
-          <h2 id="sectie-tienjarige-reeks" className="text-text-faint text-xs tracking-widest uppercase">
-            5. De tienjarige reeks
-          </h2>
-          <p className="text-text-muted max-w-prose text-sm leading-relaxed">
-            Zonder exitaannames (verkoopkosten, plusvalía) kan het model geen jaarreeks doorrekenen
-            - dezelfde aannames die de IRR nodig heeft.
-          </p>
-        </section>
+        <NoExitPlanningNotice sectionNumber={5} title="De tienjarige reeks" />
+      )}
+
+      {base !== null ? (
+        <ExitSection exit={base.exit} />
+      ) : (
+        <NoExitPlanningNotice sectionNumber={6} title="Exit" />
+      )}
+
+      {base !== null ? (
+        <ThresholdsSection
+          equityFit={base.equityFit}
+          cashflow={{
+            minMonthlyCashflow: baseScenario.minMonthlyCashflow,
+            monthlyCashflow: baseScenario.monthlyCashflow,
+            meetsMinMonthlyCashflow: baseScenario.meetsMinMonthlyCashflow,
+          }}
+          returnRequirement={base.returnRequirement}
+          irr={base.irr}
+        />
+      ) : (
+        <NoExitPlanningNotice sectionNumber={7} title="Toetsing aan de randvoorwaarden" />
       )}
 
       <p className="border-border text-text-muted rounded-md border border-dashed px-4 py-3 text-xs leading-relaxed">
-        Secties 6 t/m 9 (exit, toetsing, aannames, wat niet geverifieerd is) volgen hierna.
+        Secties 8 t/m 9 (aannames, wat niet geverifieerd is) volgen hierna.
       </p>
     </div>
   );

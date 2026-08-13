@@ -397,6 +397,8 @@ export interface ScenarioResult {
   totalOpexInclDebtService: number;
   annualCashflow: number;
   monthlyCashflow: number;
+  /** InvestorConstraints.minMonthlyCashflow, carried alongside the boolean it produced - UI_SPEC.md §6.7 shows the investor's own threshold next to the figure it is tested against, the same pairing EquityFitCheck and ReturnRequirementCheck already give the other two thresholds. */
+  minMonthlyCashflow: number;
   meetsMinMonthlyCashflow: boolean;
   dscr: number;
   dscrVerdict: "yes" | "breakEven" | "no";
