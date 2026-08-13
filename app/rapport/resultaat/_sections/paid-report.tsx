@@ -9,11 +9,15 @@
 
 import type { EngineResult } from "@/lib/rules/es/types";
 import { OneLineOutcomeSection } from "./one-line-outcome-section";
+import type { ScenarioRow } from "./scenarios-section";
+import { ScenariosSection } from "./scenarios-section";
 import { TsgScoreSection } from "./tsg-score-section";
 
 export interface PaidReportProps {
   result: EngineResult;
 }
+
+const NO_EXIT_PLANNED = { defined: false, reason: "No exit was planned for this scenario." } as const;
 
 export function PaidReport({ result }: PaidReportProps) {
   const base = result.scenarioOutcomes?.find((o) => o.scenario === "base") ?? null;
@@ -22,6 +26,22 @@ export function PaidReport({ result }: PaidReportProps) {
   // outcome.ts itself relies on when it scores a scenario.
   const baseScenario = result.scenarios.find((s) => s.id === "base")!;
 
+  // result.scenarios and result.scenarioOutcomes are both built via
+  // SCENARIO_ORDER.map() in the calculation layer, so zipping them by
+  // array position (not a lookup) already yields conservative/base/
+  // optimistic order without this layer needing its own copy of that
+  // order.
+  const rows: ScenarioRow[] = result.scenarios.map((scenario) => {
+    const outcome = result.scenarioOutcomes?.find((o) => o.scenario === scenario.id) ?? null;
+    return {
+      scenario: scenario.id,
+      monthlyCashflow: scenario.monthlyCashflow,
+      dscr: scenario.dscr,
+      irr: outcome?.irr ?? NO_EXIT_PLANNED,
+      scoreTotal: outcome?.score?.total ?? null,
+    };
+  });
+
   return (
     <div className="flex flex-col gap-14">
       <TsgScoreSection score={base?.score ?? null} percentile={base?.percentile ?? null} />
@@ -29,14 +49,16 @@ export function PaidReport({ result }: PaidReportProps) {
       <OneLineOutcomeSection
         monthlyCashflow={baseScenario.monthlyCashflow}
         dscr={baseScenario.dscr}
-        irr={base?.irr ?? { defined: false, reason: "No exit was planned for this scenario." }}
+        irr={base?.irr ?? NO_EXIT_PLANNED}
         meetsMinRequiredReturn={base?.returnRequirement.meetsMinRequiredReturn ?? null}
         rentInputProvenance={result.rentInputProvenance}
       />
 
+      <ScenariosSection rows={rows} />
+
       <p className="border-border text-text-muted rounded-md border border-dashed px-4 py-3 text-xs leading-relaxed">
-        Secties 3 t/m 9 (scenario&apos;s, cashflowopbouw, tienjarige reeks, exit, toetsing,
-        aannames, wat niet geverifieerd is) volgen hierna.
+        Secties 4 t/m 9 (cashflowopbouw, tienjarige reeks, exit, toetsing, aannames, wat niet
+        geverifieerd is) volgen hierna.
       </p>
     </div>
   );
