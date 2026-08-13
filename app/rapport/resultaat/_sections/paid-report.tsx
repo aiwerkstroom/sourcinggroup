@@ -8,6 +8,7 @@
  */
 
 import type { EngineResult } from "@/lib/rules/es/types";
+import { OneLineOutcomeSection } from "./one-line-outcome-section";
 import { TsgScoreSection } from "./tsg-score-section";
 
 export interface PaidReportProps {
@@ -16,14 +17,26 @@ export interface PaidReportProps {
 
 export function PaidReport({ result }: PaidReportProps) {
   const base = result.scenarioOutcomes?.find((o) => o.scenario === "base") ?? null;
+  // The steady-state monthlyCashflow/dscr live on ScenarioResult
+  // (scenarios.ts), not on ScenarioOutcome - the same split
+  // outcome.ts itself relies on when it scores a scenario.
+  const baseScenario = result.scenarios.find((s) => s.id === "base")!;
 
   return (
     <div className="flex flex-col gap-14">
       <TsgScoreSection score={base?.score ?? null} percentile={base?.percentile ?? null} />
 
+      <OneLineOutcomeSection
+        monthlyCashflow={baseScenario.monthlyCashflow}
+        dscr={baseScenario.dscr}
+        irr={base?.irr ?? { defined: false, reason: "No exit was planned for this scenario." }}
+        meetsMinRequiredReturn={base?.returnRequirement.meetsMinRequiredReturn ?? null}
+        rentInputProvenance={result.rentInputProvenance}
+      />
+
       <p className="border-border text-text-muted rounded-md border border-dashed px-4 py-3 text-xs leading-relaxed">
-        Secties 2 t/m 9 (uitkomst in één regel, scenario&apos;s, cashflowopbouw, tienjarige reeks,
-        exit, toetsing, aannames, wat niet geverifieerd is) volgen hierna.
+        Secties 3 t/m 9 (scenario&apos;s, cashflowopbouw, tienjarige reeks, exit, toetsing,
+        aannames, wat niet geverifieerd is) volgen hierna.
       </p>
     </div>
   );
