@@ -19,7 +19,10 @@
  * signal, and a rent deviation is neither.
  */
 
-import { rentProvenanceDisclosureKey } from "@/lib/rules/es/rent-provenance";
+// Imported from rent-provenance-key.ts, not rent-provenance.ts - see that
+// module's own docstring for why: rent-provenance.ts also imports
+// parameters.ts, which this component must never reach even transitively.
+import { rentProvenanceDisclosureKey } from "@/lib/rules/es/rent-provenance-key";
 import { translateRentProvenanceDisclosure } from "@/lib/copy/es/rent-provenance-disclosures";
 import type {
   IrrResult,

@@ -21,7 +21,14 @@
  * no percentage - there is nothing for an observed rent to deviate from.
  */
 
-import { rentProvenanceDisclosureKey } from "../../rules/es/rent-provenance";
+// Imported from rent-provenance-key.ts, not rent-provenance.ts: that
+// module also imports parameters.ts (NEIGHBORHOOD_RENT_LONG_TERM/
+// SHORT_TERM, RENT_OVERRIDE_SIGNIFICANT_DEVIATION_THRESHOLD) for
+// computeRentInputProvenance(), which this file never calls - importing
+// from there anyway pulled the client bundle for /rapport/resultaat into
+// including all of parameters.ts's reachable module scope, RENOVATION_STRATEGIES
+// included. See rent-provenance-key.ts's own docstring.
+import { rentProvenanceDisclosureKey } from "../../rules/es/rent-provenance-key";
 import type { RentInputProvenance, RentInputProvenanceReport } from "../../rules/es/types";
 
 type Rate = "longTerm" | "shortTerm";

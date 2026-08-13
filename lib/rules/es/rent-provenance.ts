@@ -30,12 +30,13 @@ import {
   NEIGHBORHOOD_RENT_SHORT_TERM,
   RENT_OVERRIDE_SIGNIFICANT_DEVIATION_THRESHOLD,
 } from "./parameters";
-import type {
-  RentalStrategy,
-  RentInputProvenance,
-  RentInputProvenanceReport,
-  RentProvenanceDisclosureKey,
-} from "./types";
+import type { RentalStrategy, RentInputProvenance, RentInputProvenanceReport } from "./types";
+
+// Re-exported rather than redefined - see rent-provenance-key.ts for why
+// this decision lives in its own module (it needs none of the above
+// imports) and why client-reachable report code should import it from
+// there directly instead of from this file.
+export { rentProvenanceDisclosureKey } from "./rent-provenance-key";
 
 function provenanceFor(
   referenceTable: Readonly<Record<string, number>>,
@@ -134,20 +135,4 @@ export function computeRentInputProvenance(args: {
         })
       : null,
   };
-}
-
-/**
- * Which §6.1 disclosure key, if any, one rate's provenance triggers.
- *
- * Null for matchesReference and noReference - §6.1 carries nothing about
- * rent provenance when the model's own reference drove the outcome.
- * "actualCurrentRent" does emit a key, but a reassuring one: it reports a
- * stronger input than the model could supply, not a weaker one.
- */
-export function rentProvenanceDisclosureKey(
-  provenance: RentInputProvenance,
-): RentProvenanceDisclosureKey | null {
-  if (provenance.status === "actualCurrentRent") return "rentFromActualCurrentRent";
-  if (provenance.status !== "customerOverride") return null;
-  return provenance.significantDeviation ? "rentOverrideSignificant" : "rentOverrideMinor";
 }
