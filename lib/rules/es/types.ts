@@ -232,6 +232,24 @@ export interface ModelSelections {
   residency: Residency;
   /** EU/EEA residents pay 19% rental income tax, non-EU 24%. */
   euResident?: boolean;
+  /**
+   * Declares that one of the two rates above was taken from the rent this
+   * property is actually being let at today, rather than from the
+   * neighbourhood reference or a free-hand estimate. Drives
+   * EngineResult.rentInputProvenance's "actualCurrentRent" status.
+   *
+   * Declared, not inferred: an observed rent can land anywhere relative to
+   * the wijk average, including exactly on it, so no comparison could
+   * recover this fact from the number alone.
+   *
+   * The engine takes this on trust, the same way it takes any other value
+   * in ModelSelections. It cannot check the precondition itself -
+   * PropertyInput.currentRentStatus is a free-form string whose values are
+   * the form's convention, not an engine enum - so enforcing "only when
+   * the property is marked as let and a rent was entered" is the caller's
+   * job, and the paid wizard's step 3 is where that happens.
+   */
+  rentPerM2FromActualCurrentRent?: "longTerm" | "shortTerm";
 }
 
 /**
@@ -929,16 +947,32 @@ export type MaintenanceCondition = "good" | "average" | "poor";
 // Rent input provenance (UI_SPEC.md §3, interview round 2/3)
 // ---------------------------------------------------------------------------
 
-/** Where a rate the engine actually used for income stands relative to its neighbourhood reference. */
-export type RentReferenceStatus = "matchesReference" | "customerOverride" | "noReference";
+/**
+ * Where a rate the engine actually used for income came from.
+ *
+ * Three of these are *derived*: matchesReference, customerOverride and
+ * noReference all follow from comparing the supplied rate against the
+ * neighbourhood table, so no signal from the form is needed to tell them
+ * apart. "actualCurrentRent" is different in kind - it cannot be inferred
+ * from the number alone, since an observed rent may coincidentally equal
+ * the wijk average or sit far from it. It has to be declared, which is
+ * what ModelSelections.rentPerM2FromActualCurrentRent does.
+ */
+export type RentReferenceStatus =
+  | "matchesReference"
+  | "customerOverride"
+  | "noReference"
+  | "actualCurrentRent";
 
 /**
  * Provenance of one rate (long-term or short-term rent per m²) actually
  * used by the selected rentalStrategy. Computed by comparing what was
  * supplied (ModelSelections.rentPerM2LongTerm/ShortTerm) against
  * NEIGHBORHOOD_RENT_LONG_TERM/SHORT_TERM[neighborhood] - no separate "did
- * the customer touch this field" signal from the form is needed, because
- * the comparison itself carries the same information.
+ * the customer touch this field" signal from the form is needed for that
+ * comparison, because the comparison itself carries the same information.
+ * The one exception is "actualCurrentRent", which is declared rather than
+ * derived - see RentReferenceStatus.
  */
 export interface RentInputProvenance {
   status: RentReferenceStatus;
@@ -946,9 +980,17 @@ export interface RentInputProvenance {
   referenceRentPerM2: number | null;
   /** The rate actually fed into the calculation. */
   suppliedRentPerM2: number;
-  /** (supplied - reference) / reference. Null under "noReference". */
+  /**
+   * (supplied - reference) / reference. Null under "noReference", and
+   * null under "actualCurrentRent" - a rent this property is actually
+   * being let at is an observed fact about this building, not an estimate
+   * measured against a wijk average, so there is nothing for it to
+   * deviate from. referenceRentPerM2 is still reported there when the
+   * wijk is known, because §6.8 legitimately wants to show what reference
+   * existed; it is context, not a yardstick.
+   */
   deviationFraction: number | null;
-  /** |deviationFraction| >= RENT_OVERRIDE_SIGNIFICANT_DEVIATION_THRESHOLD.value. Always false under "matchesReference"/"noReference". */
+  /** |deviationFraction| >= RENT_OVERRIDE_SIGNIFICANT_DEVIATION_THRESHOLD.value. Only ever true under "customerOverride". */
   significantDeviation: boolean;
 }
 
@@ -966,22 +1008,32 @@ export interface RentInputProvenanceReport {
 }
 
 /**
- * The two disclosure keys a rent override can trigger in the paid report
+ * The disclosure keys a rate's provenance can trigger in the paid report
  * (interview round 2/3 follow-up). Unlike FreeTierDisclosureKey these are
- * not unconditional - RentInputProvenance.status must be
- * "customerOverride" for either to apply, and which of the two depends on
- * significantDeviation. matchesReference/noReference emit neither: §6.1
- * carries nothing about rent provenance unless the customer's own figure
- * is in play.
+ * not unconditional: matchesReference and noReference emit none, because
+ * §6.1 carries nothing about rent provenance when the model's own
+ * reference is what drove the outcome.
  *
  * "rentOverrideSignificant" belongs in §6.1 ("Uitkomst in één regel")
  * itself, not only in the §6.8 assumptions appendix - a materially
  * different input deserves visibility where the headline figures are, not
- * only in the fine print. "rentOverrideMinor" is a lighter mention; both
- * keys carry no Dutch text here (CLAUDE.md §6) - see
- * lib/copy/es/rent-override-disclosures.ts, which also does the number
- * interpolation these keys' text needs (the supplied rate, the deviation
- * percentage, the reference) since that data is not static per key the
+ * only in the fine print. "rentOverrideMinor" is a lighter mention.
+ *
+ * "rentFromActualCurrentRent" is the odd one out and deliberately so: it
+ * is reassuring rather than cautioning. The other two flag that a figure
+ * came from the customer's judgement instead of market data; this one
+ * reports that the figure came from something better than either - what
+ * this specific building is actually being let at today. It carries no
+ * deviation and no threshold, since an observed fact has nothing to
+ * deviate from.
+ *
+ * None of these keys carries Dutch text here (CLAUDE.md §6) - see
+ * lib/copy/es/rent-provenance-disclosures.ts, which also does the number
+ * interpolation this text needs (the supplied rate, the deviation
+ * percentage, the reference), since that data is not static per key the
  * way the free-tier disclosures are.
  */
-export type RentOverrideDisclosureKey = "rentOverrideSignificant" | "rentOverrideMinor";
+export type RentProvenanceDisclosureKey =
+  | "rentOverrideSignificant"
+  | "rentOverrideMinor"
+  | "rentFromActualCurrentRent";

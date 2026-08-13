@@ -1,15 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
   translateRentInputProvenanceReport,
-  translateRentOverrideDisclosure,
-} from "../../../copy/es/rent-override-disclosures";
+  translateRentProvenanceDisclosure,
+} from "../../../copy/es/rent-provenance-disclosures";
 import { runEngine } from "../engine";
 import {
   NEIGHBORHOOD_RENT_LONG_TERM,
   NEIGHBORHOOD_RENT_SHORT_TERM,
   RENT_OVERRIDE_SIGNIFICANT_DEVIATION_THRESHOLD,
 } from "../parameters";
-import { computeRentInputProvenance, rentOverrideDisclosureKey } from "../rent-provenance";
+import { computeRentInputProvenance, rentProvenanceDisclosureKey } from "../rent-provenance";
 import { referenceCase } from "./referencecase";
 
 /**
@@ -51,8 +51,8 @@ describe("computeRentInputProvenance - matchesReference", () => {
       rentPerM2ShortTerm: 29.0,
       rentalStrategy: "longTerm",
     });
-    expect(rentOverrideDisclosureKey(report.longTerm!)).toBeNull();
-    expect(translateRentOverrideDisclosure("longTerm", report.longTerm!)).toBeNull();
+    expect(rentProvenanceDisclosureKey(report.longTerm!)).toBeNull();
+    expect(translateRentProvenanceDisclosure("longTerm", report.longTerm!)).toBeNull();
     expect(translateRentInputProvenanceReport(report)).toEqual([]);
   });
 });
@@ -91,7 +91,7 @@ describe("computeRentInputProvenance - noReference", () => {
       rentPerM2ShortTerm: 40.0,
       rentalStrategy: "longTerm",
     });
-    expect(rentOverrideDisclosureKey(report.longTerm!)).toBeNull();
+    expect(rentProvenanceDisclosureKey(report.longTerm!)).toBeNull();
     expect(translateRentInputProvenanceReport(report)).toEqual([]);
   });
 });
@@ -118,8 +118,8 @@ describe("computeRentInputProvenance - customerOverride, not significant", () =>
       rentPerM2ShortTerm: 29.0,
       rentalStrategy: "longTerm",
     });
-    expect(rentOverrideDisclosureKey(report.longTerm!)).toBe("rentOverrideMinor");
-    const text = translateRentOverrideDisclosure("longTerm", report.longTerm!);
+    expect(rentProvenanceDisclosureKey(report.longTerm!)).toBe("rentOverrideMinor");
+    const text = translateRentProvenanceDisclosure("longTerm", report.longTerm!);
     expect(text).not.toBeNull();
     expect(text).toContain("langetermijnhuur");
     expect(text).toContain("19,55");
@@ -150,8 +150,8 @@ describe("computeRentInputProvenance - customerOverride, significant", () => {
       rentPerM2ShortTerm: 29.0,
       rentalStrategy: "longTerm",
     });
-    expect(rentOverrideDisclosureKey(report.longTerm!)).toBe("rentOverrideSignificant");
-    const text = translateRentOverrideDisclosure("longTerm", report.longTerm!);
+    expect(rentProvenanceDisclosureKey(report.longTerm!)).toBe("rentOverrideSignificant");
+    const text = translateRentProvenanceDisclosure("longTerm", report.longTerm!);
     expect(text).not.toBeNull();
     // the value the customer entered
     expect(text).toContain("12,75");
@@ -171,7 +171,7 @@ describe("computeRentInputProvenance - customerOverride, significant", () => {
       rentPerM2ShortTerm: 29.0,
       rentalStrategy: "longTerm",
     });
-    const text = translateRentOverrideDisclosure("longTerm", report.longTerm!);
+    const text = translateRentProvenanceDisclosure("longTerm", report.longTerm!);
     expect(text).toContain("hoger dan");
   });
 });
@@ -194,7 +194,7 @@ describe("computeRentInputProvenance - the boundary at precisely 20%", () => {
       RENT_OVERRIDE_SIGNIFICANT_DEVIATION_THRESHOLD.value,
     );
     expect(report.longTerm!.significantDeviation).toBe(true);
-    expect(rentOverrideDisclosureKey(report.longTerm!)).toBe("rentOverrideSignificant");
+    expect(rentProvenanceDisclosureKey(report.longTerm!)).toBe("rentOverrideSignificant");
   });
 
   it("just below 20% is not significant", () => {
@@ -207,7 +207,7 @@ describe("computeRentInputProvenance - the boundary at precisely 20%", () => {
       rentalStrategy: "longTerm",
     });
     expect(report.longTerm!.significantDeviation).toBe(false);
-    expect(rentOverrideDisclosureKey(report.longTerm!)).toBe("rentOverrideMinor");
+    expect(rentProvenanceDisclosureKey(report.longTerm!)).toBe("rentOverrideMinor");
   });
 
   it("just above 20% is significant", () => {
@@ -220,7 +220,7 @@ describe("computeRentInputProvenance - the boundary at precisely 20%", () => {
       rentalStrategy: "longTerm",
     });
     expect(report.longTerm!.significantDeviation).toBe(true);
-    expect(rentOverrideDisclosureKey(report.longTerm!)).toBe("rentOverrideSignificant");
+    expect(rentProvenanceDisclosureKey(report.longTerm!)).toBe("rentOverrideSignificant");
   });
 });
 
@@ -321,5 +321,167 @@ describe("EngineResult.rentInputProvenance - wired unconditionally into runEngin
     });
     expect(result.rentInputProvenance.longTerm!.status).toBe("matchesReference");
     expect(result.rentInputProvenance.shortTerm!.status).toBe("matchesReference");
+  });
+});
+
+describe("computeRentInputProvenance - actualCurrentRent", () => {
+  it("reports the declared status, with no deviation to measure", () => {
+    const report = computeRentInputProvenance({
+      neighborhood: "Ruzafa",
+      rentPerM2LongTerm: 14.5,
+      rentPerM2ShortTerm: 29.0,
+      rentalStrategy: "longTerm",
+      fromActualCurrentRent: "longTerm",
+    });
+    expect(report.longTerm).toEqual({
+      status: "actualCurrentRent",
+      // Still carried: §6.8 may show what reference existed. Context, not
+      // a yardstick - hence the null deviation below.
+      referenceRentPerM2: 17.0,
+      suppliedRentPerM2: 14.5,
+      deviationFraction: null,
+      significantDeviation: false,
+    });
+  });
+
+  it("never flags a significant deviation, however far it sits from the reference", () => {
+    // 14.5 vs 17.0 is -14.7%, and 6.0 vs 17.0 is -64.7% - both would be
+    // customerOverride territory, one of them significantly so. An
+    // observed rent is neither.
+    for (const supplied of [14.5, 6.0, 40.0]) {
+      const report = computeRentInputProvenance({
+        neighborhood: "Ruzafa",
+        rentPerM2LongTerm: supplied,
+        rentPerM2ShortTerm: 29.0,
+        rentalStrategy: "longTerm",
+        fromActualCurrentRent: "longTerm",
+      });
+      expect(report.longTerm!.status).toBe("actualCurrentRent");
+      expect(report.longTerm!.deviationFraction).toBeNull();
+      expect(report.longTerm!.significantDeviation).toBe(false);
+    }
+  });
+
+  it("stays actualCurrentRent even when the observed rent equals the reference exactly", () => {
+    // The whole reason this status is declared rather than derived: a
+    // coincidence with the wijk average must not turn it into
+    // "matchesReference", which would credit the model for a figure it
+    // did not supply.
+    const report = computeRentInputProvenance({
+      neighborhood: "Ruzafa",
+      rentPerM2LongTerm: 17.0,
+      rentPerM2ShortTerm: 29.0,
+      rentalStrategy: "longTerm",
+      fromActualCurrentRent: "longTerm",
+    });
+    expect(report.longTerm!.status).toBe("actualCurrentRent");
+  });
+
+  it("carries a null reference when the wijk is unknown, without becoming noReference", () => {
+    const report = computeRentInputProvenance({
+      neighborhood: undefined,
+      rentPerM2LongTerm: 14.5,
+      rentPerM2ShortTerm: 29.0,
+      rentalStrategy: "longTerm",
+      fromActualCurrentRent: "longTerm",
+    });
+    expect(report.longTerm!.status).toBe("actualCurrentRent");
+    expect(report.longTerm!.referenceRentPerM2).toBeNull();
+  });
+
+  it("emits a reassuring §6.1 line naming the rate, with no percentage and no warning", () => {
+    const report = computeRentInputProvenance({
+      neighborhood: "Ruzafa",
+      rentPerM2LongTerm: 14.5,
+      rentPerM2ShortTerm: 29.0,
+      rentalStrategy: "longTerm",
+      fromActualCurrentRent: "longTerm",
+    });
+    expect(rentProvenanceDisclosureKey(report.longTerm!)).toBe("rentFromActualCurrentRent");
+    const text = translateRentProvenanceDisclosure("longTerm", report.longTerm!)!;
+    expect(text).toContain("werkelijke huidige huur van dit pand");
+    expect(text).toContain("14,50");
+    expect(text).toContain("niet op een schatting");
+    // Reassuring, not cautioning: none of the override vocabulary.
+    expect(text).not.toContain("%");
+    expect(text).not.toContain("wijkreferentie");
+    expect(text).not.toContain("U heeft zelf");
+    expect(text).not.toContain("wijkt");
+  });
+
+  it("applies to the short-term rate when that is the one observed", () => {
+    const report = computeRentInputProvenance({
+      neighborhood: "Ruzafa",
+      rentPerM2LongTerm: 17.0,
+      rentPerM2ShortTerm: 24.0,
+      rentalStrategy: "hybrid",
+      fromActualCurrentRent: "shortTerm",
+    });
+    expect(report.shortTerm!.status).toBe("actualCurrentRent");
+    // The other rate is untouched by the declaration and still compares
+    // against its own table.
+    expect(report.longTerm!.status).toBe("matchesReference");
+  });
+
+  it("has no effect when it names a rate the selected strategy does not use", () => {
+    const report = computeRentInputProvenance({
+      neighborhood: "Ruzafa",
+      rentPerM2LongTerm: 17.0,
+      rentPerM2ShortTerm: 24.0,
+      rentalStrategy: "longTerm",
+      fromActualCurrentRent: "shortTerm",
+    });
+    expect(report.shortTerm).toBeNull();
+    expect(report.longTerm!.status).toBe("matchesReference");
+    expect(translateRentInputProvenanceReport(report)).toEqual([]);
+  });
+
+  it("leaves the other three statuses exactly as they were when not declared", () => {
+    const base = {
+      neighborhood: "Ruzafa",
+      rentPerM2ShortTerm: 29.0,
+      rentalStrategy: "longTerm" as const,
+    };
+    expect(
+      computeRentInputProvenance({ ...base, rentPerM2LongTerm: 17.0 }).longTerm!.status,
+    ).toBe("matchesReference");
+    expect(
+      computeRentInputProvenance({ ...base, rentPerM2LongTerm: 14.5 }).longTerm!.status,
+    ).toBe("customerOverride");
+    expect(
+      computeRentInputProvenance({ ...base, neighborhood: undefined, rentPerM2LongTerm: 14.5 })
+        .longTerm!.status,
+    ).toBe("noReference");
+  });
+});
+
+describe("EngineResult.rentInputProvenance - actualCurrentRent end to end", () => {
+  it("runEngine passes ModelSelections.rentPerM2FromActualCurrentRent through", () => {
+    const result = runEngine({
+      ...referenceCase,
+      property: { ...referenceCase.property, neighborhood: "Ruzafa" },
+      selections: {
+        ...referenceCase.selections,
+        rentalStrategy: "longTerm",
+        rentPerM2LongTerm: 14.5,
+        rentPerM2FromActualCurrentRent: "longTerm",
+      },
+    });
+    expect(result.rentInputProvenance.longTerm!.status).toBe("actualCurrentRent");
+    expect(result.rentInputProvenance.longTerm!.suppliedRentPerM2).toBe(14.5);
+    expect(result.rentInputProvenance.longTerm!.deviationFraction).toBeNull();
+  });
+
+  it("without the declaration the same figure reads as a customer override", () => {
+    const result = runEngine({
+      ...referenceCase,
+      property: { ...referenceCase.property, neighborhood: "Ruzafa" },
+      selections: {
+        ...referenceCase.selections,
+        rentalStrategy: "longTerm",
+        rentPerM2LongTerm: 14.5,
+      },
+    });
+    expect(result.rentInputProvenance.longTerm!.status).toBe("customerOverride");
   });
 });

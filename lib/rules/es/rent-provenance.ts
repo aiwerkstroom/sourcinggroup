@@ -1,19 +1,26 @@
 /**
  * Provenance of the rent rate(s) the paid form's belegger step lets the
- * customer override (interview round 2/3 follow-up): the wijk reference
- * pre-fills the field, the customer may type over it.
+ * customer set (interview round 2/3, extended with "actualCurrentRent").
  *
- * No separate "did the customer touch this field" signal has to travel
- * from the form. PropertyInput.neighborhood already exists, and
- * NEIGHBORHOOD_RENT_LONG_TERM/SHORT_TERM are already keyed by
- * neighbourhood name, so this module simply compares what was supplied
- * against what the table says for that neighbourhood - a value equal to
- * the table's is "matchesReference" regardless of whether the customer
- * left it untouched or retyped the same number; a value the table cannot
- * produce is "customerOverride".
+ * Three of the four statuses are derived. The wijk reference pre-fills the
+ * field and the customer may type over it, so comparing what was supplied
+ * against NEIGHBORHOOD_RENT_LONG_TERM/SHORT_TERM for the given
+ * neighbourhood is enough to tell matchesReference, customerOverride and
+ * noReference apart - no "did the customer touch this field" signal has to
+ * travel from the form, since PropertyInput.neighborhood and the tables
+ * are already keyed the same way.
  *
- * Computed once per rate, not per scenario: the input rate itself does
- * not vary by conservative/base/optimistic (only the scenario multiplier
+ * "actualCurrentRent" is the exception, and the asymmetry is worth naming:
+ * it cannot be derived. A rent this building is actually being let at may
+ * land above the wijk average, below it, or exactly on it, so the number
+ * alone carries no trace of where it came from. It is therefore declared
+ * by the caller (ModelSelections.rentPerM2FromActualCurrentRent) and this
+ * module reports it without comparison - no deviation, no threshold, since
+ * an observed fact about this specific property has nothing to deviate
+ * from.
+ *
+ * Computed once per rate, not per scenario: the input rate itself does not
+ * vary by conservative/base/optimistic (only the scenario multiplier
  * does), so runEngine() attaches one RentInputProvenanceReport to
  * EngineResult rather than duplicating it three times.
  */
@@ -27,15 +34,34 @@ import type {
   RentalStrategy,
   RentInputProvenance,
   RentInputProvenanceReport,
-  RentOverrideDisclosureKey,
+  RentProvenanceDisclosureKey,
 } from "./types";
 
-function provenanceFor(referenceTable: Readonly<Record<string, number>>, args: {
-  neighborhood: string | undefined;
-  suppliedRentPerM2: number;
-}): RentInputProvenance {
+function provenanceFor(
+  referenceTable: Readonly<Record<string, number>>,
+  args: {
+    neighborhood: string | undefined;
+    suppliedRentPerM2: number;
+    fromActualCurrentRent: boolean;
+  },
+): RentInputProvenance {
   const referenceRentPerM2 =
     args.neighborhood !== undefined ? (referenceTable[args.neighborhood] ?? null) : null;
+
+  // Checked before the reference comparisons: an observed rent is not an
+  // estimate that happens to differ from the table, so it is never
+  // reported as matching or deviating from it, even when the numbers
+  // coincide. The reference is still carried when known - §6.8 may show
+  // what reference existed - but as context, not as a yardstick.
+  if (args.fromActualCurrentRent) {
+    return {
+      status: "actualCurrentRent",
+      referenceRentPerM2,
+      suppliedRentPerM2: args.suppliedRentPerM2,
+      deviationFraction: null,
+      significantDeviation: false,
+    };
+  }
 
   if (referenceRentPerM2 === null) {
     return {
@@ -75,12 +101,19 @@ function provenanceFor(referenceTable: Readonly<Record<string, number>>, args: {
  * stays null rather than reporting on a figure that never entered the
  * outcome (income.ts computes both IncomeLines unconditionally, but only
  * the selected strategy's figure feeds scenarios.ts onward).
+ *
+ * `fromActualCurrentRent` names at most one rate, and only that rate skips
+ * the reference comparison. Naming a rate the strategy does not use has no
+ * effect at all, for the same reason the unused rate is not reported: it
+ * never reached the outcome.
  */
 export function computeRentInputProvenance(args: {
   neighborhood: string | undefined;
   rentPerM2LongTerm: number;
   rentPerM2ShortTerm: number;
   rentalStrategy: RentalStrategy;
+  /** ModelSelections.rentPerM2FromActualCurrentRent - which rate, if any, is the property's observed current rent. */
+  fromActualCurrentRent?: "longTerm" | "shortTerm";
 }): RentInputProvenanceReport {
   const usesLongTerm = args.rentalStrategy === "longTerm" || args.rentalStrategy === "hybrid";
   const usesShortTerm = args.rentalStrategy === "shortTerm" || args.rentalStrategy === "hybrid";
@@ -90,25 +123,31 @@ export function computeRentInputProvenance(args: {
       ? provenanceFor(NEIGHBORHOOD_RENT_LONG_TERM.value, {
           neighborhood: args.neighborhood,
           suppliedRentPerM2: args.rentPerM2LongTerm,
+          fromActualCurrentRent: args.fromActualCurrentRent === "longTerm",
         })
       : null,
     shortTerm: usesShortTerm
       ? provenanceFor(NEIGHBORHOOD_RENT_SHORT_TERM.value, {
           neighborhood: args.neighborhood,
           suppliedRentPerM2: args.rentPerM2ShortTerm,
+          fromActualCurrentRent: args.fromActualCurrentRent === "shortTerm",
         })
       : null,
   };
 }
 
 /**
- * Which of the two §6.1 disclosure keys, if any, one rate's provenance
- * triggers. Null for matchesReference/noReference - §6.1 carries nothing
- * about rent provenance unless the customer's own figure is in play.
+ * Which §6.1 disclosure key, if any, one rate's provenance triggers.
+ *
+ * Null for matchesReference and noReference - §6.1 carries nothing about
+ * rent provenance when the model's own reference drove the outcome.
+ * "actualCurrentRent" does emit a key, but a reassuring one: it reports a
+ * stronger input than the model could supply, not a weaker one.
  */
-export function rentOverrideDisclosureKey(
+export function rentProvenanceDisclosureKey(
   provenance: RentInputProvenance,
-): RentOverrideDisclosureKey | null {
+): RentProvenanceDisclosureKey | null {
+  if (provenance.status === "actualCurrentRent") return "rentFromActualCurrentRent";
   if (provenance.status !== "customerOverride") return null;
   return provenance.significantDeviation ? "rentOverrideSignificant" : "rentOverrideMinor";
 }

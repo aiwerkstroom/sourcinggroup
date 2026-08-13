@@ -171,6 +171,7 @@ export function runEngine(input: EngineInput): EngineResult {
     rentPerM2LongTerm: selections.rentPerM2LongTerm,
     rentPerM2ShortTerm: selections.rentPerM2ShortTerm,
     rentalStrategy: selections.rentalStrategy,
+    fromActualCurrentRent: selections.rentPerM2FromActualCurrentRent,
   });
 
   return {
