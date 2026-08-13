@@ -16,9 +16,18 @@ import {
   checkCadastralConstruccion,
   checkCadastralSuelo,
   checkCommunityFeesAnnual,
+  checkLtvRange,
+  checkMaxLtv,
+  checkMaxMonthlyDebt,
+  checkMaxRenovationBudget,
+  checkMinLtv,
+  checkMinMonthlyCashflow,
+  checkPreferredLtv,
   checkPurchasePrice,
+  checkRentPerM2LongTerm,
+  checkRentPerM2ShortTerm,
+  checkTotalBudget,
   checkUsableAreaM2,
-  isFiniteNumber,
 } from "./field-validation";
 import type { FieldValidationKey } from "./field-validation";
 import type { EngineInput } from "./types";
@@ -49,6 +58,18 @@ const FIELD_ISSUE_EN: Record<FieldValidationKey, string> = {
   cadastralSueloMustBeZeroOrPositive: "cadastralValue.suelo must be zero or positive",
   cadastralConstruccionMustBeZeroOrPositive:
     "cadastralValue.construccion must be zero or positive",
+  ownMoneyMustBeZeroOrPositive: "ownMoney must be zero or positive",
+  totalBudgetMustBePositive: "totalBudget must be a positive number",
+  maxRenovationBudgetMustBeZeroOrPositive: "maxRenovationBudget must be zero or positive",
+  minLtvMustBeFraction: "minLtv must be between 0 and 1",
+  maxLtvMustBeFraction: "maxLtv must be between 0 and 1",
+  preferredLtvMustBeFraction: "preferredLtv must be between 0 and 1",
+  minLtvCannotExceedMaxLtv: "minLtv cannot be greater than maxLtv",
+  minMonthlyCashflowMustBeANumber: "minMonthlyCashflow must be a number",
+  maxMonthlyDebtMustBeZeroOrPositive: "maxMonthlyDebt must be zero or positive",
+  holdingYearsMustBePositiveInteger: "holdingYears must be a positive whole number",
+  rentPerM2LongTermMustBePositive: "rentPerM2LongTerm must be a positive number",
+  rentPerM2ShortTermMustBePositive: "rentPerM2ShortTerm must be a positive number",
 };
 
 export function validateEngineInput(input: EngineInput): string[] {
@@ -77,45 +98,16 @@ export function validateEngineInput(input: EngineInput): string[] {
       `rentalStrategy "${selections.rentalStrategy}" requires a valid título habilitante; hasTouristRentalLicense is false`,
     );
   }
-  if (!isFiniteNumber(constraints.totalBudget) || constraints.totalBudget <= 0) {
-    issues.push("totalBudget must be a positive number");
-  }
-  if (!isFiniteNumber(constraints.maxRenovationBudget) || constraints.maxRenovationBudget < 0) {
-    issues.push("maxRenovationBudget must be zero or positive");
-  }
-  if (!isFiniteNumber(constraints.minLtv) || constraints.minLtv < 0 || constraints.minLtv > 1) {
-    issues.push("minLtv must be between 0 and 1");
-  }
-  if (!isFiniteNumber(constraints.maxLtv) || constraints.maxLtv < 0 || constraints.maxLtv > 1) {
-    issues.push("maxLtv must be between 0 and 1");
-  }
-  if (
-    isFiniteNumber(constraints.minLtv) &&
-    isFiniteNumber(constraints.maxLtv) &&
-    constraints.minLtv > constraints.maxLtv
-  ) {
-    issues.push("minLtv cannot be greater than maxLtv");
-  }
-  if (
-    constraints.preferredLtv !== undefined &&
-    (!isFiniteNumber(constraints.preferredLtv) ||
-      constraints.preferredLtv < 0 ||
-      constraints.preferredLtv > 1)
-  ) {
-    issues.push("preferredLtv must be between 0 and 1");
-  }
-  if (!isFiniteNumber(constraints.minMonthlyCashflow)) {
-    issues.push("minMonthlyCashflow must be a number");
-  }
-  if (!isFiniteNumber(constraints.maxMonthlyDebt) || constraints.maxMonthlyDebt < 0) {
-    issues.push("maxMonthlyDebt must be zero or positive");
-  }
-  if (!isFiniteNumber(selections.rentPerM2LongTerm) || selections.rentPerM2LongTerm <= 0) {
-    issues.push("rentPerM2LongTerm must be a positive number");
-  }
-  if (!isFiniteNumber(selections.rentPerM2ShortTerm) || selections.rentPerM2ShortTerm <= 0) {
-    issues.push("rentPerM2ShortTerm must be a positive number");
-  }
+  pushField(checkTotalBudget(constraints.totalBudget));
+  pushField(checkMaxRenovationBudget(constraints.maxRenovationBudget));
+  pushField(checkMinLtv(constraints.minLtv));
+  pushField(checkMaxLtv(constraints.maxLtv));
+  pushField(checkLtvRange(constraints.minLtv, constraints.maxLtv));
+  pushField(checkPreferredLtv(constraints.preferredLtv));
+  pushField(checkMinMonthlyCashflow(constraints.minMonthlyCashflow));
+  pushField(checkMaxMonthlyDebt(constraints.maxMonthlyDebt));
+  pushField(checkRentPerM2LongTerm(selections.rentPerM2LongTerm));
+  pushField(checkRentPerM2ShortTerm(selections.rentPerM2ShortTerm));
   return issues;
 }
 

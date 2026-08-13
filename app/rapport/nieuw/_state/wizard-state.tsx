@@ -63,9 +63,36 @@ export interface StaatEnLastenStepData {
   hasTouristRentalLicense: string;
 }
 
+/**
+ * Step 3. LTV and ROI are held as percentages, the way the customer types
+ * them ("70"), and converted to the engine's fractions (0.7) at
+ * validation time - so the field rules stay the engine's own.
+ */
+export interface BeleggerStepData {
+  ownMoney: string;
+  totalBudget: string;
+  maxRenovationBudget: string;
+  preferredLtvPercent: string;
+  minLtvPercent: string;
+  maxLtvPercent: string;
+  maxMonthlyDebt: string;
+  minMonthlyCashflow: string;
+  minRoiTargetPercent: string;
+  holdingYears: string;
+  /** "" until chosen; otherwise a RentalStrategy the permit gate allows. */
+  rentalStrategy: string;
+  rentPerM2LongTerm: string;
+  rentPerM2ShortTerm: string;
+  /** Which rate, if any, the prefill took from the observed current rent - carried into ModelSelections. */
+  rentFromActualCurrentRent: "" | "longTerm" | "shortTerm";
+  /** False until the server action has filled the rate fields once, so it does not overwrite edits. */
+  rentPrefilled: boolean;
+}
+
 export interface WizardData {
   pand: PandStepData;
   staatEnLasten: StaatEnLastenStepData;
+  belegger: BeleggerStepData;
 }
 
 /**
@@ -102,10 +129,29 @@ export const EMPTY_STAAT_EN_LASTEN: StaatEnLastenStepData = {
   hasTouristRentalLicense: "",
 };
 
+export const EMPTY_BELEGGER: BeleggerStepData = {
+  ownMoney: "",
+  totalBudget: "",
+  maxRenovationBudget: "",
+  preferredLtvPercent: "",
+  minLtvPercent: "",
+  maxLtvPercent: "",
+  maxMonthlyDebt: "",
+  minMonthlyCashflow: "",
+  minRoiTargetPercent: "",
+  holdingYears: "",
+  rentalStrategy: "",
+  rentPerM2LongTerm: "",
+  rentPerM2ShortTerm: "",
+  rentFromActualCurrentRent: "",
+  rentPrefilled: false,
+};
+
 interface WizardContextValue {
   data: WizardData;
   setPand: (patch: Partial<PandStepData>) => void;
   setStaatEnLasten: (patch: Partial<StaatEnLastenStepData>) => void;
+  setBelegger: (patch: Partial<BeleggerStepData>) => void;
   /** Slugs of steps submitted successfully - later steps use this to detect a cold entry. */
   completedSteps: ReadonlySet<string>;
   markCompleted: (slug: string) => void;
@@ -117,6 +163,7 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
   const [data, setData] = useState<WizardData>({
     pand: EMPTY_PAND,
     staatEnLasten: EMPTY_STAAT_EN_LASTEN,
+    belegger: EMPTY_BELEGGER,
   });
   const [completedSteps, setCompletedSteps] = useState<ReadonlySet<string>>(new Set());
 
@@ -140,9 +187,13 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const setBelegger = useCallback((patch: Partial<BeleggerStepData>) => {
+    setData((current) => ({ ...current, belegger: { ...current.belegger, ...patch } }));
+  }, []);
+
   const value = useMemo<WizardContextValue>(
-    () => ({ data, setPand, setStaatEnLasten, completedSteps, markCompleted }),
-    [data, setPand, setStaatEnLasten, completedSteps, markCompleted],
+    () => ({ data, setPand, setStaatEnLasten, setBelegger, completedSteps, markCompleted }),
+    [data, setPand, setStaatEnLasten, setBelegger, completedSteps, markCompleted],
   );
 
   return <WizardContext.Provider value={value}>{children}</WizardContext.Provider>;

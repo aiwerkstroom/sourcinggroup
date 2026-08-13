@@ -28,6 +28,20 @@ export const FIELD_VALIDATION_COPY_NL: Readonly<Record<FieldValidationKey, strin
   cadastralSueloMustBeZeroOrPositive: "De waarde van de grond kan niet negatief zijn.",
   cadastralConstruccionMustBeZeroOrPositive:
     "De waarde van de opstal kan niet negatief zijn.",
+  ownMoneyMustBeZeroOrPositive: "Vul uw beschikbaar eigen vermogen in — € 0 mag, negatief niet.",
+  totalBudgetMustBePositive: "Vul een totaalbudget groter dan € 0 in.",
+  maxRenovationBudgetMustBeZeroOrPositive:
+    "Het renovatiebudget kan niet negatief zijn — € 0 mag wel.",
+  minLtvMustBeFraction: "De minimale LTV moet tussen 0% en 100% liggen.",
+  maxLtvMustBeFraction: "De maximale LTV moet tussen 0% en 100% liggen.",
+  preferredLtvMustBeFraction: "De gewenste LTV moet tussen 0% en 100% liggen.",
+  minLtvCannotExceedMaxLtv: "De minimale LTV kan niet hoger zijn dan de maximale LTV.",
+  minMonthlyCashflowMustBeANumber:
+    "Vul een bedrag in. Een negatief bedrag mag: dat betekent dat u bereid bent maandelijks bij te leggen.",
+  maxMonthlyDebtMustBeZeroOrPositive: "De maximale maandlast kan niet negatief zijn.",
+  holdingYearsMustBePositiveInteger: "Vul een heel aantal jaren in, minimaal 1.",
+  rentPerM2LongTermMustBePositive: "Vul een langetermijnhuur groter dan € 0 in.",
+  rentPerM2ShortTermMustBePositive: "Vul een kortetermijnhuur groter dan € 0 in.",
 };
 
 /** Translates one validation key, with the same exhaustiveness guard the disclosure copy uses. */
@@ -51,6 +65,30 @@ export function translateFieldValidation(key: FieldValidationKey): string {
       return FIELD_VALIDATION_COPY_NL.cadastralSueloMustBeZeroOrPositive;
     case "cadastralConstruccionMustBeZeroOrPositive":
       return FIELD_VALIDATION_COPY_NL.cadastralConstruccionMustBeZeroOrPositive;
+    case "ownMoneyMustBeZeroOrPositive":
+      return FIELD_VALIDATION_COPY_NL.ownMoneyMustBeZeroOrPositive;
+    case "totalBudgetMustBePositive":
+      return FIELD_VALIDATION_COPY_NL.totalBudgetMustBePositive;
+    case "maxRenovationBudgetMustBeZeroOrPositive":
+      return FIELD_VALIDATION_COPY_NL.maxRenovationBudgetMustBeZeroOrPositive;
+    case "minLtvMustBeFraction":
+      return FIELD_VALIDATION_COPY_NL.minLtvMustBeFraction;
+    case "maxLtvMustBeFraction":
+      return FIELD_VALIDATION_COPY_NL.maxLtvMustBeFraction;
+    case "preferredLtvMustBeFraction":
+      return FIELD_VALIDATION_COPY_NL.preferredLtvMustBeFraction;
+    case "minLtvCannotExceedMaxLtv":
+      return FIELD_VALIDATION_COPY_NL.minLtvCannotExceedMaxLtv;
+    case "minMonthlyCashflowMustBeANumber":
+      return FIELD_VALIDATION_COPY_NL.minMonthlyCashflowMustBeANumber;
+    case "maxMonthlyDebtMustBeZeroOrPositive":
+      return FIELD_VALIDATION_COPY_NL.maxMonthlyDebtMustBeZeroOrPositive;
+    case "holdingYearsMustBePositiveInteger":
+      return FIELD_VALIDATION_COPY_NL.holdingYearsMustBePositiveInteger;
+    case "rentPerM2LongTermMustBePositive":
+      return FIELD_VALIDATION_COPY_NL.rentPerM2LongTermMustBePositive;
+    case "rentPerM2ShortTermMustBePositive":
+      return FIELD_VALIDATION_COPY_NL.rentPerM2ShortTermMustBePositive;
     default: {
       const exhaustive: never = key;
       throw new Error(`Missing Dutch copy for field validation key: ${String(exhaustive)}`);

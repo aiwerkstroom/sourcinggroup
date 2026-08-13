@@ -5,7 +5,15 @@ import {
   checkCadastralConstruccion,
   checkCadastralSuelo,
   checkCommunityFeesAnnual,
+  checkHoldingYears,
+  checkLtvRange,
+  checkMaxLtv,
+  checkMinLtv,
+  checkMinMonthlyCashflow,
+  checkOwnMoney,
+  checkPreferredLtv,
   checkPurchasePrice,
+  checkTotalBudget,
   checkUsableAreaM2,
 } from "../field-validation";
 import type { FieldValidationKey } from "../field-validation";
@@ -140,6 +148,18 @@ describe("Dutch copy covers every field-validation key", () => {
     "communityFeesMustBeZeroOrPositive",
     "cadastralSueloMustBeZeroOrPositive",
     "cadastralConstruccionMustBeZeroOrPositive",
+    "ownMoneyMustBeZeroOrPositive",
+    "totalBudgetMustBePositive",
+    "maxRenovationBudgetMustBeZeroOrPositive",
+    "minLtvMustBeFraction",
+    "maxLtvMustBeFraction",
+    "preferredLtvMustBeFraction",
+    "minLtvCannotExceedMaxLtv",
+    "minMonthlyCashflowMustBeANumber",
+    "maxMonthlyDebtMustBeZeroOrPositive",
+    "holdingYearsMustBePositiveInteger",
+    "rentPerM2LongTermMustBePositive",
+    "rentPerM2ShortTermMustBePositive",
   ];
 
   it("has exactly one Record entry per key", () => {
@@ -156,5 +176,64 @@ describe("Dutch copy covers every field-validation key", () => {
     expect(() => translateFieldValidation("nonexistent" as unknown as never)).toThrow(
       /Missing Dutch copy for field validation key/,
     );
+  });
+});
+
+describe("investor constraint rules (wizard step 3)", () => {
+  it("own money accepts zero but not negative", () => {
+    expect(checkOwnMoney(0)).toBeNull();
+    expect(checkOwnMoney(115_000)).toBeNull();
+    expect(checkOwnMoney(-1)).toBe("ownMoneyMustBeZeroOrPositive");
+    expect(checkOwnMoney(undefined)).toBe("ownMoneyMustBeZeroOrPositive");
+  });
+
+  it("total budget must be strictly positive", () => {
+    expect(checkTotalBudget(450_000)).toBeNull();
+    expect(checkTotalBudget(0)).toBe("totalBudgetMustBePositive");
+  });
+
+  it("LTV bounds are fractions, inclusive of both ends", () => {
+    expect(checkMinLtv(0)).toBeNull();
+    expect(checkMinLtv(1)).toBeNull();
+    expect(checkMinLtv(0.6)).toBeNull();
+    expect(checkMinLtv(1.01)).toBe("minLtvMustBeFraction");
+    expect(checkMaxLtv(-0.01)).toBe("maxLtvMustBeFraction");
+    // 60 rather than 0.6 is the classic percent/fraction slip; the form
+    // divides by 100 before calling this, so reaching here means it didn't.
+    expect(checkMaxLtv(60)).toBe("maxLtvMustBeFraction");
+  });
+
+  it("preferred LTV is optional but bounded when present", () => {
+    expect(checkPreferredLtv(undefined)).toBeNull();
+    expect(checkPreferredLtv(0.7)).toBeNull();
+    expect(checkPreferredLtv(1.5)).toBe("preferredLtvMustBeFraction");
+  });
+
+  it("the LTV range must not be inverted", () => {
+    expect(checkLtvRange(0.6, 0.75)).toBeNull();
+    expect(checkLtvRange(0.75, 0.75)).toBeNull();
+    expect(checkLtvRange(0.8, 0.75)).toBe("minLtvCannotExceedMaxLtv");
+  });
+
+  it("skips the range comparison while either bound is unusable", () => {
+    // One field, one message - the same principle as the usable/built area pair.
+    expect(checkLtvRange(Number.NaN, 0.75)).toBeNull();
+    expect(checkLtvRange(0.8, undefined)).toBeNull();
+  });
+
+  it("minimum monthly cashflow accepts a negative floor", () => {
+    // "I accept paying in €200 a month" is a real answer, not an error.
+    expect(checkMinMonthlyCashflow(-200)).toBeNull();
+    expect(checkMinMonthlyCashflow(500)).toBeNull();
+    expect(checkMinMonthlyCashflow(undefined)).toBe("minMonthlyCashflowMustBeANumber");
+  });
+
+  it("holding years must be a positive whole number", () => {
+    expect(checkHoldingYears(10)).toBeNull();
+    expect(checkHoldingYears(1)).toBeNull();
+    expect(checkHoldingYears(0)).toBe("holdingYearsMustBePositiveInteger");
+    expect(checkHoldingYears(-5)).toBe("holdingYearsMustBePositiveInteger");
+    // The projection is built year by year, so half a year has nowhere to go.
+    expect(checkHoldingYears(3.5)).toBe("holdingYearsMustBePositiveInteger");
   });
 });
