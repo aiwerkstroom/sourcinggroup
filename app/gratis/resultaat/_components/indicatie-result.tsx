@@ -1,0 +1,143 @@
+/**
+ * The free indication's result (UI_SPEC.md §2/§3, SCORE_SPEC.md §8).
+ *
+ * Plain function component, same reasoning as the paid report's sections:
+ * it takes the calculation layer's own FreeTierBand/IndicativeScore and
+ * renders them, nothing more - so it renders identically from the result
+ * page's Server Component and from a golden-render test via
+ * react-dom/server.
+ *
+ * Visual weight follows this task's own instruction: the indicative
+ * labels come first and large, the cashflow band with its own disclosure
+ * directly under it, then the remaining five disclosures read in full -
+ * none of the six FreeTierDisclosureKey entries sits behind a fold or an
+ * accordion. The underlying 0-10 scores are never rendered, because
+ * IndicativeScore never carries them (SCORE_SPEC.md §8.2's own point -
+ * see that type's docstring).
+ *
+ * No colour on the labels: UI_SPEC.md §1 reserves colour for a pass/fail
+ * threshold, and Laag/Gemiddeld/Hoog is a coarse grade, not a threshold -
+ * the same restraint the paid report's TSG-score dimension bars already
+ * apply.
+ */
+
+import { translateFreeTierDisclosure, translateIndicativeLabel } from "@/lib/copy/es/free-tier-disclosures";
+import type { FreeTierBand, IndicativeScore } from "@/lib/rules/es/types";
+import type { FreeIndicationQuery } from "../../_lib/query-params";
+import { formatEuro } from "../_lib/format";
+import { ShareButton } from "./share-button";
+
+export interface IndicatieResultProps {
+  input: FreeIndicationQuery;
+  band: FreeTierBand;
+  score: IndicativeScore;
+}
+
+const PROPERTY_TYPE_LABEL_NL: Readonly<Record<string, string>> = {
+  appartement: "Appartement",
+  studio: "Studio",
+  penthouse: "Penthouse",
+  woonhuis: "Woonhuis",
+  villa: "Villa",
+  anders: "Anders",
+};
+
+function LabelStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="text-text-faint text-xs tracking-wide uppercase">{label}</span>
+      <span className="text-3xl font-semibold">{value}</span>
+    </div>
+  );
+}
+
+/** What the paid report adds on top of this indication - factual, per this task's instruction, not sales copy. */
+const FULL_REPORT_ADDITIONS: readonly string[] = [
+  "Volledige TSG-score op alle vijf dimensies (cashflow, schuldbestendigheid, rendement, haalbaarheid, datazekerheid) - deze indicatie scoort er twee.",
+  "Conservatief, basis en optimistisch scenario naast elkaar, inclusief DSCR en rendement op eigen vermogen (IRR).",
+  "Opbouw van de cashflow: elke kostenpost, van bruto huur tot netto maandcashflow na belasting.",
+  "Tienjarige projectie, jaar voor jaar.",
+  "Exit-analyse: verkoopwaarde, verkoopcourtage, plusvalía, vermogenswinstbelasting, restschuld en netto opbrengst.",
+  "Toetsing aan uw eigen randvoorwaarden: eigen vermogen, minimale cashflow en rendementsdoelstelling.",
+  "Herkomst per aanname (bron en datum), en een expliciete lijst van wat niet geverifieerd is.",
+];
+
+export function IndicatieResult({ input, band, score }: IndicatieResultProps) {
+  const remainingDisclosures = [...band.disclosures.filter((key) => key !== "band"), ...score.disclosures];
+
+  return (
+    <div className="flex flex-col gap-12">
+      <header className="border-border border-b pb-6">
+        <p className="text-text-faint text-xs tracking-widest uppercase">Gratis indicatie</p>
+        <h1 className="mt-1 text-xl font-semibold">{input.neighborhood}</h1>
+        <p className="text-text-muted mt-2 text-sm">
+          {formatEuro(input.purchasePrice)} · {input.builtAreaM2} m²
+          {input.propertyType !== undefined
+            ? ` · ${PROPERTY_TYPE_LABEL_NL[input.propertyType] ?? input.propertyType}`
+            : ""}
+          {input.units !== undefined ? ` · ${input.units} eenheden` : ""}
+        </p>
+      </header>
+
+      <section aria-labelledby="sectie-indicatieve-score" className="flex flex-col gap-6">
+        <h2 id="sectie-indicatieve-score" className="text-text-faint text-xs tracking-widest uppercase">
+          Indicatieve score
+        </h2>
+        <div className="flex flex-wrap gap-x-12 gap-y-6">
+          <LabelStat label="Cashflow" value={translateIndicativeLabel(score.cashflowLabel)} />
+          <LabelStat label="Datazekerheid" value={translateIndicativeLabel(score.dataConfidenceLabel)} />
+        </div>
+      </section>
+
+      <section aria-labelledby="sectie-bandbreedte" className="flex flex-col gap-4">
+        <h2 id="sectie-bandbreedte" className="text-text-faint text-xs tracking-widest uppercase">
+          Cashflow-bandbreedte
+        </h2>
+        <p className="tabular text-2xl">
+          {formatEuro(band.monthlyCashflowBeforeFinancing.low)} –{" "}
+          {formatEuro(band.monthlyCashflowBeforeFinancing.high)}
+          <span className="text-text-muted ml-2 text-sm">per maand</span>
+        </p>
+        <p className="text-text-muted max-w-prose text-sm leading-relaxed">
+          {translateFreeTierDisclosure("band")}
+        </p>
+      </section>
+
+      <section aria-labelledby="sectie-toelichting" className="flex flex-col gap-4">
+        <h2 id="sectie-toelichting" className="text-text-faint text-xs tracking-widest uppercase">
+          Toelichting
+        </h2>
+        <ul className="flex flex-col gap-3">
+          {remainingDisclosures.map((key) => (
+            <li key={key} className="text-text-muted max-w-prose text-sm leading-relaxed">
+              {translateFreeTierDisclosure(key)}
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section aria-labelledby="sectie-wat-mist" className="flex flex-col gap-4">
+        <h2 id="sectie-wat-mist" className="text-text-faint text-xs tracking-widest uppercase">
+          Wat het volledige rapport toevoegt
+        </h2>
+        <ul className="flex flex-col gap-2">
+          {FULL_REPORT_ADDITIONS.map((line) => (
+            <li key={line} className="flex gap-3">
+              <span aria-hidden="true" className="text-text-faint select-none">
+                –
+              </span>
+              <p className="max-w-prose text-sm leading-relaxed">{line}</p>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <footer className="border-border flex flex-wrap items-center justify-between gap-4 border-t pt-6">
+        <ShareButton />
+        <a href="/rapport/nieuw/pand" className="text-text-muted text-sm underline hover:text-text">
+          Naar het volledige rapport
+        </a>
+      </footer>
+    </div>
+  );
+}
