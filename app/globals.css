@@ -1,36 +1,61 @@
 @import "tailwindcss";
 
 /*
- * Visuele richting: UI_SPEC.md §1 - donker, dicht, functioneel, data
- * eerst. Grotesk/monospace voor cijfers, strakke tabellen, kleur
- * uitsluitend als signaal (drempel gehaald/niet gehaald), geen
- * schijnprecisie, geen superlatieven.
+ * Visuele richting: DESIGN_SPEC.md - licht thema als hoofdthema, warm wit
+ * papier, één donkerblauw accent, signaalkleuren strikt gereserveerd voor
+ * drempels. Referenties: McKinsey (helder en ruim), Palantir Foundry
+ * (dichtheid waar nodig), Upfront (nuchtere toon).
  *
- * Tailwind v4 CSS-first config: tokens hier, geen tailwind.config.ts.
+ * Tailwind v4 CSS-first config: tokens hier, geen tailwind.config.ts. De
+ * tokennamen zijn semantisch (bg/surface/text/border/accent/signal), niet
+ * kleurgebonden, zodat componenten nergens een hex of een Tailwind-
+ * palletnaam noemen - het thema is op één plek te herzien.
+ *
+ * Twee waarden wijken bewust af van de hexcodes die DESIGN_SPEC.md §1 als
+ * voorbeeld noemt, omdat §6 (WCAG AA, 4.5:1 voor álle tekst, secundair en
+ * labels inbegrepen) ze uitsluit. Beide behouden de bedoelde kleurfamilie
+ * en de bedoelde onderlinge hiërarchie; alleen de helderheid schuift:
+ *
+ *   - §1 stelt #9CA3AF voor als subtiele tekst. Dat haalt 2,4:1 op warm wit
+ *     en is dus niet leesbaar genoeg voor voetnoten. De hele grijstrap is
+ *     daarom één stap donkerder gezet (muted #4B5563 = 7,2:1, faint
+ *     #6B7280 = 4,6:1). Drie zichtbaar verschillende niveaus, alle drie AA.
+ *   - §1 zegt de bestaande signaalkleuren te behouden. Die waren gekozen
+ *     tegen een donkere achtergrond (groen #4ADE80 haalt 1,7:1 op wit) en
+ *     kunnen op papier geen tekst dragen. Zelfde tinten, 700-gewicht:
+ *     4,8-6,2:1. Ze blijven uitsluitend voor drempels (§1/§7 UI_SPEC).
  */
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  /* Inter via next/font (app/layout.tsx) - één familie voor de hele interface. */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, sans-serif;
 
-  --color-bg: #0b0d10;
-  --color-surface: #14171b;
-  --color-surface-raised: #1b1f24;
-  --color-border: #2a2f36;
-  --color-border-strong: #3a4048;
+  /* Papier en oppervlakken: warm wit voor de pagina, zuiver wit voor kaarten. */
+  --color-bg: #fafaf9;
+  --color-surface: #ffffff;
+  /* Gevulde staat van een keuze-element (geselecteerde radio), niet een derde kaartniveau. */
+  --color-surface-raised: #f3f4f6;
 
-  --color-text: #e8eaed;
-  --color-text-muted: #9aa1ab;
+  --color-border: #e5e7eb;
+  --color-border-strong: #d1d5db;
+
+  --color-text: #111827;
+  --color-text-muted: #4b5563;
   --color-text-faint: #6b7280;
 
-  /* Signaal, niet decoratie: alleen gebruikt waar een drempel gehaald of
-     niet gehaald is (UI_SPEC.md §1). */
-  --color-signal-positive: #4ade80;
-  --color-signal-negative: #f87171;
-  --color-signal-neutral: #fbbf24;
+  /* Eén accent, donkerblauw: links, primaire knoppen, tabelheader-onderlijnen. */
+  --color-accent: #1e40af;
+  --color-accent-hover: #1e3a8a;
+  --color-accent-subtle: #eff6ff;
+  --color-accent-ring: #3b82f6;
+
+  /* Uitsluitend signaal: drempel gehaald / niet gehaald / tussenniveau. */
+  --color-signal-positive: #15803d;
+  --color-signal-negative: #b91c1c;
+  --color-signal-neutral: #b45309;
 }
 
 html {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 body {
@@ -39,9 +64,20 @@ body {
   font-family: var(--font-sans);
 }
 
-/* Cijfers krijgen tabular-nums standaard, zodat bedragen in tabellen
-   uitlijnen (UI_SPEC.md §1: "strakke tabellen"). */
+/*
+ * Cijfers lijnen uit in kolommen (DESIGN_SPEC.md §2). Op tabellen als
+ * default, zodat een nieuwe tabel het niet hoeft te vragen; de .tabular-
+ * klasse blijft bestaan voor losse cijfers buiten een tabel (bedragen in
+ * een definitielijst, de score, invoervelden).
+ *
+ * Geen aparte monospace-familie meer: §2 kiest Inter voor de hele
+ * interface, en Inter's tabular-nums doet het uitlijnwerk dat eerder van
+ * de mono-familie kwam.
+ */
+table {
+  font-variant-numeric: tabular-nums;
+}
+
 .tabular {
-  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
