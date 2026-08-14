@@ -8,6 +8,7 @@
  */
 
 import type { EngineResult } from "@/lib/rules/es/types";
+import { Card } from "../_components/card";
 import { AssumptionsSection } from "./assumptions-section";
 import { CashflowBreakdownSection } from "./cashflow-breakdown-section";
 import { ExitSection } from "./exit-section";
@@ -73,63 +74,81 @@ export function PaidReport({ result }: PaidReportProps) {
   });
 
   return (
-    <div className="flex flex-col gap-14">
-      <TsgScoreSection score={base?.score ?? null} percentile={base?.percentile ?? null} />
+    <div className="flex flex-col gap-8">
+      <Card size="large">
+        <TsgScoreSection score={base?.score ?? null} percentile={base?.percentile ?? null} />
+      </Card>
 
-      <OneLineOutcomeSection
-        monthlyCashflow={baseScenario.monthlyCashflow}
-        dscr={baseScenario.dscr}
-        irr={base?.irr ?? NO_EXIT_PLANNED}
-        meetsMinRequiredReturn={base?.returnRequirement.meetsMinRequiredReturn ?? null}
-        rentInputProvenance={result.rentInputProvenance}
-      />
-
-      <ScenariosSection rows={rows} />
-
-      <CashflowBreakdownSection
-        scenario={baseScenario}
-        fixedCosts={result.fixedOperatingCosts}
-        annualIncomeTax={result.tax.taxDueBase}
-      />
-
-      {result.scenarioOutcomes !== null ? (
-        <TenYearSection outcomes={result.scenarioOutcomes} />
-      ) : (
-        <NoExitPlanningNotice sectionNumber={5} title="De tienjarige reeks" />
-      )}
-
-      {base !== null ? (
-        <ExitSection exit={base.exit} />
-      ) : (
-        <NoExitPlanningNotice sectionNumber={6} title="Exit" />
-      )}
-
-      {base !== null ? (
-        <ThresholdsSection
-          equityFit={base.equityFit}
-          cashflow={{
-            minMonthlyCashflow: baseScenario.minMonthlyCashflow,
-            monthlyCashflow: baseScenario.monthlyCashflow,
-            meetsMinMonthlyCashflow: baseScenario.meetsMinMonthlyCashflow,
-          }}
-          returnRequirement={base.returnRequirement}
-          irr={base.irr}
+      <Card>
+        <OneLineOutcomeSection
+          monthlyCashflow={baseScenario.monthlyCashflow}
+          dscr={baseScenario.dscr}
+          irr={base?.irr ?? NO_EXIT_PLANNED}
+          meetsMinRequiredReturn={base?.returnRequirement.meetsMinRequiredReturn ?? null}
+          rentInputProvenance={result.rentInputProvenance}
         />
-      ) : (
-        <NoExitPlanningNotice sectionNumber={7} title="Toetsing aan de randvoorwaarden" />
-      )}
+      </Card>
 
-      {base !== null ? (
-        <AssumptionsSection assumptionsUsed={base.assumptionsUsed} />
-      ) : (
-        <NoExitPlanningNotice sectionNumber={8} title="Aannames en bronnen" />
-      )}
+      <Card>
+        <ScenariosSection rows={rows} />
+      </Card>
 
-      {base !== null ? (
-        <PlaceholdersSection placeholdersUsed={base.placeholdersUsed} />
-      ) : (
-        <NoExitPlanningNotice sectionNumber={9} title="Wat niet geverifieerd is" />
-      )}
+      <Card>
+        <CashflowBreakdownSection
+          scenario={baseScenario}
+          fixedCosts={result.fixedOperatingCosts}
+          annualIncomeTax={result.tax.taxDueBase}
+        />
+      </Card>
+
+      <Card>
+        {result.scenarioOutcomes !== null ? (
+          <TenYearSection outcomes={result.scenarioOutcomes} />
+        ) : (
+          <NoExitPlanningNotice sectionNumber={5} title="De tienjarige reeks" />
+        )}
+      </Card>
+
+      <Card>
+        {base !== null ? (
+          <ExitSection exit={base.exit} />
+        ) : (
+          <NoExitPlanningNotice sectionNumber={6} title="Exit" />
+        )}
+      </Card>
+
+      <Card>
+        {base !== null ? (
+          <ThresholdsSection
+            equityFit={base.equityFit}
+            cashflow={{
+              minMonthlyCashflow: baseScenario.minMonthlyCashflow,
+              monthlyCashflow: baseScenario.monthlyCashflow,
+              meetsMinMonthlyCashflow: baseScenario.meetsMinMonthlyCashflow,
+            }}
+            returnRequirement={base.returnRequirement}
+            irr={base.irr}
+          />
+        ) : (
+          <NoExitPlanningNotice sectionNumber={7} title="Toetsing aan de randvoorwaarden" />
+        )}
+      </Card>
+
+      <Card>
+        {base !== null ? (
+          <AssumptionsSection assumptionsUsed={base.assumptionsUsed} />
+        ) : (
+          <NoExitPlanningNotice sectionNumber={8} title="Aannames en bronnen" />
+        )}
+      </Card>
+
+      <Card>
+        {base !== null ? (
+          <PlaceholdersSection placeholdersUsed={base.placeholdersUsed} />
+        ) : (
+          <NoExitPlanningNotice sectionNumber={9} title="Wat niet geverifieerd is" />
+        )}
+      </Card>
     </div>
   );
 }
