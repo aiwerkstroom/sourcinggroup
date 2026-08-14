@@ -14,25 +14,49 @@ Referenties: McKinsey-rapportages (helder, ruim, ingetogen), Palantir Foundry
 **Licht thema als hoofdthema.** Vervangt de huidige donkere globals.css volledig,
 niet uitgebreid.
 
-**Achtergrond en oppervlakken.**
-- Pagina-achtergrond: warm wit (bijvoorbeeld `#FAFAF9` of `#F8F8F7`) — niet zuiver
-  wit, iets zachter voor lange leessessies
-- Kaartachtergrond: zuiver wit (`#FFFFFF`), scheidt de kaart van de pagina
-- Tekst primair: bijna zwart (`#111827` of vergelijkbaar), niet zuiver zwart
-- Tekst secundair: middengrijs (`#6B7280`) voor labels en metadata
-- Tekst subtiel: lichtgrijs (`#9CA3AF`) voor voetnoten en de-emphasis
-- Randlijnen: zeer licht (`#E5E7EB`) voor rüinstrepen tussen tabelrijen
+De hexcodes hieronder zijn de daadwerkelijk toegepaste waarden uit
+`app/globals.css`, met het gemeten contrast tegen de pagina-achtergrond
+(`#FAFAF9`). Ze zijn bindend. De eerdere voorbeeldwaarden in dit document waren
+op het oog gekozen; waar een meting uitwees dat die de contrasteis van §6 niet
+haalde, is de waarde aangepast en hieronder vervangen. Zie de voetnoot bij §6
+over welke eis leidt bij tegenspraak.
 
-**Accentkleur: donkerblauw.**
-- Primair accent: donkerblauw (bijvoorbeeld `#1E3A8A` of `#1D4ED8`) — voor links,
-  primaire knoppen, tabelheader-onderlijnen, hover-onderlijnen
-- Alleen deze ene accentkleur naast de signaalkleuren; geen extra accenten voor
-  categorieën of secties
+**Achtergrond en oppervlakken.**
+- Pagina-achtergrond: warm wit `#FAFAF9` — niet zuiver wit, iets zachter voor
+  lange leessessies
+- Kaartachtergrond: zuiver wit `#FFFFFF`, scheidt de kaart van de pagina
+- Gevulde staat van een keuze-element (geselecteerde radio): `#F3F4F6` — geen
+  derde kaartniveau, alleen een subtiele vulling
+- Tekst primair: bijna zwart `#111827` (17,0:1), niet zuiver zwart
+- Tekst secundair: `#4B5563` (7,2:1) voor labels en metadata
+- Tekst subtiel: `#6B7280` (4,6:1) voor voetnoten en de-emphasis
+- Randlijnen: zeer licht `#E5E7EB` voor rüinstrepen tussen tabelrijen; iets
+  sterker `#D1D5DB` waar een rand zelf de begrenzing is
+
+De grijstrap is als geheel één stap donkerder dan aanvankelijk geschetst. De
+oorspronkelijke subtiele tint `#9CA3AF` haalt 2,4:1 en is daarmee onleesbaar
+voor voetnoten; alleen die ene waarde ophogen zou secundair en subtiel laten
+samenvallen, dus schuift de hele trap mee. Drie zichtbaar verschillende niveaus,
+alle drie boven 4,5:1.
+
+**Accentkleur: donkerblauw.** Eén accent, geen extra accenten voor categorieën
+of secties.
+- Primair accent: `#1E40AF` (8,4:1) — links, primaire knoppen,
+  tabelheader-onderlijnen, de marker op de score-liniaal
+- Hover op het accent: `#1E3A8A` (9,9:1)
+- Zachte accentvulling: `#EFF6FF` — uitsluitend als achtergrond, draagt zelf
+  geen tekst
+- Focusring: `#3B82F6` — grafisch element, valt onder de 3:1-eis, niet 4,5:1
 
 **Signaalkleuren blijven strikt gereserveerd voor drempels** (§7 van UI_SPEC):
-- Groen: drempel gehaald (bestaande waarde uit globals.css behouden)
-- Rood: drempel niet gehaald
-- Oranje: waarschuwing / tussenniveau
+- Groen `#15803D` (4,8:1): drempel gehaald
+- Rood `#B91C1C` (6,2:1): drempel niet gehaald
+- Oranje `#B45309` (4,8:1): waarschuwing / tussenniveau
+
+Dit zijn niet de waarden uit de donkere globals.css. Die waren gekozen tegen een
+donkere achtergrond en halen op warm wit 1,6 tot 2,7:1 — groen `#4ADE80` komt
+niet verder dan 1,7:1. Zelfde tinten, 700-gewicht, waarmee ze wel tekst kunnen
+dragen.
 
 Deze mogen nergens anders gebruikt worden — niet voor accenten, niet voor
 categorielabels, niet voor de score-liniaal.
@@ -166,7 +190,9 @@ inline-flex items-center gap-2
 
 Aanpakken vanaf begin, geen volledige audit:
 - Contrast: alle tekst moet minimaal 4.5:1 contrast halen tegen zijn achtergrond
-  (secundaire tekst en labels ook)
+  (secundaire tekst en labels ook). Puur grafische elementen — randlijnen,
+  focusringen, de liniaal en tick-marks van de score, lijnen in een grafiek —
+  vallen onder de lagere 3:1-eis, omdat ze geen tekst dragen.
 - Focus-indicatoren: zichtbaar op alle interactieve elementen (zie §5)
 - Toetsenbordnavigatie: elk formulier bruikbaar zonder muis; tab-volgorde logisch
 - Alt-text op inhoudelijke afbeeldingen (nog geen in scope, maar principe geldt)
@@ -175,6 +201,13 @@ Aanpakken vanaf begin, geen volledige audit:
 
 Wat expliciet niet in scope is voor nu: screenreader-audit, ARIA-live-regions voor
 dynamische updates, hoge-contrast-modus. Later te evalueren.
+
+**Bij tegenspraak leidt deze paragraaf.** Waar een kleurvoorstel elders in dit
+document de 4,5:1-eis niet haalt, wint de eis en schuift de kleur op — met behoud
+van de bedoelde kleurfamilie en de bedoelde onderlinge hiërarchie. De hexcodes in
+§1 zijn op die manier vastgesteld en gemeten; ze zijn daarmee de bindende
+waarden, niet de illustratieve. Een nieuwe kleur wordt gemeten vóór hij wordt
+vastgelegd, niet op het oog gekozen.
 
 ## 7. Responsive gedrag
 

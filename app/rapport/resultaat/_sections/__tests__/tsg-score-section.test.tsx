@@ -82,8 +82,18 @@ describe("TsgScoreSection - golden render against the reference case", () => {
   });
 });
 
-describe("TsgScoreSection - bar width reflects the score, clamped to the 0-10 track", () => {
-  it("draws a 0-score bar at 0% and a 10-score bar at full width", () => {
+describe("TsgScoreSection - marker position reflects the score across the 0-10 track", () => {
+  /*
+   * This assertion used to read the inline `width:0%` / `width:100%` of the
+   * old proportional bar. DESIGN_SPEC.md §4 replaced that bar with a ruler
+   * (ScoreRuler), so the mechanism moved from a div's CSS width to a marker's
+   * x in the SVG's 0-100 user space. The intent is unchanged and still worth
+   * asserting here at section level - a score of 0 sits hard left, a score of
+   * 10 hard right, a mid score in between - so the test is rewritten rather
+   * than dropped. The ruler's own geometry is covered in depth by
+   * score-ruler.test.tsx.
+   */
+  it("puts the 0-score marker at the left edge and the 10-score marker at the right", () => {
     const html = renderToStaticMarkup(
       <TsgScoreSection
         score={{
@@ -99,7 +109,14 @@ describe("TsgScoreSection - bar width reflects the score, clamped to the 0-10 tr
         percentile={50}
       />,
     );
-    expect(html).toContain("width:0%");
-    expect(html).toContain("width:100%");
+
+    const markers = [...html.matchAll(/data-marker="score" data-score="([-\d.]+)" x1="([-\d.]+)"/g)].map(
+      (m) => ({ score: Number.parseFloat(m[1]!), x: Number.parseFloat(m[2]!) }),
+    );
+
+    expect(markers).toHaveLength(5);
+    expect(markers.find((m) => m.score === 0)!.x).toBe(0);
+    expect(markers.find((m) => m.score === 10)!.x).toBe(100);
+    expect(markers.filter((m) => m.score === 5).every((m) => m.x === 50)).toBe(true);
   });
 });
