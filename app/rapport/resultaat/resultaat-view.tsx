@@ -17,12 +17,18 @@
  * Not `result`: the route rebuilds the EngineResult itself server-side,
  * the same way runReport() already does at the exit step, so
  * TSG_SCORE_DIMENSION_WEIGHTS stays off every path the browser is on.
+ *
+ * The logout button (fase 4 stap 4's addendum) sits next to it, not
+ * because the two are related, but because the header is the one place
+ * on this page that is not itself part of the nine-section report - the
+ * natural spot for page-level actions, not content-level ones.
  */
 
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useWizard } from "../nieuw/_state/wizard-state";
 import { DownloadPdfButton } from "./_components/download-pdf-button";
+import { LogoutButton } from "./_components/logout-button";
 import { PaidReport } from "./_sections/paid-report";
 
 export function ResultatView() {
@@ -41,7 +47,10 @@ export function ResultatView() {
           <p className="text-text-faint text-xs tracking-widest uppercase">Rendementsrapport</p>
           <h1 className="mt-1 text-xl font-semibold">{data.pand.address}</h1>
         </div>
-        <DownloadPdfButton data={data} />
+        <div className="flex items-center gap-3">
+          <DownloadPdfButton data={data} />
+          <LogoutButton />
+        </div>
       </header>
 
       <div className="mt-8">
