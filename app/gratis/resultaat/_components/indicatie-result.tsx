@@ -19,10 +19,19 @@
  * threshold, and Laag/Gemiddeld/Hoog is a coarse grade, not a threshold -
  * the same restraint the paid report's TSG-score dimension bars already
  * apply.
+ *
+ * Card styling (DESIGN_SPEC.md §3): each of the four content sections is
+ * its own card, no dividers between them - the same treatment
+ * paid-report.tsx gives its nine sections. The indicative-score card is
+ * `size="large"`, the one card enlarged to match how this flow's own task
+ * instructions named it: "visueel zwaartepunt". Header and footer (the
+ * context line and the share/CTA row) stay outside any card, exactly as
+ * they do in the paid report.
  */
 
 import { translateFreeTierDisclosure, translateIndicativeLabel } from "@/lib/copy/es/free-tier-disclosures";
 import type { FreeTierBand, IndicativeScore } from "@/lib/rules/es/types";
+import { Card } from "../../_components/card";
 import type { FreeIndicationQuery } from "../../_lib/query-params";
 import { formatEuro } from "../_lib/format";
 import { ShareButton } from "./share-button";
@@ -66,7 +75,7 @@ export function IndicatieResult({ input, band, score }: IndicatieResultProps) {
   const remainingDisclosures = [...band.disclosures.filter((key) => key !== "band"), ...score.disclosures];
 
   return (
-    <div className="flex flex-col gap-12">
+    <div className="flex flex-col gap-8">
       <header className="border-border border-b pb-6">
         <p className="text-text-faint text-xs tracking-widest uppercase">Gratis indicatie</p>
         <h1 className="mt-1 text-xl font-semibold">{input.neighborhood}</h1>
@@ -79,58 +88,66 @@ export function IndicatieResult({ input, band, score }: IndicatieResultProps) {
         </p>
       </header>
 
-      <section aria-labelledby="sectie-indicatieve-score" className="flex flex-col gap-6">
-        <h2 id="sectie-indicatieve-score" className="text-text-faint text-xs tracking-widest uppercase">
-          Indicatieve score
-        </h2>
-        <div className="flex flex-wrap gap-x-12 gap-y-6">
-          <LabelStat label="Cashflow" value={translateIndicativeLabel(score.cashflowLabel)} />
-          <LabelStat label="Datazekerheid" value={translateIndicativeLabel(score.dataConfidenceLabel)} />
-        </div>
-      </section>
+      <Card size="large">
+        <section aria-labelledby="sectie-indicatieve-score" className="flex flex-col gap-6">
+          <h2 id="sectie-indicatieve-score" className="text-text-faint text-xs tracking-widest uppercase">
+            Indicatieve score
+          </h2>
+          <div className="flex flex-wrap gap-x-12 gap-y-6">
+            <LabelStat label="Cashflow" value={translateIndicativeLabel(score.cashflowLabel)} />
+            <LabelStat label="Datazekerheid" value={translateIndicativeLabel(score.dataConfidenceLabel)} />
+          </div>
+        </section>
+      </Card>
 
-      <section aria-labelledby="sectie-bandbreedte" className="flex flex-col gap-4">
-        <h2 id="sectie-bandbreedte" className="text-text-faint text-xs tracking-widest uppercase">
-          Cashflow-bandbreedte
-        </h2>
-        <p className="tabular text-2xl">
-          {formatEuro(band.monthlyCashflowBeforeFinancing.low)} –{" "}
-          {formatEuro(band.monthlyCashflowBeforeFinancing.high)}
-          <span className="text-text-muted ml-2 text-sm">per maand</span>
-        </p>
-        <p className="text-text-muted max-w-prose text-sm leading-relaxed">
-          {translateFreeTierDisclosure("band")}
-        </p>
-      </section>
+      <Card>
+        <section aria-labelledby="sectie-bandbreedte" className="flex flex-col gap-4">
+          <h2 id="sectie-bandbreedte" className="text-text-faint text-xs tracking-widest uppercase">
+            Cashflow-bandbreedte
+          </h2>
+          <p className="tabular text-2xl">
+            {formatEuro(band.monthlyCashflowBeforeFinancing.low)} –{" "}
+            {formatEuro(band.monthlyCashflowBeforeFinancing.high)}
+            <span className="text-text-muted ml-2 text-sm">per maand</span>
+          </p>
+          <p className="text-text-muted max-w-prose text-sm leading-relaxed">
+            {translateFreeTierDisclosure("band")}
+          </p>
+        </section>
+      </Card>
 
-      <section aria-labelledby="sectie-toelichting" className="flex flex-col gap-4">
-        <h2 id="sectie-toelichting" className="text-text-faint text-xs tracking-widest uppercase">
-          Toelichting
-        </h2>
-        <ul className="flex flex-col gap-3">
-          {remainingDisclosures.map((key) => (
-            <li key={key} className="text-text-muted max-w-prose text-sm leading-relaxed">
-              {translateFreeTierDisclosure(key)}
-            </li>
-          ))}
-        </ul>
-      </section>
+      <Card>
+        <section aria-labelledby="sectie-toelichting" className="flex flex-col gap-4">
+          <h2 id="sectie-toelichting" className="text-text-faint text-xs tracking-widest uppercase">
+            Toelichting
+          </h2>
+          <ul className="flex flex-col gap-3">
+            {remainingDisclosures.map((key) => (
+              <li key={key} className="text-text-muted max-w-prose text-sm leading-relaxed">
+                {translateFreeTierDisclosure(key)}
+              </li>
+            ))}
+          </ul>
+        </section>
+      </Card>
 
-      <section aria-labelledby="sectie-wat-mist" className="flex flex-col gap-4">
-        <h2 id="sectie-wat-mist" className="text-text-faint text-xs tracking-widest uppercase">
-          Wat het volledige rapport toevoegt
-        </h2>
-        <ul className="flex flex-col gap-2">
-          {FULL_REPORT_ADDITIONS.map((line) => (
-            <li key={line} className="flex gap-3">
-              <span aria-hidden="true" className="text-text-faint select-none">
-                –
-              </span>
-              <p className="max-w-prose text-sm leading-relaxed">{line}</p>
-            </li>
-          ))}
-        </ul>
-      </section>
+      <Card>
+        <section aria-labelledby="sectie-wat-mist" className="flex flex-col gap-4">
+          <h2 id="sectie-wat-mist" className="text-text-faint text-xs tracking-widest uppercase">
+            Wat het volledige rapport toevoegt
+          </h2>
+          <ul className="flex flex-col gap-2">
+            {FULL_REPORT_ADDITIONS.map((line) => (
+              <li key={line} className="flex gap-3">
+                <span aria-hidden="true" className="text-text-faint select-none">
+                  –
+                </span>
+                <p className="max-w-prose text-sm leading-relaxed">{line}</p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      </Card>
 
       <footer className="border-border flex flex-wrap items-center justify-between gap-4 border-t pt-6">
         <ShareButton />

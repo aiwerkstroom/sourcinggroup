@@ -70,7 +70,7 @@ export default async function GratisIndicatieResultaatPage({
   const score = computeIndicativeScore(band);
 
   return (
-    <div className="mx-auto min-h-screen max-w-2xl px-6 py-10">
+    <div className="mx-auto min-h-screen max-w-5xl px-4 py-10 md:px-8">
       <IndicatieResult input={parsed.value} band={band} score={score} />
     </div>
   );

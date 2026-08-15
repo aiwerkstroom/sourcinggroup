@@ -18,6 +18,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { translateFieldValidation } from "@/lib/copy/es/validation";
 import { checkBuiltAreaM2, checkPurchasePrice } from "@/lib/rules/es/field-validation";
+import { Card } from "./_components/card";
 import { FieldGroup, NumberField, SelectField } from "./_components/fields";
 import { buildFreeIndicationQuery } from "./_lib/query-params";
 import { parseNumberInput } from "./_lib/parse-number";
@@ -118,44 +119,48 @@ export function IndicatieForm({ neighborhoods }: { neighborhoods: string[] }) {
   });
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-10">
-      <FieldGroup title="Het pand">
-        <SelectField
-          label="Postcode of wijk"
-          options={neighborhoodOptions}
-          placeholder="Kies een wijk"
-          {...field("neighborhood")}
-        />
-        <NumberField label="Vraagprijs" unit="€" placeholder="350.000" {...field("purchasePrice")} />
-        <NumberField
-          label="Woonoppervlak (gebouwd)"
-          unit="m²"
-          placeholder="90"
-          {...field("builtAreaM2")}
-        />
-        <SelectField
-          label="Pandtype"
-          options={PROPERTY_TYPES}
-          placeholder="Kies een type"
-          optional
-          {...field("propertyType")}
-        />
-        <NumberField label="Aantal eenheden" placeholder="1" optional {...field("units")} />
-        <p className="text-text-faint -mt-2 max-w-prose text-xs">
-          Pandtype en aantal eenheden worden vastgelegd, maar tellen nog niet mee in deze
-          berekening.
-        </p>
-      </FieldGroup>
+    <div className="max-w-xl">
+      <Card>
+        <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-10">
+          <FieldGroup title="Het pand">
+            <SelectField
+              label="Postcode of wijk"
+              options={neighborhoodOptions}
+              placeholder="Kies een wijk"
+              {...field("neighborhood")}
+            />
+            <NumberField label="Vraagprijs" unit="€" placeholder="350.000" {...field("purchasePrice")} />
+            <NumberField
+              label="Woonoppervlak (gebouwd)"
+              unit="m²"
+              placeholder="90"
+              {...field("builtAreaM2")}
+            />
+            <SelectField
+              label="Pandtype"
+              options={PROPERTY_TYPES}
+              placeholder="Kies een type"
+              optional
+              {...field("propertyType")}
+            />
+            <NumberField label="Aantal eenheden" placeholder="1" optional {...field("units")} />
+            <p className="text-text-faint -mt-2 max-w-prose text-xs">
+              Pandtype en aantal eenheden worden vastgelegd, maar tellen nog niet mee in deze
+              berekening.
+            </p>
+          </FieldGroup>
 
-      <div className="border-border flex items-center justify-between border-t pt-6">
-        <p className="text-text-faint text-xs">Geen account nodig</p>
-        <button
-          type="submit"
-          className="bg-text text-bg rounded-md px-4 py-2 text-sm font-medium hover:opacity-90"
-        >
-          Bereken indicatie
-        </button>
-      </div>
-    </form>
+          <div className="border-border flex items-center justify-between border-t pt-6">
+            <p className="text-text-faint text-xs">Geen account nodig</p>
+            <button
+              type="submit"
+              className="bg-text text-bg rounded-md px-4 py-2 text-sm font-medium hover:opacity-90"
+            >
+              Bereken indicatie
+            </button>
+          </div>
+        </form>
+      </Card>
+    </div>
   );
 }

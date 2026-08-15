@@ -14,7 +14,7 @@ import { IndicatieForm } from "./indicatie-form";
 export default function GratisIndicatiePage() {
   const neighborhoods = Object.keys(NEIGHBORHOOD_RENT_LONG_TERM.value);
   return (
-    <div className="mx-auto min-h-screen max-w-2xl px-6 py-10">
+    <div className="mx-auto min-h-screen max-w-5xl px-4 py-10 md:px-8">
       <header className="border-border border-b pb-6">
         <p className="text-text-faint text-xs tracking-widest uppercase">Gratis indicatie</p>
         <h1 className="mt-1 text-xl font-semibold">Een eerste inschatting</h1>
@@ -24,7 +24,7 @@ export default function GratisIndicatiePage() {
         </p>
       </header>
 
-      <div className="mt-10">
+      <div className="mt-8">
         <IndicatieForm neighborhoods={neighborhoods} />
       </div>
     </div>
