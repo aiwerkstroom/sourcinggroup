@@ -25,6 +25,15 @@
  * (UI_SPEC.md §1 reserves colour for pass/fail signals elsewhere), but a
  * deliberate choice for this one chart, where the three lines' relative
  * standing is exactly what "worse / middle / better" already means.
+ *
+ * Table style (DESIGN_SPEC.md §4): the compound two-row header (scenario
+ * groups over their five metrics each) gets one accent-coloured underline
+ * at its own bottom edge - on the second header row, not the first, since
+ * that is where the header block actually ends and the body begins. The
+ * lighter border between the two header rows stays the neutral tone: it
+ * separates two header tiers, not header from data, so it does not carry
+ * the same accent weight. Body rows keep a plain row divider, no vertical
+ * rules anywhere.
  */
 
 import { SCENARIO_ID_COPY_NL } from "@/lib/copy/es/scenarios";
@@ -55,8 +64,8 @@ export function TenYearTable({ outcomes }: TenYearSectionProps) {
     <div className="overflow-x-auto">
       <table className="w-full min-w-4xl border-collapse text-sm">
         <thead>
-          <tr className="border-border text-text-muted border-b text-left">
-            <th scope="col" rowSpan={2} className="py-2 pr-4 align-bottom font-medium">
+          <tr className="text-text text-left">
+            <th scope="col" rowSpan={2} className="px-4 py-3 align-bottom font-medium">
               Jaar
             </th>
             {outcomes.map((outcome) => (
@@ -64,13 +73,13 @@ export function TenYearTable({ outcomes }: TenYearSectionProps) {
                 key={outcome.scenario}
                 scope="colgroup"
                 colSpan={5}
-                className="border-border border-b py-2 pr-4 text-center font-medium"
+                className="border-border border-b px-4 py-3 text-center font-medium"
               >
                 {SCENARIO_ID_COPY_NL[outcome.scenario]}
               </th>
             ))}
           </tr>
-          <tr className="border-border text-text-faint border-b text-left text-xs">
+          <tr className="border-accent text-text-muted border-b-2 text-left text-xs">
             {outcomes.map((outcome) =>
               [
                 "Bruto huur",
@@ -79,7 +88,7 @@ export function TenYearTable({ outcomes }: TenYearSectionProps) {
                 "Hypotheekschuld",
                 "Eigen vermogen opgebouwd",
               ].map((label) => (
-                <th key={`${outcome.scenario}-${label}`} scope="col" className="py-1.5 pr-4 text-right font-medium">
+                <th key={`${outcome.scenario}-${label}`} scope="col" className="px-4 py-3 text-right font-medium">
                   {label}
                 </th>
               )),
@@ -91,8 +100,8 @@ export function TenYearTable({ outcomes }: TenYearSectionProps) {
             const first = outcomes[0]!.years[i]!;
             const isYearFive = first.yearNumber === 5;
             return (
-              <tr key={first.yearNumber} className="border-border/50 border-b last:border-b-0">
-                <td className="py-2 pr-4">
+              <tr key={first.yearNumber} className="border-border border-b last:border-b-0">
+                <td className="px-4 py-3">
                   <span className={isYearFive ? "underline decoration-1 underline-offset-2" : undefined}>
                     {first.yearNumber}
                   </span>
@@ -104,19 +113,19 @@ export function TenYearTable({ outcomes }: TenYearSectionProps) {
                   const y = outcome.years[i]!;
                   const keyBase = `${first.yearNumber}-${outcome.scenario}`;
                   return [
-                    <td key={`${keyBase}-gross`} className="tabular py-2 pr-4 text-right">
+                    <td key={`${keyBase}-gross`} className="tabular px-4 py-3 text-right">
                       {euroInt(y.grossIncome)}
                     </td>,
-                    <td key={`${keyBase}-noi`} className="tabular py-2 pr-4 text-right">
+                    <td key={`${keyBase}-noi`} className="tabular px-4 py-3 text-right">
                       {euroInt(y.noi)}
                     </td>,
-                    <td key={`${keyBase}-cfat`} className="tabular py-2 pr-4 text-right">
+                    <td key={`${keyBase}-cfat`} className="tabular px-4 py-3 text-right">
                       {euroInt(y.cashflowAfterTax)}
                     </td>,
-                    <td key={`${keyBase}-mortgage`} className="tabular py-2 pr-4 text-right">
+                    <td key={`${keyBase}-mortgage`} className="tabular px-4 py-3 text-right">
                       {euroInt(y.mortgageBalance)}
                     </td>,
-                    <td key={`${keyBase}-equity`} className="tabular py-2 pr-4 text-right">
+                    <td key={`${keyBase}-equity`} className="tabular px-4 py-3 text-right">
                       {euroInt(y.equityBuilt)}
                     </td>,
                   ];

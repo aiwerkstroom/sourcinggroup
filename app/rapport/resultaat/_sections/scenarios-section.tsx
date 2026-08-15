@@ -13,6 +13,14 @@
  * the two named): the table keeps its shape and scrolls horizontally
  * within its own container on a narrow screen, rather than reflowing into
  * a different layout that a PDF export would need a second version of.
+ *
+ * Table style (DESIGN_SPEC.md §4): row dividers, no vertical borders; the
+ * header carries darker text and the accent-coloured underline,
+ * distinguishing it from an ordinary row without a second border colour;
+ * number cells stay tabular-nums (globals.css sets that on every `table`
+ * by default - the explicit `.tabular` class on the numeric cells below is
+ * redundant with that default and kept only so a cell still reads
+ * correctly if it is ever copied outside a table context).
  */
 
 import { SCENARIO_ID_COPY_NL } from "@/lib/copy/es/scenarios";
@@ -43,38 +51,38 @@ export function ScenariosSection({ rows }: ScenariosSectionProps) {
       <div className="overflow-x-auto">
         <table className="w-full min-w-lg border-collapse text-sm">
           <thead>
-            <tr className="border-border text-text-muted border-b text-left">
-              <th scope="col" className="py-2 pr-4 font-medium">
+            <tr className="border-accent text-text border-b-2 text-left">
+              <th scope="col" className="px-4 py-3 font-medium">
                 Scenario
               </th>
-              <th scope="col" className="py-2 pr-4 text-right font-medium">
+              <th scope="col" className="px-4 py-3 text-right font-medium">
                 Maandcashflow
               </th>
-              <th scope="col" className="py-2 pr-4 text-right font-medium">
+              <th scope="col" className="px-4 py-3 text-right font-medium">
                 DSCR
               </th>
-              <th scope="col" className="py-2 pr-4 text-right font-medium">
+              <th scope="col" className="px-4 py-3 text-right font-medium">
                 IRR
               </th>
-              <th scope="col" className="py-2 text-right font-medium">
+              <th scope="col" className="px-4 py-3 text-right font-medium">
                 Score
               </th>
             </tr>
           </thead>
           <tbody>
             {rows.map((row) => (
-              <tr key={row.scenario} className="border-border/50 border-b last:border-b-0">
-                <td className="py-2.5 pr-4">{SCENARIO_ID_COPY_NL[row.scenario]}</td>
-                <td className="tabular py-2.5 pr-4 text-right">
+              <tr key={row.scenario} className="border-border border-b last:border-b-0">
+                <td className="px-4 py-3">{SCENARIO_ID_COPY_NL[row.scenario]}</td>
+                <td className="tabular px-4 py-3 text-right">
                   {formatEuro(row.monthlyCashflow)}
                 </td>
-                <td className="tabular py-2.5 pr-4 text-right">
+                <td className="tabular px-4 py-3 text-right">
                   {row.dscr.toFixed(2).replace(".", ",")}
                 </td>
-                <td className="tabular py-2.5 pr-4 text-right">
+                <td className="tabular px-4 py-3 text-right">
                   {row.irr.defined ? formatPercent(row.irr.irr) : "—"}
                 </td>
-                <td className="tabular py-2.5 text-right">
+                <td className="tabular px-4 py-3 text-right">
                   {row.scoreTotal !== null ? formatScore(row.scoreTotal) : "—"}
                 </td>
               </tr>
