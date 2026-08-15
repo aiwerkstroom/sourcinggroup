@@ -6,6 +6,7 @@ import { PDFParse } from "pdf-parse";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { buildEngineInput } from "@/app/rapport/nieuw/_lib/build-engine-input";
 import type { WizardData } from "@/app/rapport/nieuw/_state/wizard-state";
+import { SESSION_COOKIE } from "@/lib/auth/supabase-mock";
 import { referenceCase } from "@/lib/rules/es/__tests__/referencecase";
 import { runEngine } from "@/lib/rules/es/engine";
 import { formatEuro, formatPercent } from "../../_lib/format";
@@ -53,6 +54,25 @@ const TEST_TIMEOUT_MS = 90_000;
 
 function normalize(s: string): string {
   return s.replace(/\s+/g, " ").trim();
+}
+
+/**
+ * Both PDF routes now sit behind middleware.ts's session check (fase 4
+ * stap 4: "alle /rapport/* routes" includes these two, unlike the
+ * internal print routes they drive, which stay excluded on purpose - see
+ * middleware.ts's own docstring). This test drives them with a raw
+ * fetch(), not a browser, so there is no real supabase-mock.ts session to
+ * carry - middleware only checks the cookie's presence and shape, so a
+ * hand-built cookie in the same format signUp()/signIn() would have set
+ * is sufficient without going through either of those functions (which
+ * are client-only, document.cookie-based, and unusable from this
+ * Node-side test regardless).
+ */
+function fakeSessionCookieHeader(): string {
+  const value = encodeURIComponent(
+    JSON.stringify({ id: "pdf-export-test-user", email: "pdf-export-test@example.com" }),
+  );
+  return `${SESSION_COOKIE}=${value}`;
 }
 
 async function waitForServer(deadline: number): Promise<void> {
@@ -146,7 +166,9 @@ beforeAll(async () => {
 
   await waitForServer(Date.now() + START_TIMEOUT_MS);
 
-  const referenceRes = await fetch(`${BASE_URL}/rapport/resultaat/pdf`);
+  const referenceRes = await fetch(`${BASE_URL}/rapport/resultaat/pdf`, {
+    headers: { Cookie: fakeSessionCookieHeader() },
+  });
   expect(referenceRes.ok).toBe(true);
   expect(referenceRes.headers.get("content-type")).toBe("application/pdf");
   const referenceBuffer = Buffer.from(await referenceRes.arrayBuffer());
@@ -156,7 +178,7 @@ beforeAll(async () => {
 
   const secondRes = await fetch(`${BASE_URL}/rapport/resultaat/pdf/genereer`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", Cookie: fakeSessionCookieHeader() },
     body: JSON.stringify(secondCase),
   });
   expect(secondRes.ok).toBe(true);

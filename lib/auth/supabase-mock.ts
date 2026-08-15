@@ -30,7 +30,8 @@
  * this whole file, not just the parts that matter for security.
  */
 
-const SESSION_COOKIE = "tsg-mock-session";
+/** Exported so middleware.ts checks the same cookie name this file sets - one name, one place, not two literals that could drift apart. */
+export const SESSION_COOKIE = "tsg-mock-session";
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
 
 export interface AuthUser {
