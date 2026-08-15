@@ -1,6 +1,6 @@
 import { referenceCase } from "@/lib/rules/es/__tests__/referencecase";
 import { runEngine } from "@/lib/rules/es/engine";
-import { PaidReport } from "../_sections/paid-report";
+import { PrintDocument } from "./_components/print-document";
 
 /**
  * Print-only rendering of the paid report. Not linked from anywhere in the
@@ -12,22 +12,13 @@ import { PaidReport } from "../_sections/paid-report";
  * §3, "één ontwerp, twee outputs") - nothing here is a second design for
  * print, only a different caller of the first one.
  *
- * Fixed to the reference case for now (fase 3 stap 1: prove the mechanism
- * end to end before wiring up a real customer's EngineResult in the
- * download-integration step).
+ * Fixed to the reference case - a stable, always-available render for the
+ * golden test and for manually checking the print pipeline still works.
+ * The real download route (fase 3 stap 3) has its own print/[token] page
+ * for an actual customer's EngineResult; this one is deliberately never
+ * fed real data.
  */
 export default function PrintPage() {
   const result = runEngine(referenceCase);
-
-  return (
-    <div className="mx-auto max-w-5xl px-4 py-10 md:px-8">
-      <header className="border-border border-b pb-6">
-        <p className="text-text-faint text-xs tracking-widest uppercase">Rendementsrapport</p>
-        <h1 className="mt-1 text-xl font-semibold">{referenceCase.property.address}</h1>
-      </header>
-      <div className="mt-8">
-        <PaidReport result={result} />
-      </div>
-    </div>
-  );
+  return <PrintDocument propertyAddress={referenceCase.property.address!} result={result} />;
 }
