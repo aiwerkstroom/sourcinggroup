@@ -49,7 +49,7 @@ export function ScenariosSection({ rows }: ScenariosSectionProps) {
       </h2>
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-lg border-collapse text-sm">
+        <table className="w-full min-w-lg border-collapse text-sm break-inside-avoid">
           <thead>
             <tr className="border-accent text-text border-b-2 text-left">
               <th scope="col" className="px-4 py-3 font-medium">

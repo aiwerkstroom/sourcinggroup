@@ -189,7 +189,13 @@ describe("TenYearSection - composes the table and the chart under one heading", 
     const html = renderToStaticMarkup(<TenYearSection outcomes={outcomes} />);
 
     expect(html).toContain("De tienjarige reeks");
-    expect((html.match(/<table/g) ?? []).length).toBe(1);
+    // Two table shapes for two audiences (fase 3's print checkpoint): one
+    // wide, print:hidden screen table with all three scenarios side by
+    // side, and three narrow, hidden print:block per-scenario tables that
+    // replace it only when printing. "One table" no longer holds; "one of
+    // each shape" does.
+    expect((html.match(/<table class="w-full min-w-4xl/g) ?? []).length).toBe(1);
+    expect((html.match(/<table class="w-full max-w-lg/g) ?? []).length).toBe(3);
     expect((html.match(/<svg/g) ?? []).length).toBe(1);
     expect((html.match(/<polyline/g) ?? []).length).toBe(3);
   });

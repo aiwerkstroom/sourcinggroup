@@ -14,6 +14,14 @@
  * `size="large"` is for the one card DESIGN_SPEC.md §3 names explicitly as
  * a "grote hoofdkaart": the TSG-score. Every other section is the p-6
  * default.
+ *
+ * No break-inside-avoid here (fase 3 print pass tried this, then dropped
+ * it): forcing an entire card onto a fresh page whenever it doesn't fit
+ * the remainder of the current one left large blank gaps in the PDF - a
+ * worse read than a clean split between two of a card's own paragraphs or
+ * ScoreRuler rows would have been. Where a genuine mid-content split would
+ * look broken (a table row cut in half), that table carries its own
+ * break-inside-avoid instead - see ten-year-section.tsx's print tables.
  */
 
 export interface CardProps {
