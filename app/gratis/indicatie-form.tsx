@@ -154,7 +154,7 @@ export function IndicatieForm({ neighborhoods }: { neighborhoods: string[] }) {
             <p className="text-text-faint text-xs">Geen account nodig</p>
             <button
               type="submit"
-              className="bg-accent text-surface rounded-md px-4 py-2 text-sm font-medium transition-colors hover:bg-accent-hover"
+              className="bg-accent text-surface focus-visible:ring-accent-ring rounded-md px-4 py-2 text-sm font-medium transition-colors hover:bg-accent-hover focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
             >
               Bereken indicatie
             </button>

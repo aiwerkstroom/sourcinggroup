@@ -23,6 +23,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { translateFieldValidation } from "@/lib/copy/es/validation";
 import { FieldGroup, NumberField } from "../_components/fields";
+import { Spinner } from "../_components/spinner";
 import { parseNumberInput } from "../_lib/parse-number";
 import { useWizard } from "../_state/wizard-state";
 import type { ExitStepData } from "../_state/wizard-state";
@@ -149,7 +150,7 @@ export function ExitForm() {
         <button
           type="button"
           onClick={() => router.push("/rapport/nieuw/belegger")}
-          className="border-accent text-accent rounded-md border px-4 py-2 text-sm font-medium transition-colors hover:bg-accent-subtle"
+          className="border-accent text-accent focus-visible:ring-accent-ring rounded-md border px-4 py-2 text-sm font-medium transition-colors hover:bg-accent-subtle focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
         >
           Terug
         </button>
@@ -158,8 +159,9 @@ export function ExitForm() {
           <button
             type="submit"
             disabled={running}
-            className="bg-accent text-surface rounded-md px-4 py-2 text-sm font-medium transition-colors hover:bg-accent-hover disabled:opacity-50"
+            className="bg-accent text-surface focus-visible:ring-accent-ring flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors hover:bg-accent-hover focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:opacity-50"
           >
+            {running ? <Spinner /> : null}
             {running ? "Bezig met doorrekenen…" : "Rapport doorrekenen"}
           </button>
         </div>

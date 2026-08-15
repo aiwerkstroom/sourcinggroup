@@ -52,7 +52,7 @@ function FieldShell({ label, hint, error, optional, children }: FieldShellProps)
 }
 
 const inputClass =
-  "bg-surface border-border focus:border-border-strong w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-white/20";
+  "bg-surface border-border focus-visible:border-border-strong focus-visible:ring-accent-ring w-full rounded-md border px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-offset-2";
 const inputErrorClass = "border-signal-negative";
 
 interface NumberFieldProps {

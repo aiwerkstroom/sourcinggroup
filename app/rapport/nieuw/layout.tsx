@@ -46,7 +46,10 @@ function StepIndicator() {
         return (
           <li key={step.slug} className="flex items-center">
             {isVisitable && !isCurrent ? (
-              <Link href={step.href} className="text-text-muted hover:text-text flex items-center">
+              <Link
+                href={step.href}
+                className="text-text-muted hover:text-text focus-visible:ring-accent-ring flex items-center rounded-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+              >
                 {number}
                 {step.label}
               </Link>

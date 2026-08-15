@@ -245,7 +245,7 @@ export function StaatEnLastenForm() {
         <button
           type="button"
           onClick={() => router.push("/rapport/nieuw/pand")}
-          className="border-accent text-accent rounded-md border px-4 py-2 text-sm font-medium transition-colors hover:bg-accent-subtle"
+          className="border-accent text-accent focus-visible:ring-accent-ring rounded-md border px-4 py-2 text-sm font-medium transition-colors hover:bg-accent-subtle focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
         >
           Terug
         </button>
@@ -253,7 +253,7 @@ export function StaatEnLastenForm() {
           <p className="text-text-faint text-xs">Stap 2 van 4</p>
           <button
             type="submit"
-            className="bg-accent text-surface rounded-md px-4 py-2 text-sm font-medium transition-colors hover:bg-accent-hover"
+            className="bg-accent text-surface focus-visible:ring-accent-ring rounded-md px-4 py-2 text-sm font-medium transition-colors hover:bg-accent-hover focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
           >
             Volgende: belegger
           </button>

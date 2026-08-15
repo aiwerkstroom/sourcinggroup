@@ -23,7 +23,7 @@ export function ShareButton() {
       <button
         type="button"
         onClick={handleClick}
-        className="border-accent text-accent rounded-md border px-4 py-2 text-sm font-medium transition-colors hover:bg-accent-subtle"
+        className="border-accent text-accent focus-visible:ring-accent-ring rounded-md border px-4 py-2 text-sm font-medium transition-colors hover:bg-accent-subtle focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
       >
         URL kopiëren
       </button>

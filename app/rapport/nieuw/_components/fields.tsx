@@ -55,7 +55,7 @@ function FieldShell({ label, hint, error, optional, children }: FieldShellProps)
 }
 
 const inputClass =
-  "bg-surface border-border focus:border-border-strong w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-white/20";
+  "bg-surface border-border focus-visible:border-border-strong focus-visible:ring-accent-ring w-full rounded-md border px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-offset-2";
 const inputErrorClass = "border-signal-negative";
 
 interface TextFieldProps {
@@ -226,8 +226,10 @@ export function RadioGroup({ label, value, onChange, options, hint, error }: Rad
           return (
             <label
               key={option.value}
-              className={`flex cursor-pointer gap-3 rounded-md border px-3 py-2.5 ${
-                selected ? "border-border-strong bg-surface-raised" : "border-border hover:bg-white/5"
+              className={`has-[:focus-visible]:ring-accent-ring flex cursor-pointer gap-3 rounded-md border px-3 py-2.5 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-offset-2 ${
+                selected
+                  ? "border-border-strong bg-surface-raised"
+                  : "border-border hover:bg-surface-raised/50"
               } ${error ? "border-signal-negative" : ""}`}
             >
               <input
@@ -236,7 +238,7 @@ export function RadioGroup({ label, value, onChange, options, hint, error }: Rad
                 value={option.value}
                 checked={selected}
                 onChange={() => onChange(option.value)}
-                className="mt-1 accent-white"
+                className="[accent-color:var(--color-accent)] mt-1 outline-none"
               />
               <span className="flex flex-col gap-0.5">
                 <span className="text-sm">{option.label}</span>

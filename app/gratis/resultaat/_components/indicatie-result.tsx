@@ -153,7 +153,7 @@ export function IndicatieResult({ input, band, score }: IndicatieResultProps) {
         <ShareButton />
         <a
           href="/rapport/nieuw/pand"
-          className="text-text-muted hover:text-accent text-sm underline transition-colors"
+          className="text-text-muted hover:text-accent focus-visible:ring-accent-ring rounded-sm text-sm underline transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
         >
           Naar het volledige rapport
         </a>

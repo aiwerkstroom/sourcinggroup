@@ -36,7 +36,10 @@ export default async function GratisIndicatieResultaatPage({
           Deze link mist een geldige vraagprijs of oppervlak, of is niet compleet. Vul het
           formulier opnieuw in.
         </p>
-        <Link href="/gratis" className="text-sm underline">
+        <Link
+          href="/gratis"
+          className="focus-visible:ring-accent-ring rounded-sm text-sm underline focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+        >
           Naar het formulier
         </Link>
       </div>
@@ -60,7 +63,10 @@ export default async function GratisIndicatieResultaatPage({
           &quot;{neighborhood}&quot; is niet een van de wijken waarvoor deze indicatie
           referentiedata heeft. Kies een wijk uit de lijst.
         </p>
-        <Link href="/gratis" className="text-sm underline">
+        <Link
+          href="/gratis"
+          className="focus-visible:ring-accent-ring rounded-sm text-sm underline focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+        >
           Naar het formulier
         </Link>
       </div>
