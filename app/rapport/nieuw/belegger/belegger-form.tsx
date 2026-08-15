@@ -371,7 +371,7 @@ export function BeleggerForm() {
         <button
           type="button"
           onClick={() => router.push("/rapport/nieuw/staat-en-lasten")}
-          className="border-border-strong rounded-md border px-4 py-2 text-sm hover:bg-white/5"
+          className="border-accent text-accent rounded-md border px-4 py-2 text-sm font-medium transition-colors hover:bg-accent-subtle"
         >
           Terug
         </button>
@@ -379,7 +379,7 @@ export function BeleggerForm() {
           <p className="text-text-faint text-xs">Stap 3 van 4</p>
           <button
             type="submit"
-            className="bg-text text-bg rounded-md px-4 py-2 text-sm font-medium hover:opacity-90"
+            className="bg-accent text-surface rounded-md px-4 py-2 text-sm font-medium transition-colors hover:bg-accent-hover"
           >
             Volgende: exit
           </button>

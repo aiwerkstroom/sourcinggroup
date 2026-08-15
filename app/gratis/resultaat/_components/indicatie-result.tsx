@@ -151,7 +151,10 @@ export function IndicatieResult({ input, band, score }: IndicatieResultProps) {
 
       <footer className="border-border flex flex-wrap items-center justify-between gap-4 border-t pt-6">
         <ShareButton />
-        <a href="/rapport/nieuw/pand" className="text-text-muted text-sm underline hover:text-text">
+        <a
+          href="/rapport/nieuw/pand"
+          className="text-text-muted hover:text-accent text-sm underline transition-colors"
+        >
           Naar het volledige rapport
         </a>
       </footer>

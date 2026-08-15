@@ -48,7 +48,7 @@ export interface CashflowBreakdownSectionProps {
 
 function Row({ label, annualAmount }: { label: string; annualAmount: number }) {
   return (
-    <div className="flex items-baseline justify-between gap-4 py-1.5">
+    <div className="flex items-baseline justify-between gap-4 px-4 py-3">
       <span className="text-text-muted text-sm">{label}</span>
       <span className="tabular text-sm">{formatEuro(annualAmount / MONTHS_PER_YEAR)}</span>
     </div>
@@ -65,7 +65,7 @@ function Subtotal({
   note?: string;
 }) {
   return (
-    <div className="border-border flex flex-col gap-0.5 border-t pt-2 pb-1.5">
+    <div className="border-border flex flex-col gap-0.5 border-t px-4 py-3">
       <div className="flex items-baseline justify-between gap-4">
         <span className="text-sm font-medium">{label}</span>
         <span className="tabular text-sm font-medium">

@@ -35,7 +35,7 @@ export interface ExitSectionProps {
 
 function Row({ label, amount }: { label: string; amount: number }) {
   return (
-    <div className="flex items-baseline justify-between gap-4 py-1.5">
+    <div className="flex items-baseline justify-between gap-4 px-4 py-3">
       <span className="text-text-muted text-sm">{label}</span>
       <span className="tabular text-sm">{formatEuro(amount)}</span>
     </div>
@@ -44,7 +44,7 @@ function Row({ label, amount }: { label: string; amount: number }) {
 
 function Subtotal({ label, amount }: { label: string; amount: number }) {
   return (
-    <div className="border-border flex items-baseline justify-between gap-4 border-t pt-2 pb-1.5">
+    <div className="border-border flex items-baseline justify-between gap-4 border-t px-4 py-3">
       <span className="text-sm font-medium">{label}</span>
       <span className="tabular text-sm font-medium">{formatEuro(amount)}</span>
     </div>
