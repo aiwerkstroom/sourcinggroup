@@ -34,6 +34,7 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { TEST_CARDS } from "./test-cards";
 
 /** EUR 49 from UI_SPEC.md section 2, in cents - Stripe's own unit for EUR. */
 export const REPORT_PRICE_CENTS = 4900;
@@ -93,19 +94,12 @@ export interface ConfirmPaymentResult {
 }
 
 /**
- * Stripe's real test card numbers, on purpose. Once the real SDK is
- * connected these exact numbers keep behaving exactly as they do here in
- * Stripe's test mode, so the manual test script for this flow does not
- * have to be rewritten along with the SDK.
+ * Re-exported so this module stays the one import a server-side caller
+ * needs. The numbers themselves live in test-cards.ts, which has no
+ * imports at all: the payment form shows them on screen and is a client
+ * component, and it must not reach into this file to get them.
  */
-export const TEST_CARDS = {
-  /** Succeeds immediately. */
-  success: "4242424242424242",
-  /** Declined by the issuer. */
-  declined: "4000000000000002",
-  /** Requires a 3-D Secure challenge before it can succeed. */
-  requiresAuthentication: "4000002500003155",
-} as const;
+export { TEST_CARDS };
 
 // globalThis-backed for the same reason pending-results.ts is: Next.js
 // hands a Route Handler and a Page separate module instances even inside
