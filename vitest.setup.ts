@@ -18,6 +18,15 @@ import { cleanup } from "@testing-library/react";
 import { afterEach } from "vitest";
 import "@testing-library/jest-dom/vitest";
 
+/**
+ * stripe-mock.ts simulates a payment provider's network latency so the
+ * UI's loading states are honest in a browser. In a test suite that is
+ * 600ms of waiting per call and nothing else, on a module that fase 4
+ * stap 2 puts on the path of every payment test - so it is switched off
+ * here rather than per file.
+ */
+process.env.TSG_STRIPE_MOCK_LATENCY_MS = "0";
+
 afterEach(() => {
   cleanup();
 });

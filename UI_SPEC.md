@@ -98,7 +98,13 @@ De score is bij een afwijzing laag, niet afwezig. Een pand met een lage cashflow
 
 ## 8. Betaling
 
-Per rapport: € 49, via Stripe Checkout. Per crawl-resultaat: per gevonden object. De klant ziet een lijst met scores en basiscijfers; betaalt per object dat hij volledig wil bekijken. Prijs per object nog vast te stellen.
+Per rapport: € 49, via Stripe Payment Element — ingebed op een eigen betaalpagina tussen de wizard en het rapport, niet op een extern Stripe-domein. Per rapport afgerekend; geen tegoeden.
+
+De volgorde ligt vast: de vier wizard-stappen, dan de betaling, en pas na een geslaagde betaling de doorrekening. De invoer wordt tussen die twee momenten kortlevend serverzijdig vastgehouden — nooit in een URL, nooit in browseropslag, en niet permanent opgeslagen. Of er betaald is, bepaalt de server aan de hand van de betaalstatus bij Stripe; niet de melding van de browser.
+
+Validatie gaat vóór de betaling uit: invoer die niet doorrekenbaar is, bereikt de betaalpagina niet. Niemand betaalt voor een rapport dat daarna niet berekend kan worden.
+
+Per crawl-resultaat: per gevonden object. De klant ziet een lijst met scores en basiscijfers; betaalt per object dat hij volledig wil bekijken. Prijs per object nog vast te stellen.
 
 ## 9. Account en bewaring
 
