@@ -15,8 +15,17 @@
  *   holding period, so any generic figure would be a guess dressed as a
  *   starting point - exactly what MODEL_SPEC_FASE1B §5 refuses to do.
  *
- * Submitting runs the engine through a Server Action, so the scoring
- * weights never reach the browser (interview round 1).
+ * Submitting no longer runs the engine (fase 4 stap 2). The report is
+ * paid for now, so this step opens a payment instead: the input goes to
+ * /rapport/betalen/voorbereiden, which validates it without calculating
+ * and parks it server-side, and runEngine() runs only after the payment
+ * succeeds. The scoring weights still never reach the browser - that
+ * part is unchanged, and the engine simply runs one route later.
+ *
+ * The validation that used to surface here surfaces here still: the
+ * prepare route runs the engine's own cross-field rules and answers 400
+ * with the same issue list this form already knew how to show. Nobody
+ * reaches the payment page with input that cannot produce a report.
  */
 
 import { useRouter } from "next/navigation";
@@ -27,13 +36,12 @@ import { Spinner } from "../_components/spinner";
 import { parseNumberInput } from "../_lib/parse-number";
 import { useWizard } from "../_state/wizard-state";
 import type { ExitStepData } from "../_state/wizard-state";
-import { runReport } from "./actions";
 
 type FieldErrors = Partial<Record<keyof ExitStepData, string>>;
 
 export function ExitForm() {
   const router = useRouter();
-  const { data, setExit, setResult, completedSteps, markCompleted } = useWizard();
+  const { data, setExit, completedSteps, markCompleted } = useWizard();
   const step = data.exit;
   const [errors, setErrors] = useState<FieldErrors>({});
   const [engineIssues, setEngineIssues] = useState<string[]>([]);
@@ -84,14 +92,20 @@ export function ExitForm() {
 
     setRunning(true);
     try {
-      const outcome = await runReport(data);
-      if (!outcome.ok) {
-        setEngineIssues(outcome.issues);
+      const response = await fetch("/rapport/betalen/voorbereiden", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        const body = await response.json();
+        setEngineIssues(body.issues ?? ["De aanvraag kon niet worden verwerkt."]);
         return;
       }
-      setResult(outcome.result);
+
       markCompleted("exit");
-      router.push("/rapport/resultaat");
+      router.push("/rapport/betalen");
     } finally {
       setRunning(false);
     }
@@ -137,7 +151,7 @@ export function ExitForm() {
           role="alert"
           className="border-signal-negative/40 bg-signal-negative/5 rounded-md border px-4 py-3"
         >
-          <p className="text-sm font-medium">De berekening kon niet worden uitgevoerd</p>
+          <p className="text-sm font-medium">Het rapport kan zo niet worden doorgerekend</p>
           <ul className="text-text-muted mt-2 list-inside list-disc text-xs">
             {engineIssues.map((issue) => (
               <li key={issue}>{issue}</li>
@@ -162,7 +176,7 @@ export function ExitForm() {
             className="bg-accent text-surface focus-visible:ring-accent-ring flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors hover:bg-accent-hover focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:opacity-50"
           >
             {running ? <Spinner /> : null}
-            {running ? "Bezig met doorrekenen…" : "Rapport doorrekenen"}
+            {running ? "Betaling wordt voorbereid…" : "Doorgaan naar betaling"}
           </button>
         </div>
       </div>

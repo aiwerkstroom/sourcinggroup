@@ -15,8 +15,14 @@
  * The download button (fase 3 stap 3) sends `data` - the wizard's own
  * WizardData, already sitting in this same context - to the PDF route.
  * Not `result`: the route rebuilds the EngineResult itself server-side,
- * the same way runReport() already does at the exit step, so
+ * the same way the release route does after payment, so
  * TSG_SCORE_DIMENSION_WEIGHTS stays off every path the browser is on.
+ *
+ * Since fase 4 stap 2 that context is not always filled by the wizard
+ * itself: a customer returning from a redirect-based payment method
+ * arrives with it empty, and the release route hands both the result and
+ * the input back so this page still has an address to show and a payload
+ * for the PDF button.
  *
  * The logout button (fase 4 stap 4's addendum) sits next to it, not
  * because the two are related, but because the header is the one place

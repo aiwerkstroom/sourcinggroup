@@ -7,15 +7,15 @@ import { storePendingReport } from "../../print/_lib/pending-results";
 
 /**
  * The real download route (fase 3 stap 3): the wizard's own in-memory
- * WizardData - the same shape actions.ts's runReport() already turns into
- * an EngineResult at the exit step - arrives as the POST body, not a URL
+ * WizardData - the same shape the release route turns into an
+ * EngineResult after payment - arrives as the POST body, not a URL
  * (this task's own instruction: a full address and financial figures do
  * not belong in a querystring), and nothing here is written to a
  * database (CLAUDE.md §4 - accounts and storage are fase 4).
  *
  * buildEngineInput() + runEngine() run again here rather than trusting a
- * client-supplied EngineResult, for the same reason runReport() runs them
- * server-side in the first place: TSG_SCORE_DIMENSION_WEIGHTS must never
+ * client-supplied EngineResult, for the same reason the paid path runs
+ * them server-side at all: TSG_SCORE_DIMENSION_WEIGHTS must never
  * cross to the browser, so nothing downstream of it can either - a
  * customer's browser only ever holds the WizardData that goes in, never
  * the weighted score that comes out.

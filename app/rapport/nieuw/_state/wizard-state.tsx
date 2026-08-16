@@ -183,6 +183,15 @@ interface WizardContextValue {
   setStaatEnLasten: (patch: Partial<StaatEnLastenStepData>) => void;
   setBelegger: (patch: Partial<BeleggerStepData>) => void;
   setExit: (patch: Partial<ExitStepData>) => void;
+  /**
+   * Replaces all four steps at once. Only the payment flow uses this: a
+   * customer returning from a redirect-based payment method arrives
+   * through a full page load with this context freshly empty, and the
+   * release route hands the input back so the report can still render
+   * its header and its PDF button. Not for the steps themselves - they
+   * patch one step at a time, on purpose.
+   */
+  restoreData: (data: WizardData) => void;
   /** The engine's output, once step 4 has run it. Held here so the result page can render it - nothing is persisted. */
   result: EngineResult | null;
   setResult: (result: EngineResult | null) => void;
@@ -231,6 +240,10 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
     setData((current) => ({ ...current, exit: { ...current.exit, ...patch } }));
   }, []);
 
+  const restoreData = useCallback((restored: WizardData) => {
+    setData(restored);
+  }, []);
+
   const value = useMemo<WizardContextValue>(
     () => ({
       data,
@@ -238,12 +251,23 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
       setStaatEnLasten,
       setBelegger,
       setExit,
+      restoreData,
       result,
       setResult,
       completedSteps,
       markCompleted,
     }),
-    [data, setPand, setStaatEnLasten, setBelegger, setExit, result, completedSteps, markCompleted],
+    [
+      data,
+      setPand,
+      setStaatEnLasten,
+      setBelegger,
+      setExit,
+      restoreData,
+      result,
+      completedSteps,
+      markCompleted,
+    ],
   );
 
   return <WizardContext.Provider value={value}>{children}</WizardContext.Provider>;

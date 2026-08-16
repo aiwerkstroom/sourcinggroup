@@ -23,7 +23,8 @@
  */
 
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { WizardProvider } from "@/app/rapport/nieuw/_state/wizard-state";
 import {
   createPaymentIntent,
   REPORT_CURRENCY,
@@ -33,12 +34,48 @@ import {
 import { TEST_CARDS } from "@/lib/payments/test-cards";
 import { PaymentForm } from "../payment-form";
 
+const pushMock = vi.fn();
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: pushMock }),
+}));
+
+/**
+ * The release itself is a route, not reachable from jsdom - it has its
+ * own golden tests (vrijgeven/__tests__). What matters here is the
+ * form's half of the contract: that a successful payment triggers the
+ * release, and that its answer decides what the customer sees next.
+ */
+let releaseResponse: { ok: boolean; body: unknown };
+
+beforeEach(() => {
+  pushMock.mockClear();
+  releaseResponse = {
+    ok: true,
+    body: { result: { scenarioOutcomes: [] }, data: { pand: { address: "Teststraat 1" } } },
+  };
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({
+      ok: releaseResponse.ok,
+      json: async () => releaseResponse.body,
+    })),
+  );
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
 async function renderWithIntent() {
   const intent = await createPaymentIntent({
     amount: REPORT_PRICE_CENTS,
     currency: REPORT_CURRENCY,
   });
-  render(<PaymentForm clientSecret={intent.client_secret} />);
+  render(
+    <WizardProvider>
+      <PaymentForm clientSecret={intent.client_secret} />
+    </WizardProvider>,
+  );
   return intent;
 }
 
@@ -66,15 +103,17 @@ describe("PaymentForm - the successful card", () => {
     const intent = await renderWithIntent();
     await payWith(TEST_CARDS.success);
 
-    await waitFor(() =>
-      expect(screen.getByText(/Betaling geslaagd/)).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText(/Betaling geslaagd/)).toBeInTheDocument());
     expect(screen.getByText(/doorrekening start nu/i)).toBeInTheDocument();
 
     // The form is gone: there is nothing left to pay.
     expect(screen.queryByLabelText("Kaartnummer")).not.toBeInTheDocument();
 
-    // And the service agrees, which is what the release step will ask.
+    // The release was asked for, and its answer carried the customer on.
+    expect(fetch).toHaveBeenCalledWith("/rapport/betalen/vrijgeven", { method: "POST" });
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/rapport/resultaat"));
+
+    // And the service agrees, which is what the release route asks too.
     const server = await retrievePaymentIntent(intent.id);
     expect(server!.status).toBe("succeeded");
   });
@@ -103,7 +142,7 @@ describe("PaymentForm - the declined card", () => {
 
     await payWith(TEST_CARDS.success);
 
-    await waitFor(() => expect(screen.getByText(/Betaling geslaagd/)).toBeInTheDocument());
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/rapport/resultaat"));
     const server = await retrievePaymentIntent(intent.id);
     expect(server!.status).toBe("succeeded");
   });
@@ -136,9 +175,51 @@ describe("PaymentForm - the 3-D Secure card, the path the pending-store exists f
       fireEvent.click(screen.getByRole("button", { name: "Bevestigen" }));
     });
 
-    await waitFor(() => expect(screen.getByText(/Betaling geslaagd/)).toBeInTheDocument());
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/rapport/resultaat"));
     const server = await retrievePaymentIntent(intent.id);
     expect(server!.status).toBe("succeeded");
+  });
+});
+
+describe("PaymentForm - paid, but the release refused", () => {
+  it("explains that nothing is lost and offers a way to reach a person", async () => {
+    releaseResponse = {
+      ok: false,
+      body: {
+        error:
+          "Uw betaling is gelukt, maar het rapport kon niet worden doorgerekend. " +
+          "Er is niets kwijt: uw gegevens staan klaar en uw betaling is geregistreerd.",
+        contact: "support@thesourcinggroup.example",
+      },
+    };
+
+    await renderWithIntent();
+    await payWith(TEST_CARDS.success);
+
+    await waitFor(() =>
+      expect(screen.getByText("Het rapport kon niet worden vrijgegeven")).toBeInTheDocument(),
+    );
+    expect(screen.getByRole("alert")).toHaveTextContent(/niets kwijt/);
+    expect(screen.getByRole("link", { name: "support@thesourcinggroup.example" })).toHaveAttribute(
+      "href",
+      "mailto:support@thesourcinggroup.example",
+    );
+
+    // Not carried on to a report that does not exist.
+    expect(pushMock).not.toHaveBeenCalled();
+  });
+
+  it("does not offer a retry, because a second attempt would fail identically", async () => {
+    releaseResponse = { ok: false, body: { error: "Mislukt.", contact: null } };
+
+    await renderWithIntent();
+    await payWith(TEST_CARDS.success);
+
+    await waitFor(() =>
+      expect(screen.getByText("Het rapport kon niet worden vrijgegeven")).toBeInTheDocument(),
+    );
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Kaartnummer")).not.toBeInTheDocument();
   });
 });
 
