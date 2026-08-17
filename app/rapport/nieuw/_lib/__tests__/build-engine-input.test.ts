@@ -75,6 +75,7 @@ const referenceWizardData: WizardData = {
     sellingCommissionPercent: "4",
     municipalCapitalGainsTax: "3.500",
   },
+  listingOrigin: null,
 };
 
 describe("buildEngineInput - the reference case, end to end through the wizard", () => {

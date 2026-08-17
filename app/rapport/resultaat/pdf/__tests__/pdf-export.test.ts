@@ -141,6 +141,7 @@ const secondCase: WizardData = {
     sellingCommissionPercent: "4",
     municipalCapitalGainsTax: "2000",
   },
+  listingOrigin: null,
 };
 
 let server: ChildProcessWithoutNullStreams;

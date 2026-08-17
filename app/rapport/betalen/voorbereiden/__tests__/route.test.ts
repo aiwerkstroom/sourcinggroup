@@ -87,6 +87,7 @@ const validCase: WizardData = {
     sellingCommissionPercent: "4",
     municipalCapitalGainsTax: "3.500",
   },
+  listingOrigin: null,
 };
 
 /**

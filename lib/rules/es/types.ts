@@ -277,6 +277,15 @@ export interface EngineInput {
    * separate manual call to buildScenarioOutcome() and its prerequisites.
    */
   exitPlanning?: ExitPlanningInput;
+  /**
+   * Optional: set by buildEngineInput() when the wizard was entered via a
+   * chosen listing (SOURCING_SPEC.md §4/§7 step 4), already comparing the
+   * submitted field values against the listing's own - runEngine() does
+   * no comparison of its own, only a passthrough (defaulting to
+   * EMPTY_LISTING_FIELD_PROVENANCE when omitted), the same "no new
+   * calculation logic" treatment PropertyInput.propertyType already gets.
+   */
+  listingFieldProvenance?: ListingFieldProvenanceReport;
 }
 
 /** One row of the income model (long-term or short-term). */
@@ -781,6 +790,14 @@ export interface EngineResult {
    * reports "noReference" on both rates).
    */
   rentInputProvenance: RentInputProvenanceReport;
+  /**
+   * Provenance of the four listing-prefilled fields (SOURCING_SPEC.md
+   * §4/§7 step 4). Unconditional like rentInputProvenance, not optional -
+   * EMPTY_LISTING_FIELD_PROVENANCE (all four null) for every call whose
+   * EngineInput.listingFieldProvenance was omitted, which today is every
+   * call outside this feature's own golden tests.
+   */
+  listingFieldProvenance: ListingFieldProvenanceReport;
 }
 
 // ---------------------------------------------------------------------------
@@ -1056,3 +1073,67 @@ export type RentProvenanceDisclosureKey =
   | "rentOverrideSignificant"
   | "rentOverrideMinor"
   | "rentFromActualCurrentRent";
+
+// ---------------------------------------------------------------------------
+// Listing field provenance (SOURCING_SPEC.md §4/§7 step 4, pijler 2)
+// ---------------------------------------------------------------------------
+
+/**
+ * Whether a wizard field that was prefilled from a chosen listing
+ * (SOURCING_SPEC.md §4) still holds exactly that value, or has since been
+ * edited by the customer.
+ *
+ * Derived by comparison, the same way RentReferenceStatus's
+ * matchesReference/customerOverride are - no separate "did the customer
+ * touch this field" signal from the form is needed, because comparing the
+ * current value against the value it was prefilled with carries the same
+ * information. The one accepted edge case this shares with
+ * matchesReference: a customer who retypes the exact original value reads
+ * as "fromListing", not as a deliberate confirmation - the same tradeoff
+ * already accepted there, for the same reason (no separate signal exists
+ * to tell the two apart).
+ */
+export type ListingFieldProvenanceStatus = "fromListing" | "confirmed";
+
+/**
+ * Provenance of one field prefilled from a listing. Generic over the
+ * field's own value type (string for neighborhood, number for the three
+ * numeric fields) rather than a single `string | number` union, so a
+ * caller never has to narrow it - the same generic-over-T shape
+ * Parameter<T> already uses in this file.
+ */
+export interface ListingFieldProvenance<T> {
+  status: ListingFieldProvenanceStatus;
+  /** The listing's own original value - what the field was prefilled with, for the disclosure sentence. */
+  originalValue: T;
+}
+
+/**
+ * Provenance for the four wizard fields SOURCING_SPEC.md §4 prefills from
+ * a chosen listing: neighborhood, purchasePrice, builtAreaM2 and
+ * usableAreaM2 (the last only when the listing itself supplied one).
+ * propertyType is deliberately absent - SOURCING_SPEC.md §4's own
+ * standard is "een waarde die de uitkomst draagt", and propertyType is
+ * recorded but consumed by no calculation (PropertyInput.propertyType's
+ * own docstring), so it is prefilled without being tracked.
+ *
+ * All four null for every wizard entry that did not go through a chosen
+ * listing - which, until SOURCING_SPEC.md §7 step 4's own wizard-prefill
+ * ships, is every entry. EMPTY_LISTING_FIELD_PROVENANCE is exactly this
+ * shape, reused wherever "no listing was involved" needs a value rather
+ * than an absence.
+ */
+export interface ListingFieldProvenanceReport {
+  neighborhood: ListingFieldProvenance<string> | null;
+  purchasePrice: ListingFieldProvenance<number> | null;
+  builtAreaM2: ListingFieldProvenance<number> | null;
+  usableAreaM2: ListingFieldProvenance<number> | null;
+}
+
+/** The report for "no listing was involved" - every field null. Shared so callers compare against one instance's shape rather than re-typing four nulls. */
+export const EMPTY_LISTING_FIELD_PROVENANCE: ListingFieldProvenanceReport = {
+  neighborhood: null,
+  purchasePrice: null,
+  builtAreaM2: null,
+  usableAreaM2: null,
+};

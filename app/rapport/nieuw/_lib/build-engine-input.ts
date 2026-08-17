@@ -24,21 +24,32 @@
  * and EU-resident for the rental income tax split - so asking would be
  * offering a choice that does not exist. The report's assumptions
  * appendix (UI_SPEC.md §6.8) is where these two show up.
+ *
+ * - The listing-field provenance comparison (SOURCING_SPEC.md §4/§7 step
+ *   4). WizardData.listingOrigin records what a chosen listing supplied,
+ *   once, at prefill time; this is where that snapshot is compared
+ *   against what actually got submitted - the same "derive from a
+ *   comparison, no separate touched-flag" approach
+ *   computeRentInputProvenance() already established for the rent rate.
+ *   runEngine() does none of this comparing itself, only a passthrough.
  */
 
 import {
   deriveFinancingStrategy,
   deriveRenovationStrategy,
 } from "@/lib/rules/es/derive-selections";
+import { EMPTY_LISTING_FIELD_PROVENANCE } from "@/lib/rules/es/types";
 import type {
   CadastralValue,
   EngineInput,
+  ListingFieldProvenanceReport,
+  ListingFieldProvenanceStatus,
   MaintenanceCondition,
   RentalStrategy,
 } from "@/lib/rules/es/types";
 import { parseNumberInput } from "./parse-number";
 import { OTHER_NEIGHBORHOOD } from "../_state/wizard-state";
-import type { WizardData } from "../_state/wizard-state";
+import type { ListingOrigin, PandStepData, WizardData } from "../_state/wizard-state";
 
 /** Fixed by the product's audience, not asked - see the module docstring. */
 export const FIXED_RESIDENCY = "nonResident" as const;
@@ -82,6 +93,64 @@ function cadastralValue(suelo: string, construccion: string): CadastralValue | u
   const c = optionalNumber(construccion);
   if (s === undefined || c === undefined) return undefined;
   return { suelo: s, construccion: c };
+}
+
+/** "fromListing" when the current value still matches the origin exactly, "confirmed" the moment it does not. */
+function fieldStatus(currentValue: unknown, originalValue: unknown): ListingFieldProvenanceStatus {
+  return currentValue === originalValue ? "fromListing" : "confirmed";
+}
+
+/**
+ * Compares WizardData.listingOrigin against what step 1 actually holds,
+ * numerically for the three numeric fields (not the raw strings) - so
+ * retyping "620000" as "620.000" is not read as an edit it was not. The
+ * neighbourhood is a closed dropdown value, so string equality is exact
+ * comparison there, not an approximation.
+ *
+ * propertyType carries no entry here at all: SOURCING_SPEC.md §4's own
+ * standard is a value that carries the outcome, and propertyType is
+ * recorded but consumed by no calculation - it is prefilled without
+ * being tracked, by design, not by omission.
+ */
+function computeListingFieldProvenance(
+  pand: PandStepData,
+  origin: ListingOrigin | null,
+): ListingFieldProvenanceReport {
+  if (origin === null) return EMPTY_LISTING_FIELD_PROVENANCE;
+
+  const neighborhood =
+    origin.neighborhood === undefined
+      ? null
+      : {
+          status: fieldStatus(pand.neighborhood, origin.neighborhood),
+          originalValue: origin.neighborhood,
+        };
+
+  const purchasePrice =
+    origin.purchasePriceEUR === undefined
+      ? null
+      : {
+          status: fieldStatus(optionalNumber(pand.purchasePrice), origin.purchasePriceEUR),
+          originalValue: origin.purchasePriceEUR,
+        };
+
+  const builtAreaM2 =
+    origin.builtAreaM2 === undefined
+      ? null
+      : {
+          status: fieldStatus(optionalNumber(pand.builtAreaM2), origin.builtAreaM2),
+          originalValue: origin.builtAreaM2,
+        };
+
+  const usableAreaM2 =
+    origin.usableAreaM2 === undefined
+      ? null
+      : {
+          status: fieldStatus(optionalNumber(pand.usableAreaM2), origin.usableAreaM2),
+          originalValue: origin.usableAreaM2,
+        };
+
+  return { neighborhood, purchasePrice, builtAreaM2, usableAreaM2 };
 }
 
 export function buildEngineInput(data: WizardData): EngineInput {
@@ -168,5 +237,6 @@ export function buildEngineInput(data: WizardData): EngineInput {
       },
       holdingYears: number(belegger.holdingYears, "holdingYears"),
     },
+    listingFieldProvenance: computeListingFieldProvenance(pand, data.listingOrigin),
   };
 }

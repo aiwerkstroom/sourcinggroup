@@ -18,6 +18,13 @@
  * the customer, and by how much - needed for every call, not only when
  * exitPlanning is given, since it depends on nothing but
  * property.neighborhood and the selected rates.
+ *
+ * EngineResult.listingFieldProvenance is the same kind of unconditional
+ * passthrough, but with no comparison happening here at all: whoever
+ * calls this (buildEngineInput()) has already done that work, so this
+ * function's only job is to default to EMPTY_LISTING_FIELD_PROVENANCE
+ * when the caller did not supply one - no new calculation logic, same as
+ * PropertyInput.propertyType.
  */
 
 import { acquisitionCosts } from "./acquisition";
@@ -35,6 +42,7 @@ import { computeRentInputProvenance } from "./rent-provenance";
 import { runScenarios } from "./scenarios";
 import { taxCalculator } from "./tax";
 import { assertValidEngineInput } from "./validation";
+import { EMPTY_LISTING_FIELD_PROVENANCE } from "./types";
 import type { EngineInput, EngineResult, ScenarioOutcome } from "./types";
 
 export function runEngine(input: EngineInput): EngineResult {
@@ -191,5 +199,6 @@ export function runEngine(input: EngineInput): EngineResult {
     rentalStrategies,
     scenarioOutcomes,
     rentInputProvenance,
+    listingFieldProvenance: input.listingFieldProvenance ?? EMPTY_LISTING_FIELD_PROVENANCE,
   };
 }

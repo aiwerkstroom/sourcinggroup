@@ -33,6 +33,7 @@ const wizardData: WizardData = {
   staatEnLasten: EMPTY_STAAT_EN_LASTEN,
   belegger: EMPTY_BELEGGER,
   exit: EMPTY_EXIT,
+  listingOrigin: null,
 };
 
 afterEach(() => {

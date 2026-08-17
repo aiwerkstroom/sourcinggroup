@@ -105,11 +105,32 @@ export interface ExitStepData {
   municipalCapitalGainsTax: string;
 }
 
+/**
+ * The listing's own values at the moment step 1 prefilled from it
+ * (SOURCING_SPEC.md §4/§7 step 4). Numbers, not the wizard's raw
+ * strings: build-engine-input.ts compares this against the field's
+ * parsed value at submission time, and a numeric comparison is immune to
+ * a field being retyped in a different but equal-valued format
+ * ("620000" vs "620.000") reading as an edit it was not. Every key is
+ * independently optional because a listing's own fields are - only
+ * `usableAreaM2` is actually ever expected to be absent in practice
+ * (SOURCING_SPEC.md §1's Listing type makes it optional; the other three
+ * are Listing's required fields).
+ */
+export interface ListingOrigin {
+  neighborhood?: string;
+  purchasePriceEUR?: number;
+  builtAreaM2?: number;
+  usableAreaM2?: number;
+}
+
 export interface WizardData {
   pand: PandStepData;
   staatEnLasten: StaatEnLastenStepData;
   belegger: BeleggerStepData;
   exit: ExitStepData;
+  /** Set once, when the wizard is entered via a chosen listing. Null for every other entry path - which, until §7 step 4's own prefill wiring, is every entry. */
+  listingOrigin: ListingOrigin | null;
 }
 
 /**
@@ -192,6 +213,13 @@ interface WizardContextValue {
    * patch one step at a time, on purpose.
    */
   restoreData: (data: WizardData) => void;
+  /**
+   * Records what a chosen listing supplied, once, when step 1's own
+   * prefill runs (SOURCING_SPEC.md §7 step 4). Not a patch like the four
+   * step setters - it is written exactly once per wizard entry and read
+   * only for comparison, never merged into anything.
+   */
+  setListingOrigin: (origin: ListingOrigin) => void;
   /** The engine's output, once step 4 has run it. Held here so the result page can render it - nothing is persisted. */
   result: EngineResult | null;
   setResult: (result: EngineResult | null) => void;
@@ -208,6 +236,7 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
     staatEnLasten: EMPTY_STAAT_EN_LASTEN,
     belegger: EMPTY_BELEGGER,
     exit: EMPTY_EXIT,
+    listingOrigin: null,
   });
   const [result, setResult] = useState<EngineResult | null>(null);
   const [completedSteps, setCompletedSteps] = useState<ReadonlySet<string>>(new Set());
@@ -240,6 +269,10 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
     setData((current) => ({ ...current, exit: { ...current.exit, ...patch } }));
   }, []);
 
+  const setListingOrigin = useCallback((origin: ListingOrigin) => {
+    setData((current) => ({ ...current, listingOrigin: origin }));
+  }, []);
+
   const restoreData = useCallback((restored: WizardData) => {
     setData(restored);
   }, []);
@@ -251,6 +284,7 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
       setStaatEnLasten,
       setBelegger,
       setExit,
+      setListingOrigin,
       restoreData,
       result,
       setResult,
@@ -263,6 +297,7 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
       setStaatEnLasten,
       setBelegger,
       setExit,
+      setListingOrigin,
       restoreData,
       result,
       completedSteps,
