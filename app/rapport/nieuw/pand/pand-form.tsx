@@ -14,10 +14,30 @@
  * overridden rate against. "Anders" is a legitimate answer, not an error:
  * the paid path takes any address, and a property outside the covered
  * wijken simply has no reference to deviate from ("noReference").
+ *
+ * `prefillListing` (SOURCING_SPEC.md §4/§7 step 4) prefills four fields
+ * from a chosen listing - neighborhood, purchasePrice, builtAreaM2, and
+ * usableAreaM2 only when the listing itself supplied one - and records
+ * the listing's own values via setListingOrigin() so
+ * buildEngineInput()'s comparison (stap 1 of this feature) has something
+ * to compare against. Address is never prefilled: a Listing carries no
+ * street address, only a wijk and a title, and writing the title into
+ * the address field would present a marketing label as a postal address.
+ * propertyType is prefilled too, but not recorded in listingOrigin -
+ * SOURCING_SPEC.md §4's own standard is a value that carries the
+ * outcome, and propertyType carries none.
+ *
+ * The prefill applies once per wizard session, not once per mount: the
+ * guard is `data.listingOrigin === null`, not a mount ref, so a second
+ * visit to this page with a different `?listing=` (browser back, or
+ * choosing another listing mid-wizard) never overwrites a choice already
+ * on record - including one the customer has since edited away from.
+ * Setting listingOrigin flips the guard itself on the very next render,
+ * which is what makes the effect self-terminating without an extra ref.
  */
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { translateFieldValidation } from "@/lib/copy/es/validation";
 import {
   checkBuiltAreaM2,
@@ -25,6 +45,7 @@ import {
   checkUsableAreaM2,
 } from "@/lib/rules/es/field-validation";
 import type { FieldValidationKey } from "@/lib/rules/es/field-validation";
+import type { Listing } from "@/lib/sourcing/source/types";
 import { FieldGroup, NumberField, SelectField, TextField } from "../_components/fields";
 import { parseNumberInput } from "../_lib/parse-number";
 import { OTHER_NEIGHBORHOOD, useWizard } from "../_state/wizard-state";
@@ -62,11 +83,36 @@ function validateRequiredNumber(
   return key === null ? undefined : translateFieldValidation(key);
 }
 
-export function PandForm({ neighborhoods }: { neighborhoods: string[] }) {
+export function PandForm({
+  neighborhoods,
+  prefillListing,
+}: {
+  neighborhoods: string[];
+  prefillListing: Listing | null;
+}) {
   const router = useRouter();
-  const { data, setPand, markCompleted } = useWizard();
+  const { data, setPand, setListingOrigin, markCompleted } = useWizard();
   const pand = data.pand;
   const [errors, setErrors] = useState<FieldErrors>({});
+
+  useEffect(() => {
+    if (prefillListing === null || data.listingOrigin !== null) return;
+
+    setPand({
+      neighborhood: prefillListing.neighborhood,
+      purchasePrice: String(prefillListing.priceEUR),
+      builtAreaM2: String(prefillListing.builtAreaM2),
+      usableAreaM2:
+        prefillListing.usableAreaM2 !== undefined ? String(prefillListing.usableAreaM2) : "",
+      propertyType: prefillListing.propertyType,
+    });
+    setListingOrigin({
+      neighborhood: prefillListing.neighborhood,
+      purchasePriceEUR: prefillListing.priceEUR,
+      builtAreaM2: prefillListing.builtAreaM2,
+      usableAreaM2: prefillListing.usableAreaM2,
+    });
+  }, [prefillListing, data.listingOrigin, setPand, setListingOrigin]);
 
   const neighborhoodOptions = [
     ...neighborhoods.map((name) => ({ value: name, label: name })),

@@ -16,8 +16,17 @@
  * elsewhere (the paid report's own thresholds section), not for a
  * sieve figure that is already filtered to "passed" by the time it
  * reaches this card.
+ *
+ * "Kies dit pand" (SOURCING_SPEC.md §4/§7 step 4) is a plain link, not a
+ * button with a client-side handler - carrying the listing across routes
+ * needs nothing more than a URL, so this card stays server-only. Only
+ * sourceId travels: pand/page.tsx re-fetches the listing itself from
+ * source-mock.ts, the same server-only function this page already calls
+ * to build the list. Nothing about the listing's own data needs to
+ * survive the navigation as state - the URL is the entire handoff.
  */
 
+import Link from "next/link";
 import type { Listing } from "@/lib/sourcing/source/types";
 import type { SieveYieldResult } from "@/lib/sourcing/yield/types";
 import { Card } from "./card";
@@ -55,6 +64,15 @@ export function ListingCard({
           <span className="tabular text-lg font-semibold">{sieveYield.sieveYieldPercent}%</span>
         </div>
         <SieveYieldDisclosures disclosures={sieveYield.disclosures} />
+      </div>
+
+      <div className="mt-4">
+        <Link
+          href={`/rapport/nieuw/pand?listing=${encodeURIComponent(listing.sourceId)}`}
+          className="border-accent text-accent focus-visible:ring-accent-ring inline-flex rounded-md border px-4 py-2 text-sm font-medium transition-colors hover:bg-accent-subtle focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+        >
+          Kies dit pand
+        </Link>
       </div>
     </Card>
   );
