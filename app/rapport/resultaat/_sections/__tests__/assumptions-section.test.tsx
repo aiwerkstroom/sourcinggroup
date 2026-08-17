@@ -16,7 +16,10 @@ import { AssumptionsSection } from "../assumptions-section";
 function buildProps() {
   const result = runEngine(referenceCase);
   const outcome = result.scenarioOutcomes!.find((o) => o.scenario === "base")!;
-  return { assumptionsUsed: outcome.assumptionsUsed };
+  return {
+    assumptionsUsed: outcome.assumptionsUsed,
+    listingFieldProvenance: result.listingFieldProvenance,
+  };
 }
 
 describe("AssumptionsSection - golden data against the reference case", () => {
@@ -80,5 +83,81 @@ describe("AssumptionsSection - rendered against the reference case", () => {
     const props = buildProps();
     const html = renderToStaticMarkup(<AssumptionsSection {...props} />);
     expect((html.match(/<li/g) ?? []).length).toBe(props.assumptionsUsed.length);
+  });
+
+  it("shows nothing about a listing origin for the reference case (no listing was chosen)", () => {
+    const props = buildProps();
+    const html = renderToStaticMarkup(<AssumptionsSection {...props} />);
+    expect(html).not.toContain("overgenomen uit de gekozen listing");
+  });
+});
+
+describe("AssumptionsSection - the §6.8 listing-fields note (SOURCING_SPEC.md §4/§7 step 4)", () => {
+  it("names wijk and oppervlak together when both are still fromListing", () => {
+    const props = buildProps();
+    const html = renderToStaticMarkup(
+      <AssumptionsSection
+        {...props}
+        listingFieldProvenance={{
+          neighborhood: { status: "fromListing", originalValue: "El Carmen (Ciutat Vella)" },
+          purchasePrice: { status: "confirmed", originalValue: 620000 },
+          builtAreaM2: { status: "fromListing", originalValue: 180 },
+          usableAreaM2: { status: "fromListing", originalValue: 165 },
+        }}
+      />,
+    );
+    expect(html).toContain(
+      "De wijk, het gebouwd oppervlak en het bruikbaar oppervlak zijn overgenomen uit de gekozen listing, niet door u bevestigd.",
+    );
+  });
+
+  it("names a single field on its own when only that one is still fromListing", () => {
+    const props = buildProps();
+    const html = renderToStaticMarkup(
+      <AssumptionsSection
+        {...props}
+        listingFieldProvenance={{
+          neighborhood: { status: "confirmed", originalValue: "El Carmen (Ciutat Vella)" },
+          purchasePrice: null,
+          builtAreaM2: { status: "fromListing", originalValue: 180 },
+          usableAreaM2: { status: "confirmed", originalValue: 165 },
+        }}
+      />,
+    );
+    expect(html).toContain(
+      "Het gebouwd oppervlak is overgenomen uit de gekozen listing, niet door u bevestigd.",
+    );
+  });
+
+  it("never mentions purchasePrice here - that field has its own §6.1 treatment", () => {
+    const props = buildProps();
+    const html = renderToStaticMarkup(
+      <AssumptionsSection
+        {...props}
+        listingFieldProvenance={{
+          neighborhood: { status: "confirmed", originalValue: "El Carmen (Ciutat Vella)" },
+          purchasePrice: { status: "fromListing", originalValue: 620000 },
+          builtAreaM2: { status: "confirmed", originalValue: 180 },
+          usableAreaM2: { status: "confirmed", originalValue: 165 },
+        }}
+      />,
+    );
+    expect(html).not.toContain("overgenomen uit de gekozen listing");
+  });
+
+  it("shows nothing once every field is confirmed", () => {
+    const props = buildProps();
+    const html = renderToStaticMarkup(
+      <AssumptionsSection
+        {...props}
+        listingFieldProvenance={{
+          neighborhood: { status: "confirmed", originalValue: "El Carmen (Ciutat Vella)" },
+          purchasePrice: { status: "confirmed", originalValue: 620000 },
+          builtAreaM2: { status: "confirmed", originalValue: 180 },
+          usableAreaM2: { status: "confirmed", originalValue: 165 },
+        }}
+      />,
+    );
+    expect(html).not.toContain("overgenomen uit de gekozen listing");
   });
 });

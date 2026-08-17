@@ -17,6 +17,14 @@
  * actualCurrentRent case, and a faint aside for a minor override. None of
  * the three uses colour - UI_SPEC.md §1 reserves colour for a pass/fail
  * signal, and a rent deviation is neither.
+ *
+ * EngineResult.listingFieldProvenance.purchasePrice surfaces here too
+ * (SOURCING_SPEC.md §4/§7 step 4), with the same boxed weight as a
+ * significant rent override: an unverified listing price drives the
+ * headline figures just as directly. It renders before the rent notes -
+ * price is the more foundational of the two - and only when the status is
+ * still "fromListing"; a confirmed or edited price, or no listing origin
+ * at all, shows nothing.
  */
 
 // Imported from rent-provenance-key.ts, not rent-provenance.ts - see that
@@ -24,8 +32,10 @@
 // parameters.ts, which this component must never reach even transitively.
 import { rentProvenanceDisclosureKey } from "@/lib/rules/es/rent-provenance-key";
 import { translateRentProvenanceDisclosure } from "@/lib/copy/es/rent-provenance-disclosures";
+import { translatePurchasePriceFromListingNotice } from "@/lib/copy/es/listing-field-provenance-disclosures";
 import type {
   IrrResult,
+  ListingFieldProvenanceReport,
   RentInputProvenance,
   RentInputProvenanceReport,
 } from "@/lib/rules/es/types";
@@ -38,6 +48,7 @@ export interface OneLineOutcomeSectionProps {
   irr: IrrResult;
   meetsMinRequiredReturn: boolean | null;
   rentInputProvenance: RentInputProvenanceReport;
+  listingFieldProvenance: ListingFieldProvenanceReport;
 }
 
 function StatFigure({ label, value }: { label: string; value: string }) {
@@ -103,12 +114,28 @@ function RentProvenanceNotes({ report }: { report: RentInputProvenanceReport }) 
   );
 }
 
+function ListingPriceNotice({
+  purchasePrice,
+}: {
+  purchasePrice: ListingFieldProvenanceReport["purchasePrice"];
+}) {
+  const text = translatePurchasePriceFromListingNotice(purchasePrice);
+  if (text === null) return null;
+
+  return (
+    <div className="border-border-strong flex flex-col gap-1.5 border-l-2 pl-4">
+      <p className="text-sm leading-relaxed">{text}</p>
+    </div>
+  );
+}
+
 export function OneLineOutcomeSection({
   monthlyCashflow,
   dscr,
   irr,
   meetsMinRequiredReturn,
   rentInputProvenance,
+  listingFieldProvenance,
 }: OneLineOutcomeSectionProps) {
   const verdict = buildOneLineVerdict({ monthlyCashflow, dscr, irr, meetsMinRequiredReturn });
 
@@ -126,6 +153,7 @@ export function OneLineOutcomeSection({
         <StatFigure label="IRR" value={irr.defined ? formatPercent(irr.irr) : "onbepaald"} />
       </div>
 
+      <ListingPriceNotice purchasePrice={listingFieldProvenance.purchasePrice} />
       <RentProvenanceNotes report={rentInputProvenance} />
     </section>
   );

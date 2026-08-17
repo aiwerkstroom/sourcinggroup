@@ -19,15 +19,28 @@
  * (build-engine-input.ts's FIXED_RESIDENCY/FIXED_EU_RESIDENT), not a
  * parameter with its own provenance record - so they get their own
  * paragraph here rather than a manufactured row in the categorised list.
+ *
+ * EngineResult.listingFieldProvenance's neighborhood/builtAreaM2/
+ * usableAreaM2 (SOURCING_SPEC.md §4/§7 step 4) get one quiet line here,
+ * not a manufactured row either - unlike purchasePrice, which gets §6.1's
+ * boxed treatment, these three don't drive the headline figures, so the
+ * approved design keeps them calm: no box, no colour, the same register
+ * as this section's own faint per-parameter notes.
  */
 
 import type { AssumptionCategory } from "@/lib/copy/es/assumption-disclosures";
 import { ASSUMPTION_CATEGORY_ORDER, describeAssumption } from "@/lib/copy/es/assumption-disclosures";
-import type { Parameter, ParameterProvenance } from "@/lib/rules/es/types";
+import { translateListingFieldsFromListingNote } from "@/lib/copy/es/listing-field-provenance-disclosures";
+import type {
+  ListingFieldProvenanceReport,
+  Parameter,
+  ParameterProvenance,
+} from "@/lib/rules/es/types";
 
 export interface AssumptionsSectionProps {
   /** ScenarioOutcome.assumptionsUsed for the base scenario. */
   assumptionsUsed: readonly Parameter<unknown>[];
+  listingFieldProvenance: ListingFieldProvenanceReport;
 }
 
 const PROVENANCE_LABEL_NL: Readonly<Record<ParameterProvenance, string>> = {
@@ -80,7 +93,10 @@ function CategoryGroup({
   );
 }
 
-export function AssumptionsSection({ assumptionsUsed }: AssumptionsSectionProps) {
+export function AssumptionsSection({
+  assumptionsUsed,
+  listingFieldProvenance,
+}: AssumptionsSectionProps) {
   const byCategory = new Map<AssumptionCategory, Parameter<unknown>[]>();
   for (const param of assumptionsUsed) {
     const { category } = describeAssumption(param);
@@ -88,6 +104,8 @@ export function AssumptionsSection({ assumptionsUsed }: AssumptionsSectionProps)
     group.push(param);
     byCategory.set(category, group);
   }
+
+  const listingFieldsNote = translateListingFieldsFromListingNote(listingFieldProvenance);
 
   return (
     <section aria-labelledby="sectie-aannames" className="flex flex-col gap-6">
@@ -108,6 +126,10 @@ export function AssumptionsSection({ assumptionsUsed }: AssumptionsSectionProps)
           <CategoryGroup key={category} category={category} params={byCategory.get(category)!} />
         ))}
       </div>
+
+      {listingFieldsNote !== null ? (
+        <p className="text-text-faint text-xs leading-relaxed">{listingFieldsNote}</p>
+      ) : null}
     </section>
   );
 }

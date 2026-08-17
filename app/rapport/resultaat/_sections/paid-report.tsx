@@ -86,6 +86,7 @@ export function PaidReport({ result }: PaidReportProps) {
           irr={base?.irr ?? NO_EXIT_PLANNED}
           meetsMinRequiredReturn={base?.returnRequirement.meetsMinRequiredReturn ?? null}
           rentInputProvenance={result.rentInputProvenance}
+          listingFieldProvenance={result.listingFieldProvenance}
         />
       </Card>
 
@@ -136,7 +137,10 @@ export function PaidReport({ result }: PaidReportProps) {
 
       <Card>
         {base !== null ? (
-          <AssumptionsSection assumptionsUsed={base.assumptionsUsed} />
+          <AssumptionsSection
+            assumptionsUsed={base.assumptionsUsed}
+            listingFieldProvenance={result.listingFieldProvenance}
+          />
         ) : (
           <NoExitPlanningNotice sectionNumber={8} title="Aannames en bronnen" />
         )}

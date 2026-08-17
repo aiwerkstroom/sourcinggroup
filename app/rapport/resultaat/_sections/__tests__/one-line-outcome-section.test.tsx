@@ -2,7 +2,12 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { referenceCase } from "@/lib/rules/es/__tests__/referencecase";
 import { runEngine } from "@/lib/rules/es/engine";
-import type { RentInputProvenance, RentInputProvenanceReport } from "@/lib/rules/es/types";
+import { EMPTY_LISTING_FIELD_PROVENANCE } from "@/lib/rules/es/types";
+import type {
+  ListingFieldProvenanceReport,
+  RentInputProvenance,
+  RentInputProvenanceReport,
+} from "@/lib/rules/es/types";
 import { OneLineOutcomeSection } from "../one-line-outcome-section";
 
 /**
@@ -38,6 +43,7 @@ describe("OneLineOutcomeSection - golden render against the reference case", () 
         irr={base.irr}
         meetsMinRequiredReturn={base.returnRequirement.meetsMinRequiredReturn}
         rentInputProvenance={result.rentInputProvenance}
+        listingFieldProvenance={result.listingFieldProvenance}
       />,
     );
     return { html, base, scenario };
@@ -95,6 +101,7 @@ describe("OneLineOutcomeSection - the connector reflects agreement, not sentimen
         irr={{ defined: true, irr: 0.08, iterations: 6 }}
         meetsMinRequiredReturn={true}
         rentInputProvenance={emptyReport()}
+        listingFieldProvenance={EMPTY_LISTING_FIELD_PROVENANCE}
       />,
     );
     expect(html).toMatch(/positieve maandcashflow.*en.*rendementseis haalt/s);
@@ -109,6 +116,7 @@ describe("OneLineOutcomeSection - the connector reflects agreement, not sentimen
         irr={{ defined: true, irr: 0.01, iterations: 6 }}
         meetsMinRequiredReturn={false}
         rentInputProvenance={emptyReport()}
+        listingFieldProvenance={EMPTY_LISTING_FIELD_PROVENANCE}
       />,
     );
     expect(html).toMatch(/negatieve maandcashflow.*en.*rendementseis niet haalt/s);
@@ -123,6 +131,7 @@ describe("OneLineOutcomeSection - the connector reflects agreement, not sentimen
         irr={{ defined: true, irr: 0.01, iterations: 6 }}
         meetsMinRequiredReturn={false}
         rentInputProvenance={emptyReport()}
+        listingFieldProvenance={EMPTY_LISTING_FIELD_PROVENANCE}
       />,
     );
     expect(html).toMatch(/positieve maandcashflow.*maar.*rendementseis niet haalt/s);
@@ -136,6 +145,7 @@ describe("OneLineOutcomeSection - the connector reflects agreement, not sentimen
         irr={{ defined: false, reason: "The cashflow series never changes sign." }}
         meetsMinRequiredReturn={null}
         rentInputProvenance={emptyReport()}
+        listingFieldProvenance={EMPTY_LISTING_FIELD_PROVENANCE}
       />,
     );
     expect(html).toContain("Er is geen IRR");
@@ -162,6 +172,7 @@ describe("OneLineOutcomeSection - rent provenance styling by severity", () => {
         irr={{ defined: true, irr: 0.05, iterations: 6 }}
         meetsMinRequiredReturn={true}
         rentInputProvenance={report}
+        listingFieldProvenance={EMPTY_LISTING_FIELD_PROVENANCE}
       />,
     );
   }
@@ -201,5 +212,45 @@ describe("OneLineOutcomeSection - rent provenance styling by severity", () => {
     });
     expect(html).not.toContain("wijkreferentie");
     expect(html).not.toContain("werkelijke huidige huur");
+  });
+});
+
+describe("OneLineOutcomeSection - the §6.1 listing-price notice (SOURCING_SPEC.md §4/§7 step 4)", () => {
+  function renderWithPurchasePrice(
+    purchasePrice: ListingFieldProvenanceReport["purchasePrice"],
+  ) {
+    return renderToStaticMarkup(
+      <OneLineOutcomeSection
+        monthlyCashflow={100}
+        dscr={1.1}
+        irr={{ defined: true, irr: 0.05, iterations: 6 }}
+        meetsMinRequiredReturn={true}
+        rentInputProvenance={{ longTerm: null, shortTerm: null }}
+        listingFieldProvenance={{
+          ...EMPTY_LISTING_FIELD_PROVENANCE,
+          purchasePrice,
+        }}
+      />,
+    );
+  }
+
+  it("shows a bordered notice, at the same visual weight as a significant rent override, when the price is still fromListing", () => {
+    const html = renderWithPurchasePrice({ status: "fromListing", originalValue: 620000 });
+    expect(html).toContain("€ 620.000");
+    expect(html).toContain("nog niet door u bevestigd");
+    expect(html).toContain("Controleer of dit bedrag nog actueel is");
+    expect(html).toMatch(/border-l-2[^>]*>[\s\S]*Controleer of dit bedrag/);
+  });
+
+  it("shows nothing once the customer has confirmed or edited the price", () => {
+    const html = renderWithPurchasePrice({ status: "confirmed", originalValue: 620000 });
+    expect(html).not.toContain("overgenomen uit de");
+    expect(html).not.toContain("Controleer of dit bedrag");
+  });
+
+  it("shows nothing when no listing was involved at all", () => {
+    const html = renderWithPurchasePrice(null);
+    expect(html).not.toContain("overgenomen uit de");
+    expect(html).not.toContain("Controleer of dit bedrag");
   });
 });
