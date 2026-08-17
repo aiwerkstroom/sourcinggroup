@@ -28,6 +28,13 @@ import { SESSION_COOKIE } from "@/lib/auth/supabase-mock";
  * pages they drive - stay protected like the rest of /rapport: a real
  * download click already happens from an authenticated page, so the
  * browser's own fetch() already carries the cookie automatically.
+ *
+ * /zoeken (pijler 2, SOURCING_SPEC.md §3) is protected the same way and
+ * for an explicitly stated reason, not by extension of the wizard's own
+ * logic: the alerts pijler 2 adds later need an account regardless
+ * (saved criteria per user), so one access model for the whole pillar is
+ * simpler than anonymous search plus account-only alerts. Search itself
+ * stays free - the paid value is still the per-property report.
  */
 
 const INTERNAL_PRINT_PREFIX = "/rapport/resultaat/print";
@@ -44,7 +51,9 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const signedIn = hasSession(request);
 
-  const isProtected = pathname.startsWith("/rapport") && !pathname.startsWith(INTERNAL_PRINT_PREFIX);
+  const isProtected =
+    (pathname.startsWith("/rapport") && !pathname.startsWith(INTERNAL_PRINT_PREFIX)) ||
+    pathname.startsWith("/zoeken");
 
   if (isProtected && !signedIn) {
     const url = request.nextUrl.clone();
@@ -62,5 +71,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/rapport/:path*", "/auth/signin", "/auth/signup"],
+  matcher: ["/rapport/:path*", "/zoeken/:path*", "/auth/signin", "/auth/signup"],
 };
