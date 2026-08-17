@@ -27,6 +27,9 @@ import "@testing-library/jest-dom/vitest";
  */
 process.env.TSG_STRIPE_MOCK_LATENCY_MS = "0";
 
+/** Same reasoning as the Stripe mock's latency override, for source-mock.ts (pijler 2). */
+process.env.TSG_SOURCE_MOCK_LATENCY_MS = "0";
+
 afterEach(() => {
   cleanup();
 });
