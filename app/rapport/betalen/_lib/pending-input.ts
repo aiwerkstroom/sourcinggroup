@@ -49,7 +49,7 @@ import type { WizardData } from "@/app/rapport/nieuw/_state/wizard-state";
  * after a declined card. Roughly matches how long a real Stripe
  * PaymentIntent stays actionable.
  */
-const PENDING_TTL_MS = 30 * 60 * 1000;
+export const PENDING_TTL_MS = 30 * 60 * 1000;
 
 /** The httpOnly cookie carrying the token. Exported so every reader uses one name, not a literal that can drift. */
 export const PENDING_INPUT_COOKIE = "tsg-pending-report";
