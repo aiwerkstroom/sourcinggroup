@@ -2,11 +2,17 @@ import Link from "next/link";
 import { Card } from "./_components/card";
 import { EXAMPLE_DIMENSIONS, EXAMPLE_PROPERTY, EXAMPLE_TICKS } from "./_components/example-property";
 import { ExampleScoreRuler } from "./_components/example-score-ruler";
+import { FadeIn } from "./_components/fade-in";
 
 /**
  * The wervende landing page (LANDING_SPEC.md), replacing the previous
- * purely functional homepage. Server Component throughout - nothing here
- * is interactive, so no client boundary is needed (LANDING_SPEC.md §8).
+ * purely functional homepage.
+ *
+ * Still a Server Component. HOMEPAGE_UPGRADE_SPEC.md §7 step 1 adds
+ * motion to sections 1, 2 and 5, but only through FadeIn - a thin client
+ * wrapper that takes its children as a prop, so everything inside stays
+ * server-rendered and shipped as HTML. The page itself gained no "use
+ * client" and no interactivity of its own.
  *
  * Step 2 of LANDING_SPEC.md §9 adds the example section (§5): a fictional
  * property, illustrating the ScoreRuler's visual form and a one-line
@@ -92,7 +98,9 @@ function HeroLink({ href, children }: { href: string; children: React.ReactNode 
 export default function HomePage() {
   return (
     <div className="mx-auto min-h-screen max-w-5xl px-4 py-10 md:px-8">
-      <section className="flex flex-col gap-6">
+      {/* Hero: fades on load, not on scroll - it is already on screen, so
+          there is nothing to scroll into (HOMEPAGE_UPGRADE_SPEC.md §2). */}
+      <FadeIn trigger="load" className="flex flex-col gap-6">
         <div className="flex flex-col gap-4">
           <h1 className="max-w-2xl text-2xl leading-snug font-semibold">
             Een pand kopen in Spanje voelt vaak als een gok.
@@ -112,19 +120,27 @@ export default function HomePage() {
           <HeroLink href="/gratis">Gratis indicatie</HeroLink>
           <HeroLink href="/rapport/nieuw/pand">Betaald rapport — € 49</HeroLink>
         </div>
-      </section>
+      </FadeIn>
 
       <section className="mt-16 flex flex-col gap-6">
-        <h2 className="text-xl font-semibold">Hoe het werkt</h2>
-        <p className="text-text-muted max-w-prose leading-relaxed">
-          Drie stappen, dezelfde methode voor elk pand dat u invoert.
-        </p>
+        <FadeIn className="flex flex-col gap-6">
+          <h2 className="text-xl font-semibold">Hoe het werkt</h2>
+          <p className="text-text-muted max-w-prose leading-relaxed">
+            Drie stappen, dezelfde methode voor elk pand dat u invoert.
+          </p>
+        </FadeIn>
+        {/* Each card is its own FadeIn so the stagger is per card, 90ms
+            apart (HOMEPAGE_UPGRADE_SPEC.md §3's 80-100ms). The wrapper
+            carries the grid cell, which is why FadeIn takes a className -
+            an extra plain div here would break the three-column grid. */}
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-          {HOW_IT_WORKS_STEPS.map((step) => (
-            <Card key={step.title}>
-              <h3 className="text-base font-semibold">{step.title}</h3>
-              <p className="text-text-muted mt-2 text-sm leading-relaxed">{step.body}</p>
-            </Card>
+          {HOW_IT_WORKS_STEPS.map((step, index) => (
+            <FadeIn key={step.title} delayMs={index * 90} className="h-full">
+              <Card hoverAccent fill>
+                <h3 className="text-base font-semibold">{step.title}</h3>
+                <p className="text-text-muted mt-2 text-sm leading-relaxed">{step.body}</p>
+              </Card>
+            </FadeIn>
           ))}
         </div>
       </section>
@@ -184,7 +200,7 @@ export default function HomePage() {
         </dl>
       </section>
 
-      <section className="mt-16">
+      <FadeIn className="mt-16 block">
         <Card size="large">
           <div className="flex flex-col gap-4">
             <h2 className="text-xl font-semibold">Begin met een gratis indicatie</h2>
@@ -202,7 +218,7 @@ export default function HomePage() {
             </div>
           </div>
         </Card>
-      </section>
+      </FadeIn>
     </div>
   );
 }

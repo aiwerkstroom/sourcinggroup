@@ -191,6 +191,11 @@ describe("bundle sweep - the landing page reaches nothing in the calculation lay
       "./_components/card",
       "./_components/example-property",
       "./_components/example-score-ruler",
+      // HOMEPAGE_UPGRADE_SPEC.md §7 step 1. A client wrapper, but one
+      // that takes children as a prop, so it moves no page content into
+      // the browser bundle - and it reaches nothing in lib/rules/es
+      // itself, which is what this allowlist is guarding.
+      "./_components/fade-in",
     ];
 
     const lines = importLinesOf("app/page.tsx");

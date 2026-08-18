@@ -81,3 +81,54 @@ table {
 .tabular {
   font-variant-numeric: tabular-nums;
 }
+
+/*
+ * Scroll- en laad-fade-ins voor de homepage (HOMEPAGE_UPGRADE_SPEC.md §1).
+ *
+ * Bewust in CSS en niet in inline styles vanuit React, om drie redenen die
+ * alle drie over robuustheid gaan, niet over stijl:
+ *
+ *  1. prefers-reduced-motion is hier een gewone media query. Die geldt bij
+ *     de eerste paint, vóór er JavaScript geparsed is, en blijft gelden als
+ *     de JS nooit aankomt. Dat is een garantie; een check in een effect is
+ *     dat niet.
+ *  2. De duur (300ms) en easing staan op één plek, binnen de 150-300ms die
+ *     §1 toestaat, zonder bounce of spring - aansluitend op de bestaande
+ *     transition-colors duration-150 uit DESIGN_SPEC §5.
+ *  3. De transitie noemt alleen opacity en transform. Nooit een eigenschap
+ *     die een focus-ring raakt: §1 eist dat animatie focus nooit vertraagt
+ *     of verbergt, en de enige zekere manier om dat te garanderen is de
+ *     ring buiten de transitie houden.
+ *
+ * De verschuiving is 8px omhoog - net genoeg om als beweging te lezen, te
+ * klein om de layout te laten "springen" of scrollpositie te beïnvloeden.
+ */
+[data-fade] {
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    opacity 300ms ease-out,
+    transform 300ms ease-out;
+}
+
+[data-fade="in"] {
+  opacity: 1;
+  transform: none;
+}
+
+/*
+ * Twee ontsnappingsroutes naar "gewoon zichtbaar". Beide zetten de
+ * eindtoestand zonder transitie, zodat er niets te wachten valt.
+ *
+ * De .no-js-variant hoort bij de <noscript>-regel in layout.tsx: zonder
+ * JavaScript flipt niets ooit data-fade naar "in", en dan zou de halve
+ * pagina onzichtbaar blijven. Progressive enhancement, niet een randgeval.
+ */
+@media (prefers-reduced-motion: reduce) {
+  [data-fade],
+  [data-fade="in"] {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
