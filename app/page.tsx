@@ -1,25 +1,37 @@
 import Link from "next/link";
 import { Card } from "./_components/card";
+import { ExampleScoreRuler } from "./_components/example-score-ruler";
 
 /**
  * The wervende landing page (LANDING_SPEC.md), replacing the previous
  * purely functional homepage. Server Component throughout - nothing here
  * is interactive, so no client boundary is needed (LANDING_SPEC.md §8).
  *
- * Step 1 of LANDING_SPEC.md §9: content and structure only - hero,
- * explainer, FAQ, closing CTA. The example section (§5, a hardcoded
- * ScoreRuler illustration) is step 2, not part of this pass.
+ * Step 2 of LANDING_SPEC.md §9 adds the example section (§5): a fictional
+ * property, fully hardcoded on this page, illustrating the ScoreRuler's
+ * visual form and a one-line "outcome"-style sentence in §6.1's tone -
+ * never a real listing, never a live calculation. See
+ * example-score-ruler.tsx's own docstring for why that component has zero
+ * import from lib/rules/es or any app/rapport-internal module: §5 is
+ * explicit that this section may not import or touch
+ * TSG_SCORE_DIMENSION_WEIGHTS, real anchor points, or real Parameter
+ * objects. The mandatory "Ter illustratie" label sits directly on the
+ * example card, not in small print - §5 calls this out as required, not
+ * optional, so a visitor can never mistake the illustration for a real
+ * report or for social proof.
  *
  * Zelfde buitencontainer als elke andere pagina in de site (max-w-5xl,
  * px-4/md:px-8, py-10). The hero stays outside a card, same reasoning as
- * every other page's own header; the explainer's three steps and the
- * closing CTA reuse the existing Card component (DESIGN_SPEC.md §3) -
- * no new visual language, per LANDING_SPEC.md's own instruction.
+ * every other page's own header; the explainer's three steps, the example
+ * and the closing CTA reuse the existing Card component (DESIGN_SPEC.md
+ * §3) - no new visual language, per LANDING_SPEC.md's own instruction.
  *
  * §2's "autoriteit zonder overdrijven": no testimonials, no invented
  * numbers, no claim of a track record this product does not yet have.
  * The page's case for trust is the method itself - visible assumptions,
- * traceable outcomes - which is what §2's/§4's copy leans on instead.
+ * traceable outcomes - which is what §2's/§4's copy leans on instead. The
+ * fictional example does not undermine that: it is clearly labelled as
+ * fiction, not offered as evidence of a real outcome.
  */
 
 const HOW_IT_WORKS_STEPS = [
@@ -34,6 +46,56 @@ const HOW_IT_WORKS_STEPS = [
   {
     title: "3. U ziet de aannames",
     body: "Elke waarde in de berekening staat met bron en datum in het rapport. Wat een schatting is, heet ook zo.",
+  },
+];
+
+/**
+ * The example section's entire content (LANDING_SPEC.md §5). Every value
+ * below is invented for this page - no import from source-mock.ts's 30
+ * listings, no import from lib/rules/es, no import from
+ * app/rapport-internal copy or components. The five dimension labels
+ * mirror the real report's own public vocabulary (already shown to every
+ * paying customer, not confidential - only the per-dimension weights are
+ * unpublished, per UI_SPEC.md §5) so the illustration reads as
+ * recognisably the same kind of score; the tick positions are a plain,
+ * evenly-spaced placeholder scale, deliberately not SCORE_RULER_TICKS'
+ * real, unevenly-spaced anchors.
+ */
+const EXAMPLE_TICKS = [0, 2, 4, 6, 8, 10];
+
+const EXAMPLE_PROPERTY = {
+  description: "Appartement in Valencia · 85 m² · € 245.000",
+  totalScore: 7.3,
+  percentile: 64,
+  outcome:
+    "Een positieve maandcashflow en een dekkingsgraad boven 1,0, samen met een rendement dat de eis haalt.",
+};
+
+const EXAMPLE_DIMENSIONS = [
+  {
+    label: "Cashflow",
+    description: "Blijft er maandelijks geld over na alle kosten?",
+    score: 6.8,
+  },
+  {
+    label: "Schuldbestendigheid",
+    description: "Houdt de financiering stand bij tegenvallers?",
+    score: 7.1,
+  },
+  {
+    label: "Rendement",
+    description: "Weegt het rendement op tegen het risico?",
+    score: 7.6,
+  },
+  {
+    label: "Haalbaarheid",
+    description: "Is deze financiering haalbaar zoals ingevuld?",
+    score: 8.0,
+  },
+  {
+    label: "Datazekerheid",
+    description: "Hoe stevig staan de gebruikte cijfers?",
+    score: 6.9,
   },
 ];
 
@@ -114,6 +176,47 @@ export default function HomePage() {
             </Card>
           ))}
         </div>
+      </section>
+
+      <section className="mt-16 flex flex-col gap-6">
+        <h2 className="text-xl font-semibold">Een voorbeeld</h2>
+        <p className="text-text-muted max-w-prose leading-relaxed">
+          Zo ziet een uitkomst eruit voor een fictief pand - geen live berekening, puur ter
+          illustratie van hoe het rapport rekent en rapporteert.
+        </p>
+
+        <Card size="large">
+          <div className="flex flex-col gap-6">
+            <span className="bg-accent-subtle text-accent inline-flex w-fit rounded-full px-3 py-1 text-xs font-medium">
+              Ter illustratie — dit is geen echt pand
+            </span>
+
+            <p className="text-text-muted text-sm">{EXAMPLE_PROPERTY.description}</p>
+
+            <div className="flex items-baseline gap-4">
+              <span className="tabular text-5xl font-semibold">
+                {EXAMPLE_PROPERTY.totalScore.toFixed(1).replace(".", ",")}
+              </span>
+              <span className="text-text-muted text-sm">
+                percentiel {EXAMPLE_PROPERTY.percentile} van ons modelbereik
+              </span>
+            </div>
+
+            <div className="flex flex-col gap-6">
+              {EXAMPLE_DIMENSIONS.map((dimension) => (
+                <ExampleScoreRuler
+                  key={dimension.label}
+                  label={dimension.label}
+                  description={dimension.description}
+                  score={dimension.score}
+                  ticks={EXAMPLE_TICKS}
+                />
+              ))}
+            </div>
+
+            <p className="max-w-prose text-base leading-relaxed">{EXAMPLE_PROPERTY.outcome}</p>
+          </div>
+        </Card>
       </section>
 
       <section className="mt-16 flex flex-col gap-6">
