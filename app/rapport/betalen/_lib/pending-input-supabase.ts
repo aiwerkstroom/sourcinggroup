@@ -2,52 +2,48 @@ import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { WizardData } from "@/app/rapport/nieuw/_state/wizard-state";
 import { getServerSupabaseClient } from "@/lib/supabase/server-client";
-import { PENDING_TTL_MS } from "./pending-input";
-import type { PendingInput } from "./pending-input";
+import { PENDING_TTL_MS } from "./pending-input-contract";
+import type { PendingInput } from "./pending-input-contract";
 
 /**
- * The real Supabase-backed pending-input store (fase 4 stap 3) - the
- * adapter that replaces pending-input.ts's in-memory Map.
+ * The Supabase-backed pending-input store, and since fase 4 stap 3's live
+ * swap THE implementation the payment flow actually runs on. The
+ * migration has been applied to the real project and
+ * SUPABASE_SERVICE_ROLE_KEY is set in Vercel for Production and Preview,
+ * so pending-input.ts now resolves here by default.
  *
- * Same three functions, same signatures, same semantics. It sits beside
- * the mock rather than editing it, which is why the swap is a one-line
- * change and why the mock stays available for the test suite and for
- * local work without a database.
+ * It replaced a per-process in-memory Map. Vercel gives separate
+ * invocations separate processes, so an entry written while preparing a
+ * payment was not reliably present when the customer returned from their
+ * bank - an observed failure, not a predicted one. A row does not have
+ * that problem.
  *
- * TO SWAP, once a Supabase project with 0001_initial.sql applied exists
- * and SUPABASE_SERVICE_ROLE_KEY is set: replace the body of
- * pending-input.ts with a re-export of this module -
+ * The in-memory version still exists (pending-input-memory.ts) but is
+ * reachable only by the explicit TSG_PENDING_STORE=memory opt-in that the
+ * route-level golden tests use, never by a missing key. pending-input.ts
+ * documents exactly why that is not the silent fallback that was ruled
+ * out.
  *
- *   export { PENDING_INPUT_COOKIE, PENDING_TTL_MS } from "./pending-input-supabase";
- *   export type { PendingInput } from "./pending-input-supabase";
- *   export * from "./pending-input-supabase";
+ * WHAT IS AND IS NOT PROVEN, FROM HERE. Nothing in this sandbox has ever
+ * completed a real round trip: the egress policy blocks *.supabase.co, so
+ * that limit is unchanged by the swap. Verified here: it compiles against
+ * the real @supabase/supabase-js types (2.112.3); the real query builder
+ * still exposes the three methods it calls (the shallow type check
+ * below); and its own logic behaves correctly against a fake client in
+ * __tests__/pending-input-supabase.test.ts.
  *
- * - or point the six call sites here. Nothing else changes: those callers
- * already await these functions, which is precisely why pending-input.ts
- * made them async from the start even though a Map needs no await.
+ * NOT verified from here, and not claimed: that the deployed
+ * pending_inputs table matches these column names, that the service role
+ * gets past RLS, that jsonb round-trips WizardData unchanged, or that any
+ * query succeeds at all. The tables are reported to exist and the cron
+ * job to run; that report is credible but it is not a test this repo can
+ * execute. The first real proof is a completed payment on the live
+ * deployment - that is the check to run after this deploy, not before.
  *
- * Deliberately NOT selected by an env check at runtime. A "use Supabase
- * if configured, else the Map" fallback would fail exactly the way this
- * step exists to prevent: a missing variable in production would silently
- * restore the per-process Map, and nobody would notice until a customer
- * paid and lost their report. Missing configuration throws here
- * (server-client.ts), loudly, on the first call.
- *
- * WHAT IS AND IS NOT PROVEN. This has never run against a live database:
- * the sandbox's egress policy blocks *.supabase.co. Verified: it compiles
- * against the real @supabase/supabase-js types (2.112.3); the real query
- * builder still exposes the three methods it calls (the shallow type
- * check below); and its own logic behaves correctly against a fake client
- * in __tests__/pending-input-supabase.test.ts.
- *
- * NOT verified, and not claimed: that pending_inputs exists with these
- * column names, that the service role gets past RLS, that jsonb
- * round-trips WizardData unchanged, or that any query succeeds at all.
  * The client is narrowed to a hand-written interface by an explicit cast,
- * because the full structural check does not compile (see below) - so the
+ * because the full structural check does not compile (see below), so the
  * match between that interface and the SDK's real behaviour rests on
- * reading the SDK, not on the compiler. All of that is a live-environment
- * question, the same posture the Auth mock took, and for the same reason.
+ * reading the SDK, not on the compiler.
  */
 
 const TABLE = "pending_inputs";
@@ -257,5 +253,5 @@ async function deleteToken(token: string): Promise<void> {
   }
 }
 
-export { PENDING_INPUT_COOKIE, PENDING_TTL_MS } from "./pending-input";
-export type { PendingInput } from "./pending-input";
+export { PENDING_INPUT_COOKIE, PENDING_TTL_MS } from "./pending-input-contract";
+export type { PendingInput } from "./pending-input-contract";

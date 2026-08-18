@@ -1,5 +1,11 @@
 /**
- * Golden test for the pending-input store (fase 4 stap 2).
+ * Golden test for the IN-MEMORY pending-input store (fase 4 stap 2).
+ *
+ * Imports pending-input-memory.ts directly rather than pending-input.ts:
+ * since fase 4 stap 3's live swap the latter resolves to the Supabase
+ * adapter, which has no database to talk to here. This file still earns
+ * its place - the memory store is what the route-level golden tests run
+ * on, so its behaviour still has to be right.
  *
  * Two behaviours carry real weight here and the rest is bookkeeping:
  *
@@ -20,7 +26,7 @@ import {
   EMPTY_STAAT_EN_LASTEN,
 } from "@/app/rapport/nieuw/_state/wizard-state";
 import type { WizardData } from "@/app/rapport/nieuw/_state/wizard-state";
-import { readPendingInput, storePendingInput, takePendingInput } from "../pending-input";
+import { readPendingInput, storePendingInput, takePendingInput } from "../pending-input-memory";
 
 /**
  * The store never looks inside the data it holds, so the emptiest legal

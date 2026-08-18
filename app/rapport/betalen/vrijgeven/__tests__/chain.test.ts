@@ -120,7 +120,17 @@ beforeAll(async () => {
     );
   }
 
-  server = spawn(nextBin, ["start", "-p", String(PORT)], { cwd: repoRoot, stdio: "pipe" });
+  // TSG_PENDING_STORE=memory: this server has no Supabase behind it, and
+  // since fase 4 stap 3's live swap pending-input.ts otherwise resolves
+  // to the real adapter. This chain is about the payment->release path
+  // and the anchor surviving it, not about which store backs it - so it
+  // runs on the in-memory one, via the explicit opt-in pending-input.ts
+  // documents, never a fallback a missing key could trigger.
+  server = spawn(nextBin, ["start", "-p", String(PORT)], {
+    cwd: repoRoot,
+    stdio: "pipe",
+    env: { ...process.env, TSG_PENDING_STORE: "memory" },
+  });
   await waitForServer(Date.now() + START_TIMEOUT_MS);
   browser = await chromium.launch();
 }, TEST_TIMEOUT_MS);

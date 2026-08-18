@@ -30,6 +30,16 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
+// Runs before the imports below are evaluated, which is the point: the
+// route's module graph reaches pending-input.ts, and that file decides
+// which store it exports at load time. Since fase 4 stap 3's live swap
+// the default is Supabase, which has no database to talk to here - this
+// test drives the release route's own failure handling, not the store,
+// so it opts into the in-memory one explicitly.
+vi.hoisted(() => {
+  process.env.TSG_PENDING_STORE = "memory";
+});
 import type { WizardData } from "@/app/rapport/nieuw/_state/wizard-state";
 import {
   confirmPayment,

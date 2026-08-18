@@ -135,7 +135,17 @@ beforeAll(async () => {
     );
   }
 
-  server = spawn(nextBin, ["start", "-p", String(PORT)], { cwd: repoRoot, stdio: "pipe" });
+  // TSG_PENDING_STORE=memory: this server has no Supabase behind it, and
+  // since fase 4 stap 3's live swap pending-input.ts otherwise resolves
+  // to the real adapter. The tests below are about the routes and the
+  // page, not about which store backs them, so they run on the in-memory
+  // one - the explicit opt-in pending-input.ts documents, never a
+  // fallback the absence of a key could trigger.
+  server = spawn(nextBin, ["start", "-p", String(PORT)], {
+    cwd: repoRoot,
+    stdio: "pipe",
+    env: { ...process.env, TSG_PENDING_STORE: "memory" },
+  });
   await waitForServer(Date.now() + START_TIMEOUT_MS);
 }, TEST_TIMEOUT_MS);
 

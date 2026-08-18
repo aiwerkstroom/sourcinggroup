@@ -1,124 +1,69 @@
-import { randomUUID } from "node:crypto";
-import type { WizardData } from "@/app/rapport/nieuw/_state/wizard-state";
+import type { PendingInput } from "./pending-input-contract";
+import * as memory from "./pending-input-memory";
+import * as supabase from "./pending-input-supabase";
 
 /**
- * Holds the wizard's input across the payment step (fase 4 stap 2).
+ * THE SWAP POINT. Every caller in the payment flow imports the pending
+ * store from here, so which implementation runs is decided once, in this
+ * file, and nowhere else.
  *
- * The problem this exists for: runEngine() runs only after a successful
- * payment, so WizardData has to survive the gap between "leaving step 4"
- * and "coming back paid". React context alone cannot carry that. It
- * survives client-side navigation between routes under /rapport/layout.tsx
- * - which is exactly how the wizard reaches the result page today - but a
- * payment is not always a client-side navigation. Card payments confirmed
- * in-page stay in the document; iDEAL, Bancontact, SEPA mandates and
- * 3-D Secure challenges send the browser to another origin and back to a
- * return_url. That return is a cold document load: context gone, input
- * gone. For a Dutch audience those are the likely methods, not the edge
- * case, so the mechanism has to survive a full page load or it only works
- * for the path customers use least.
+ * Since fase 4 stap 3's live swap that is the Supabase adapter: a real
+ * table, reachable from every Vercel instance. The in-memory Map it
+ * replaced was per-process, and separate invocations are separate
+ * processes - so an entry written while preparing a payment was not
+ * reliably there when the customer returned from their bank. That was a
+ * real, observed failure, not a theoretical one.
  *
- * Hence: server-side, keyed by an opaque token the browser carries in an
- * httpOnly cookie. The address and the financial figures never enter a
- * URL and never enter browser storage - wizard-state.tsx refused the
- * latter deliberately, and this does not quietly reverse that. What the
- * browser holds is a UUID and nothing else.
+ * === Why this is a selection and not a hard re-export ===
  *
- * Nothing here is permanent. An entry lives for PENDING_TTL_MS and is
- * deleted the moment it is consumed, which keeps this inside the phase
- * boundary: report storage tied to an account is stap 3's job, not this
- * one's.
+ * The route-level golden tests (betalen/__tests__/page.test.ts,
+ * voorbereiden/__tests__/route.test.ts) drive a real `next start` server
+ * through the actual payment routes, and there is no database behind it.
+ * Without a way to run those against the Map, roughly ten genuine tests -
+ * "shows the page the input that the prepare route stored", "keeps two
+ * payments apart", "reads without consuming" - would have to be deleted
+ * outright. They spawn their server with TSG_PENDING_STORE=memory instead.
  *
- * THE SWAP POINT. The two functions below are the seam. Locally and in
- * this sandbox they are backed by an in-memory Map, the same proven shape
- * as fase 3's pending-results.ts. That only holds within a single server
- * process - and on Vercel it will not, because separate invocations are
- * separate instances and this entry has to survive minutes and several
- * requests, not the few seconds fase 3's PDF handoff needs. On a
- * multi-instance deployment the Map becomes a Supabase row with an
- * expires_at column; the callers do not change, because these functions
- * are already async precisely so a database round trip can slot in
- * without touching a single call site. That row is the same storage fase
- * 4 stap 3 introduces anyway - the same work, arriving in the right
- * order.
+ * === Why this is NOT the silent fallback that was ruled out ===
+ *
+ * The rejected design was "use Supabase if configured, else the Map".
+ * That fails open: a missing key in production quietly restores the
+ * per-process Map, and nobody finds out until a customer has paid and
+ * lost their report. This one cannot do that, because the selection does
+ * not consult the Supabase configuration at all:
+ *
+ *   - Nothing set (production, preview, any ordinary run) -> Supabase.
+ *     A missing SUPABASE_SERVICE_ROLE_KEY then throws, loudly, on the
+ *     first call (lib/supabase/server-client.ts).
+ *   - TSG_PENDING_STORE set to anything other than the exact string
+ *     "memory" - a typo, a stale value, an empty string -> Supabase, and
+ *     the same loud failure. The Map is never the default of a fallthrough.
+ *   - Only the exact opt-in reaches the Map, which takes a deliberate act.
+ *
+ * So the Map is unreachable by omission, and reachable only by intent.
+ * __tests__/pending-input-selection.test.ts pins each of those branches.
  */
 
 /**
- * Thirty minutes. Fase 3's equivalent uses thirty seconds, which is right
- * for a handoff Playwright completes immediately; a person paying is a
- * different clock - a bank app, a 3-D Secure challenge, a second attempt
- * after a declined card. Roughly matches how long a real Stripe
- * PaymentIntent stays actionable.
+ * The one string that selects the Map. Exported so the tests that opt in
+ * use this constant rather than retyping the literal - a typo in a test's
+ * spawn env would otherwise silently give it Supabase and a confusing
+ * connection error instead of the store it asked for.
  */
-export const PENDING_TTL_MS = 30 * 60 * 1000;
-
-/** The httpOnly cookie carrying the token. Exported so every reader uses one name, not a literal that can drift. */
-export const PENDING_INPUT_COOKIE = "tsg-pending-report";
-
-export interface PendingInput {
-  data: WizardData;
-  /**
-   * The intent this input is being paid for. Stored alongside rather than
-   * looked up later, so the release step cannot be talked into pairing a
-   * payment for one intent with the input of another: one entry, one
-   * intent, decided at creation.
-   */
-  paymentIntentId: string;
-  expiresAt: number;
-}
-
-const globalKey = Symbol.for("tsg.pendingInputs");
-type GlobalWithPending = typeof globalThis & { [globalKey]?: Map<string, PendingInput> };
-const g = globalThis as GlobalWithPending;
-const pending = (g[globalKey] ??= new Map<string, PendingInput>());
+export const MEMORY_STORE_ENV_VALUE = "memory";
 
 /**
- * Expiry is a stored timestamp checked on read, rather than a setTimeout
- * per entry as fase 3 uses. At thirty seconds a timer is fine; at thirty
- * minutes it would mean a live timer per abandoned checkout, and a
- * timestamp is also what the Supabase version will actually have in a
- * column - so the local shape matches the one it swaps into.
+ * Read at module load, deliberately. Which store this process talks to is
+ * a property of the process, not of the request - re-reading it per call
+ * would invite a deploy where two requests in one instance disagree.
  */
-function sweepExpired(now: number): void {
-  for (const [token, entry] of pending) {
-    if (entry.expiresAt <= now) pending.delete(token);
-  }
-}
+const useMemoryStore = process.env.TSG_PENDING_STORE === MEMORY_STORE_ENV_VALUE;
 
-export async function storePendingInput(entry: {
-  data: WizardData;
-  paymentIntentId: string;
-}): Promise<string> {
-  const now = Date.now();
-  sweepExpired(now);
+const impl = useMemoryStore ? memory : supabase;
 
-  const token = randomUUID();
-  pending.set(token, { ...entry, expiresAt: now + PENDING_TTL_MS });
-  return token;
-}
+export const storePendingInput = impl.storePendingInput;
+export const readPendingInput = impl.readPendingInput;
+export const takePendingInput = impl.takePendingInput;
 
-/**
- * Reads without consuming. The payment page needs to show what is being
- * paid for before the payment exists, so it cannot be the same call that
- * removes the entry.
- */
-export async function readPendingInput(token: string): Promise<PendingInput | null> {
-  const entry = pending.get(token);
-  if (entry === undefined) return null;
-  if (entry.expiresAt <= Date.now()) {
-    pending.delete(token);
-    return null;
-  }
-  return entry;
-}
-
-/**
- * Reads and immediately removes - each token releases exactly one report.
- * The release step (stap 4) uses this, so a replayed request cannot mint
- * a second report from one payment.
- */
-export async function takePendingInput(token: string): Promise<PendingInput | null> {
-  const entry = await readPendingInput(token);
-  if (entry === null) return null;
-  pending.delete(token);
-  return entry;
-}
+export { PENDING_INPUT_COOKIE, PENDING_TTL_MS } from "./pending-input-contract";
+export type { PendingInput };
