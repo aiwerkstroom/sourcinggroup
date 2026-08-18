@@ -35,6 +35,17 @@ export interface ExampleScoreRulerProps {
   score: number;
   /** Fictional tick positions - never SCORE_RULER_TICKS' real anchors. */
   ticks: readonly number[];
+  /**
+   * Slides the marker to its new position instead of jumping
+   * (HOMEPAGE_UPGRADE_SPEC.md §4.4), for the interactive calculator.
+   *
+   * Passed in rather than read from useReducedMotion() here, and that is
+   * deliberate: importing the hook would give this file its first import,
+   * and its whole guarantee - enforced by app/__tests__/page.test.tsx -
+   * is that it imports nothing at all. The caller is already a client
+   * component and already knows the answer, so it hands it down.
+   */
+  animateMarker?: boolean;
 }
 
 function xFor(value: number): number {
@@ -46,7 +57,13 @@ function formatFictionalScore(score: number): string {
   return score.toFixed(1).replace(".", ",");
 }
 
-export function ExampleScoreRuler({ label, description, score, ticks }: ExampleScoreRulerProps) {
+export function ExampleScoreRuler({
+  label,
+  description,
+  score,
+  ticks,
+  animateMarker = false,
+}: ExampleScoreRulerProps) {
   const markerX = xFor(score);
   const scoreLabel = formatFictionalScore(score);
 
@@ -99,6 +116,7 @@ export function ExampleScoreRuler({ label, description, score, ticks }: ExampleS
           stroke="var(--color-accent)"
           strokeWidth={2}
           vectorEffect="non-scaling-stroke"
+          style={animateMarker ? { transition: "x1 150ms ease-out, x2 150ms ease-out" } : undefined}
         />
       </svg>
     </div>

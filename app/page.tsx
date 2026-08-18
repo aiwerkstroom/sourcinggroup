@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { Card } from "./_components/card";
-import { EXAMPLE_DIMENSIONS, EXAMPLE_PROPERTY, EXAMPLE_TICKS } from "./_components/example-property";
-import { ExampleScoreRuler } from "./_components/example-score-ruler";
+import { ExampleCalculator } from "./_components/example-calculator";
 import { FadeIn } from "./_components/fade-in";
 import { FaqAccordion } from "./_components/faq-accordion";
 
@@ -15,18 +14,21 @@ import { FaqAccordion } from "./_components/faq-accordion";
  * server-rendered and shipped as HTML. The page itself gained no "use
  * client" and no interactivity of its own.
  *
- * Step 2 of LANDING_SPEC.md §9 adds the example section (§5): a fictional
- * property, illustrating the ScoreRuler's visual form and a one-line
- * "outcome"-style sentence in §6.1's tone - never a real listing, never a
- * live calculation. Its values live in ./_components/example-property.ts
- * and its ruler in ./_components/example-score-ruler.tsx; both have zero
- * imports, because §5 is explicit that this section may not import or
- * touch TSG_SCORE_DIMENSION_WEIGHTS, real anchor points, or real
- * Parameter objects. app/__tests__/page.test.tsx enforces that emptiness,
- * and this file's own import list, as a structural check. The mandatory
- * "Ter illustratie" label sits directly on the example card, not in small
- * print - §5 calls this out as required, not optional, so a visitor can
- * never mistake the illustration for a real report or for social proof.
+ * The example section is now the interactive calculator
+ * (HOMEPAGE_UPGRADE_SPEC.md §4, §7 step 3-4), which replaced the static
+ * fictional property LANDING_SPEC.md §5 introduced. Its arithmetic lives
+ * in ./_components/example-calculator-formula.ts and its ruler in
+ * ./_components/example-score-ruler.tsx; both import nothing at all,
+ * because §4.2 forbids this section from touching runEngine(),
+ * TSG_SCORE_DIMENSION_WEIGHTS or any real anchor point.
+ * app/__tests__/page.test.tsx enforces that emptiness, this file's own
+ * import list, and that the fictional curve collides with no real one.
+ *
+ * The fictional-example label is stronger than it was, because the
+ * section is now interactive: someone typing their own figures into a
+ * moving score needs to be told not just that the property is invented
+ * but that the calculation is. It sits as a fixed header on the tool,
+ * per §4.3.
  *
  * Zelfde buitencontainer als elke andere pagina in de site (max-w-5xl,
  * px-4/md:px-8, py-10). The hero stays outside a card, same reasoning as
@@ -149,41 +151,12 @@ export default function HomePage() {
       <section className="mt-16 flex flex-col gap-6">
         <h2 className="text-xl font-semibold">Een voorbeeld</h2>
         <p className="text-text-muted max-w-prose leading-relaxed">
-          Zo ziet een uitkomst eruit voor een fictief pand - geen live berekening, puur ter
-          illustratie van hoe het rapport rekent en rapporteert.
+          Pas de cijfers hieronder aan en zie hoe de uitkomst meebeweegt - een fictief pand, om te
+          laten zien hoe het rapport rekent en rapporteert.
         </p>
 
         <Card size="large">
-          <div className="flex flex-col gap-6">
-            <span className="bg-accent-subtle text-accent inline-flex w-fit rounded-full px-3 py-1 text-xs font-medium">
-              Ter illustratie — dit is geen echt pand
-            </span>
-
-            <p className="text-text-muted text-sm">{EXAMPLE_PROPERTY.description}</p>
-
-            <div className="flex items-baseline gap-4">
-              <span className="tabular text-5xl font-semibold">
-                {EXAMPLE_PROPERTY.totalScore.toFixed(1).replace(".", ",")}
-              </span>
-              <span className="text-text-muted text-sm">
-                percentiel {EXAMPLE_PROPERTY.percentile} van ons modelbereik
-              </span>
-            </div>
-
-            <div className="flex flex-col gap-6">
-              {EXAMPLE_DIMENSIONS.map((dimension) => (
-                <ExampleScoreRuler
-                  key={dimension.label}
-                  label={dimension.label}
-                  description={dimension.description}
-                  score={dimension.score}
-                  ticks={EXAMPLE_TICKS}
-                />
-              ))}
-            </div>
-
-            <p className="max-w-prose text-base leading-relaxed">{EXAMPLE_PROPERTY.outcome}</p>
-          </div>
+          <ExampleCalculator />
         </Card>
       </section>
 
