@@ -196,6 +196,10 @@ describe("bundle sweep - the landing page reaches nothing in the calculation lay
       // the browser bundle - and it reaches nothing in lib/rules/es
       // itself, which is what this allowlist is guarding.
       "./_components/fade-in",
+      // §7 step 2. Client component too, and this one does serialise its
+      // items - but they are the page's own public FAQ copy, declared in
+      // this file. Same point stands: it reaches nothing in lib/rules/es.
+      "./_components/faq-accordion",
     ];
 
     const lines = importLinesOf("app/page.tsx");

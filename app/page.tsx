@@ -3,6 +3,7 @@ import { Card } from "./_components/card";
 import { EXAMPLE_DIMENSIONS, EXAMPLE_PROPERTY, EXAMPLE_TICKS } from "./_components/example-property";
 import { ExampleScoreRuler } from "./_components/example-score-ruler";
 import { FadeIn } from "./_components/fade-in";
+import { FaqAccordion } from "./_components/faq-accordion";
 
 /**
  * The wervende landing page (LANDING_SPEC.md), replacing the previous
@@ -188,16 +189,7 @@ export default function HomePage() {
 
       <section className="mt-16 flex flex-col gap-6">
         <h2 className="text-xl font-semibold">Veelgestelde vragen</h2>
-        <dl className="flex flex-col">
-          {FAQ_ITEMS.map((item) => (
-            <div key={item.question} className="border-border border-b py-5 first:pt-0 last:border-b-0">
-              <dt className="text-base font-medium">{item.question}</dt>
-              <dd className="text-text-muted mt-2 max-w-prose text-sm leading-relaxed">
-                {item.answer}
-              </dd>
-            </div>
-          ))}
-        </dl>
+        <FaqAccordion items={FAQ_ITEMS} />
       </section>
 
       <FadeIn className="mt-16 block">
