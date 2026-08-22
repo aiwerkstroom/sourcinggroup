@@ -5,6 +5,7 @@ import {
   checkCadastralConstruccion,
   checkCadastralSuelo,
   checkCommunityFeesAnnual,
+  checkFreeTierCommunityFeesAnnual,
   checkHoldingYears,
   checkLtvRange,
   checkMaxLtv,
@@ -166,6 +167,7 @@ describe("Dutch copy covers every field-validation key", () => {
     "occupancyLongTermMustBeFraction",
     "occupancyShortTermMustBeFraction",
     "upcomingDerramasAmountMustBeZeroOrPositive",
+    "freeTierCommunityFeesMustBeZeroOrPositive",
   ];
 
   it("has exactly one Record entry per key", () => {
@@ -231,6 +233,15 @@ describe("investor constraint rules (wizard step 3)", () => {
     expect(checkUpcomingDerramasAmount(0)).toBeNull();
     expect(checkUpcomingDerramasAmount(5000)).toBeNull();
     expect(checkUpcomingDerramasAmount(-1)).toBe("upcomingDerramasAmountMustBeZeroOrPositive");
+  });
+
+  it("the free indication's own servicekosten field is optional but zero-or-positive when present - fase A stap 1, own key so blank never reads as an error", () => {
+    expect(checkFreeTierCommunityFeesAnnual(undefined)).toBeNull();
+    expect(checkFreeTierCommunityFeesAnnual(0)).toBeNull();
+    expect(checkFreeTierCommunityFeesAnnual(1_200)).toBeNull();
+    expect(checkFreeTierCommunityFeesAnnual(-1)).toBe(
+      "freeTierCommunityFeesMustBeZeroOrPositive",
+    );
   });
 
   it("the LTV range must not be inverted", () => {

@@ -17,10 +17,12 @@ import {
   FREE_TIER_BAND_RENT_MARGIN,
   NEIGHBORHOOD_RENT_LONG_TERM,
   RENOVATION_STRATEGIES,
+  RENOVATION_TIER_BY_MAINTENANCE_CONDITION,
   SCENARIOS,
   TSG_SCORE_DISTRIBUTION_COMMUNITY_FEES_RANGE,
 } from "../parameters";
 import { ALL_FREE_TIER_DISCLOSURE_KEYS } from "../types";
+import type { MaintenanceCondition, RenovationStrategyId } from "../types";
 
 /**
  * Golden values: independent recomputation in Python, written from the
@@ -261,6 +263,144 @@ describe("free indication band - disclosures are keys, not text (CLAUDE.md §6)"
   });
 });
 
+/**
+ * Fase A stap 1: three optional FreeTierBandInput fields, each replacing
+ * exactly one of the band's three width drivers at both ends when given.
+ * Golden values recomputed independently the same way the module's own
+ * top-of-file golden test is (hand-transcribed parameters.ts constants),
+ * for the same Ruzafa/€350.000/90m² case so the un-narrowed figures above
+ * are directly comparable.
+ */
+describe("free indication band - narrowing via customer input (fase A stap 1)", () => {
+  const base = { neighborhood: "Ruzafa", purchasePrice: 350_000, builtAreaM2: 90 } as const;
+  const unnarrowed = computeFreeTierBand(base);
+
+  describe("communityFeesAnnual", () => {
+    it("replaces FREE_TIER_BAND_COMMUNITY_FEES_{UN,}FAVOURABLE with the customer's own figure at both ends", () => {
+      const band = computeFreeTierBand({ ...base, communityFeesAnnual: 1_200 });
+      expect(band.unfavourable.communityFees).toBe(1_200);
+      expect(band.favourable.communityFees).toBe(1_200);
+      // The placeholder pair it replaced never appeared in placeholdersUsed
+      // in the first place (band.ts's own collectPlaceholders() never
+      // listed either), so nothing here should change either.
+      const names = band.placeholdersUsed.map((p) => p.name);
+      expect(names).not.toContain("FREE_TIER_BAND_COMMUNITY_FEES_UNFAVOURABLE");
+      expect(names).not.toContain("FREE_TIER_BAND_COMMUNITY_FEES_FAVOURABLE");
+    });
+
+    it("narrows the band width relative to the unfilled default", () => {
+      const band = computeFreeTierBand({
+        ...base,
+        communityFeesAnnual:
+          (FREE_TIER_BAND_COMMUNITY_FEES_FAVOURABLE.value +
+            FREE_TIER_BAND_COMMUNITY_FEES_UNFAVOURABLE.value) /
+          2,
+      });
+      const unnarrowedWidth =
+        unnarrowed.monthlyCashflowBeforeFinancing.high - unnarrowed.monthlyCashflowBeforeFinancing.low;
+      const narrowedWidth =
+        band.monthlyCashflowBeforeFinancing.high - band.monthlyCashflowBeforeFinancing.low;
+      expect(narrowedWidth).toBeLessThan(unnarrowedWidth);
+    });
+
+    it("does not affect the other two axes - renovation tier and rent margin still split as before", () => {
+      const band = computeFreeTierBand({ ...base, communityFeesAnnual: 1_200 });
+      expect(band.unfavourable.renovationStrategy).toBe(
+        FREE_TIER_BAND_RENOVATION_TIER_UNFAVOURABLE.value,
+      );
+      expect(band.favourable.renovationStrategy).toBe(
+        FREE_TIER_BAND_RENOVATION_TIER_FAVOURABLE.value,
+      );
+      expect(band.unfavourable.rentPerM2).toBeCloseTo(unnarrowed.unfavourable.rentPerM2, 10);
+      expect(band.favourable.rentPerM2).toBeCloseTo(unnarrowed.favourable.rentPerM2, 10);
+    });
+  });
+
+  describe("maintenanceCondition", () => {
+    it("resolves via the same RENOVATION_TIER_BY_MAINTENANCE_CONDITION mapping the paid wizard uses, at both ends", () => {
+      for (const [condition, tier] of Object.entries(RENOVATION_TIER_BY_MAINTENANCE_CONDITION.value) as [
+        MaintenanceCondition,
+        RenovationStrategyId,
+      ][]) {
+        const band = computeFreeTierBand({ ...base, maintenanceCondition: condition });
+        expect(band.unfavourable.renovationStrategy).toBe(tier);
+        expect(band.favourable.renovationStrategy).toBe(tier);
+      }
+    });
+
+    it("does not affect the other two axes - community fees and rent margin still split as before", () => {
+      const band = computeFreeTierBand({ ...base, maintenanceCondition: "poor" });
+      expect(band.unfavourable.communityFees).toBe(FREE_TIER_BAND_COMMUNITY_FEES_UNFAVOURABLE.value);
+      expect(band.favourable.communityFees).toBe(FREE_TIER_BAND_COMMUNITY_FEES_FAVOURABLE.value);
+      expect(band.unfavourable.rentPerM2).toBeCloseTo(unnarrowed.unfavourable.rentPerM2, 10);
+      expect(band.favourable.rentPerM2).toBeCloseTo(unnarrowed.favourable.rentPerM2, 10);
+    });
+  });
+
+  describe("rentLevel", () => {
+    it("'below' collapses both ends to the same -8% direction", () => {
+      const band = computeFreeTierBand({ ...base, rentLevel: "below" });
+      const expected = band.referenceRentPerM2 * (1 - FREE_TIER_BAND_RENT_MARGIN.value);
+      expect(band.unfavourable.rentPerM2).toBeCloseTo(expected, 10);
+      expect(band.favourable.rentPerM2).toBeCloseTo(expected, 10);
+    });
+
+    it("'above' collapses both ends to the same +8% direction", () => {
+      const band = computeFreeTierBand({ ...base, rentLevel: "above" });
+      const expected = band.referenceRentPerM2 * (1 + FREE_TIER_BAND_RENT_MARGIN.value);
+      expect(band.unfavourable.rentPerM2).toBeCloseTo(expected, 10);
+      expect(band.favourable.rentPerM2).toBeCloseTo(expected, 10);
+    });
+
+    it("'average' drops the margin to exactly 0 at both ends and excludes FREE_TIER_BAND_RENT_MARGIN from placeholdersUsed", () => {
+      const band = computeFreeTierBand({ ...base, rentLevel: "average" });
+      expect(band.unfavourable.rentPerM2).toBe(band.referenceRentPerM2);
+      expect(band.favourable.rentPerM2).toBe(band.referenceRentPerM2);
+      expect(band.placeholdersUsed.map((p) => p.name)).not.toContain("FREE_TIER_BAND_RENT_MARGIN");
+    });
+
+    it("FREE_TIER_BAND_RENT_MARGIN stays in placeholdersUsed for 'below'/'above' - the margin's own value still drives the figure", () => {
+      for (const rentLevel of ["below", "above"] as const) {
+        const band = computeFreeTierBand({ ...base, rentLevel });
+        expect(band.placeholdersUsed.map((p) => p.name)).toContain("FREE_TIER_BAND_RENT_MARGIN");
+      }
+    });
+
+    it("does not affect the other two axes - community fees and renovation tier still split as before", () => {
+      const band = computeFreeTierBand({ ...base, rentLevel: "average" });
+      expect(band.unfavourable.communityFees).toBe(FREE_TIER_BAND_COMMUNITY_FEES_UNFAVOURABLE.value);
+      expect(band.favourable.communityFees).toBe(FREE_TIER_BAND_COMMUNITY_FEES_FAVOURABLE.value);
+      expect(band.unfavourable.renovationStrategy).toBe(
+        FREE_TIER_BAND_RENOVATION_TIER_UNFAVOURABLE.value,
+      );
+      expect(band.favourable.renovationStrategy).toBe(
+        FREE_TIER_BAND_RENOVATION_TIER_FAVOURABLE.value,
+      );
+    });
+  });
+
+  describe("narrowedByCustomerInput disclosure", () => {
+    it("is absent, and disclosures stays the exact same array reference, when nothing is narrowed", () => {
+      expect(unnarrowed.disclosures).toBe(FREE_TIER_DISCLOSURE_KEYS);
+      expect(unnarrowed.disclosures).not.toContain("narrowedByCustomerInput");
+    });
+
+    it("appears the moment any one of the three fields is given, alongside the four unconditional keys", () => {
+      for (const input of [
+        { ...base, communityFeesAnnual: 1_200 },
+        { ...base, maintenanceCondition: "average" as const },
+        { ...base, rentLevel: "average" as const },
+      ]) {
+        const band = computeFreeTierBand(input);
+        expect(band.disclosures).toContain("narrowedByCustomerInput");
+        for (const key of FREE_TIER_DISCLOSURE_KEYS) {
+          expect(band.disclosures).toContain(key);
+        }
+      }
+    });
+  });
+});
+
 describe("free indication band - Dutch copy (lib/copy/es/free-tier-disclosures.ts)", () => {
   it("translates every key FREE_TIER_DISCLOSURE_KEYS emits", () => {
     const translated = translateFreeTierDisclosures(FREE_TIER_DISCLOSURE_KEYS);
@@ -274,9 +414,10 @@ describe("free indication band - Dutch copy (lib/copy/es/free-tier-disclosures.t
     // TypeScript's Record<FreeTierDisclosureKey, string> already enforces
     // this at compile time (a missing or extra key fails to compile); this
     // is the runtime mirror so the guarantee shows up in the test suite too.
-    // Checked against the full union, not the band's own four: the fifth
-    // key (indicativeScoreScope) is emitted by indicative-score.ts and
-    // still has to be translatable.
+    // Checked against the full union, not just the band's own four
+    // unconditional keys: narrowedByCustomerInput (conditional, this same
+    // module) and indicativeScoreScope (indicative-score.ts) both still
+    // have to be translatable.
     expect(Object.keys(FREE_TIER_DISCLOSURE_COPY_NL).sort()).toEqual(
       [...ALL_FREE_TIER_DISCLOSURE_KEYS].sort(),
     );

@@ -903,6 +903,14 @@ export interface EngineResult {
  * report could never use - so this type never carried them, and the
  * "unmodeledFields" disclosure key that used to name this limitation is
  * gone too, since there is nothing left unmodeled to disclose.
+ *
+ * Fase A stap 1 added three more, optional fields below - each replaces
+ * exactly one of the three band-width drivers band.ts's own module
+ * docstring names (FREE_TIER_BAND_COMMUNITY_FEES_{UN,}FAVOURABLE,
+ * FREE_TIER_BAND_RENOVATION_TIER_{UN,}FAVOURABLE, FREE_TIER_BAND_RENT_MARGIN)
+ * with the customer's own figure at both ends of the band, narrowing it.
+ * Left blank, each keeps today's behaviour exactly: the same
+ * favourable/unfavourable standing-in pair as before this fix.
  */
 export interface FreeTierBandInput {
   /** Key into NEIGHBORHOOD_RENT_LONG_TERM - one of the 13 wijken the free form offers as a dropdown. */
@@ -911,7 +919,33 @@ export interface FreeTierBandInput {
   purchasePrice: number;
   /** Woonoppervlak (superficie construida), m². The free form asks for built area only. */
   builtAreaM2: number;
+  /**
+   * Gastos de comunidad, €/year. Optional: when given, replaces
+   * FREE_TIER_BAND_COMMUNITY_FEES_{UN,}FAVOURABLE with this one figure at
+   * both ends of the band.
+   */
+  communityFeesAnnual?: number;
+  /**
+   * "Staat van onderhoud" - the same three-way self-assessment the paid
+   * wizard asks (MaintenanceCondition), resolved through the same
+   * RENOVATION_TIER_BY_MAINTENANCE_CONDITION mapping deriveRenovationStrategy()
+   * already uses. Optional: when given, replaces
+   * FREE_TIER_BAND_RENOVATION_TIER_{UN,}FAVOURABLE with this one tier at
+   * both ends of the band.
+   */
+  maintenanceCondition?: MaintenanceCondition;
+  /**
+   * How this property's rent compares to NEIGHBORHOOD_RENT_LONG_TERM's
+   * wijk average. Optional: when given, replaces FREE_TIER_BAND_RENT_MARGIN's
+   * ± split with a single direction at both ends - "below"/"above" collapse
+   * to the same -8%/+8% figure at both ends, "average" drops the margin to
+   * exactly 0 (FREE_TIER_BAND_RENT_MARGIN then plays no role for this band
+   * and is excluded from placeholdersUsed).
+   */
+  rentLevel?: FreeTierRentLevel;
 }
+
+export type FreeTierRentLevel = "below" | "average" | "above";
 
 /** One end of the band: a complete run of the simplified calculation at one corner of the unknowns. */
 export interface FreeTierBandEnd {
@@ -955,22 +989,32 @@ export interface FreeTierBandEnd {
  * - `financing`: why financing is absent from the figure.
  * - `unverified`: which assumptions were held fixed because no documented
  *   range exists (UI_SPEC.md §6.9).
+ * - `narrowedByCustomerInput`: fase A stap 1. Present only when the
+ *   customer supplied at least one of the three optional FreeTierBandInput
+ *   fields (communityFeesAnnual, maintenanceCondition, rentLevel) -
+ *   computeFreeTierBand() decides per call whether this key is included,
+ *   the one FreeTierDisclosureKey that is not unconditional. Deliberately
+ *   generic text, naming that the band was narrowed without naming which
+ *   field did it: a dynamic, per-field sentence would need the calculation
+ *   layer to hand structured data to the copy layer, a bigger break from
+ *   "keys only, no dynamic content" than this fix calls for.
  * - `indicativeScoreScope`: the indicative score rests on two of the five
  *   dimensions the paid report scores (SCORE_SPEC.md §8.3). Emitted by
- *   indicative-score.ts, not by the band - the first four above apply to
- *   the band whether or not a score is shown alongside it.
+ *   indicative-score.ts, not by the band - the keys above apply to the
+ *   band whether or not a score is shown alongside it.
  *
- * A sixth key, `unmodeledFields`, used to sit here: pandtype and aantal
- * eenheden were asked on the free form (UI_SPEC.md §3) but entered no
- * calculation, so this key disclosed that gap. Datakwaliteitsfix stap 6
- * removed both fields from the form instead, so there is nothing left
- * unmodeled to disclose - the key is gone, not renamed or reworded.
+ * A key that used to sit here, `unmodeledFields`, is gone rather than
+ * renamed or reworded: pandtype and aantal eenheden were asked on the
+ * free form (UI_SPEC.md §3) but entered no calculation, so this key
+ * disclosed that gap; datakwaliteitsfix stap 6 removed both fields from
+ * the form instead, so there was nothing left unmodeled to disclose.
  */
 export type FreeTierDisclosureKey =
   | "band"
   | "shortTermLicence"
   | "financing"
   | "unverified"
+  | "narrowedByCustomerInput"
   | "indicativeScoreScope";
 
 /**
@@ -981,15 +1025,17 @@ export type FreeTierDisclosureKey =
  * falls behind.
  *
  * Not the same thing as the keys any one result emits - the band emits
- * four (FREE_TIER_DISCLOSURE_KEYS in free-tier/band.ts) and the indicative
- * score emits the fifth. This is the union of everything the copy layer
- * must be able to translate.
+ * four unconditionally (FREE_TIER_DISCLOSURE_KEYS in free-tier/band.ts)
+ * plus `narrowedByCustomerInput` when it applies, and the indicative score
+ * emits the sixth (`indicativeScoreScope`). This is the union of
+ * everything the copy layer must be able to translate.
  */
 const FREE_TIER_DISCLOSURE_KEY_SET: Readonly<Record<FreeTierDisclosureKey, true>> = {
   band: true,
   shortTermLicence: true,
   financing: true,
   unverified: true,
+  narrowedByCustomerInput: true,
   indicativeScoreScope: true,
 };
 

@@ -76,6 +76,8 @@ const FIELD_ISSUE_EN: Record<FieldValidationKey, string> = {
   occupancyLongTermMustBeFraction: "occupancyLongTerm must be between 0 and 1",
   occupancyShortTermMustBeFraction: "occupancyShortTerm must be between 0 and 1",
   upcomingDerramasAmountMustBeZeroOrPositive: "upcomingDerramasEstimate must be zero or positive",
+  freeTierCommunityFeesMustBeZeroOrPositive:
+    "communityFeesAnnual must be zero or positive (free indication)",
 };
 
 export function validateEngineInput(input: EngineInput): string[] {

@@ -14,6 +14,12 @@
  * saying exactly that. Datakwaliteitsfix stap 6 removed both fields
  * instead of continuing to display that caveat.
  *
+ * Fase A stap 1 added three more fields, all optional: servicekosten,
+ * staat van onderhoud and huurniveau. Each narrows one of
+ * computeFreeTierBand()'s three band-width drivers when filled in (see
+ * FreeTierBandInput's own docstring) and leaves today's wide band exactly
+ * as it was when left blank.
+ *
  * Validation reuses the calculation layer's own field rules
  * (lib/rules/es/field-validation.ts) and their Dutch translations
  * (lib/copy/es/validation.ts) - one definition of "valid", the same
@@ -22,10 +28,21 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import {
+  FREE_TIER_RENT_LEVEL_COPY_NL,
+  FREE_TIER_RENT_LEVEL_ORDER,
+  MAINTENANCE_CONDITION_COPY_NL,
+  MAINTENANCE_CONDITION_ORDER,
+} from "@/lib/copy/es/selections";
 import { translateFieldValidation } from "@/lib/copy/es/validation";
-import { checkBuiltAreaM2, checkPurchasePrice } from "@/lib/rules/es/field-validation";
+import {
+  checkBuiltAreaM2,
+  checkFreeTierCommunityFeesAnnual,
+  checkPurchasePrice,
+} from "@/lib/rules/es/field-validation";
+import type { FreeTierRentLevel, MaintenanceCondition } from "@/lib/rules/es/types";
 import { Card } from "./_components/card";
-import { FieldGroup, NumberField, SelectField } from "./_components/fields";
+import { FieldGroup, NumberField, RadioGroup, SelectField } from "./_components/fields";
 import { buildFreeIndicationQuery } from "./_lib/query-params";
 import { parseNumberInput } from "./_lib/parse-number";
 
@@ -33,12 +50,18 @@ interface FormState {
   neighborhood: string;
   purchasePrice: string;
   builtAreaM2: string;
+  communityFeesAnnual: string;
+  maintenanceCondition: string;
+  rentLevel: string;
 }
 
 const EMPTY: FormState = {
   neighborhood: "",
   purchasePrice: "",
   builtAreaM2: "",
+  communityFeesAnnual: "",
+  maintenanceCondition: "",
+  rentLevel: "",
 };
 
 type FieldErrors = Partial<Record<keyof FormState, string>>;
@@ -73,6 +96,16 @@ export function IndicatieForm({ neighborhoods }: { neighborhoods: string[] }) {
       if (key !== null) next.builtAreaM2 = translateFieldValidation(key);
     }
 
+    // Fase A stap 1: optional even though servicekosten is mandatory on
+    // the paid wizard - only a non-empty, invalid value is rejected here.
+    const communityFees = parseNumberInput(data.communityFeesAnnual);
+    if (communityFees.state === "invalid") {
+      next.communityFeesAnnual = translateFieldValidation("mustBeANumber");
+    } else if (communityFees.state === "ok") {
+      const key = checkFreeTierCommunityFeesAnnual(communityFees.value);
+      if (key !== null) next.communityFeesAnnual = translateFieldValidation(key);
+    }
+
     return next;
   }
 
@@ -86,10 +119,18 @@ export function IndicatieForm({ neighborhoods }: { neighborhoods: string[] }) {
     const area = parseNumberInput(data.builtAreaM2);
     if (price.state !== "ok" || area.state !== "ok") return;
 
+    const communityFees = parseNumberInput(data.communityFeesAnnual);
+
     const params = buildFreeIndicationQuery({
       neighborhood: data.neighborhood,
       purchasePrice: price.value,
       builtAreaM2: area.value,
+      communityFeesAnnual: communityFees.state === "ok" ? communityFees.value : undefined,
+      maintenanceCondition:
+        data.maintenanceCondition === ""
+          ? undefined
+          : (data.maintenanceCondition as MaintenanceCondition),
+      rentLevel: data.rentLevel === "" ? undefined : (data.rentLevel as FreeTierRentLevel),
     });
     router.push(`/gratis/resultaat?${params.toString()}`);
   }
@@ -120,6 +161,38 @@ export function IndicatieForm({ neighborhoods }: { neighborhoods: string[] }) {
               unit="m²"
               placeholder="90"
               {...field("builtAreaM2")}
+            />
+          </FieldGroup>
+
+          <FieldGroup title="Versmal de bandbreedte (optioneel)">
+            <p className="text-text-faint -mt-2 max-w-prose text-xs">
+              Vul hieronder in wat u al weet. Hoe meer u invult, hoe smaller de bandbreedte
+              hieronder wordt.
+            </p>
+            <NumberField
+              label="Servicekosten per jaar"
+              unit="€"
+              placeholder="900"
+              optional
+              {...field("communityFeesAnnual")}
+            />
+            <RadioGroup
+              label="Staat van onderhoud"
+              options={MAINTENANCE_CONDITION_ORDER.map((condition) => ({
+                value: condition,
+                label: MAINTENANCE_CONDITION_COPY_NL[condition].label,
+                description: MAINTENANCE_CONDITION_COPY_NL[condition].description,
+              }))}
+              {...field("maintenanceCondition")}
+            />
+            <RadioGroup
+              label="Huurniveau"
+              hint="Hoe verhoudt de huur die u verwacht zich tot het wijkgemiddelde?"
+              options={FREE_TIER_RENT_LEVEL_ORDER.map((level) => ({
+                value: level,
+                label: FREE_TIER_RENT_LEVEL_COPY_NL[level],
+              }))}
+              {...field("rentLevel")}
             />
           </FieldGroup>
 

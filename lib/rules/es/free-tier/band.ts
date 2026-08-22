@@ -10,17 +10,30 @@
  *
  * What the customer sees is a band rather than a point. The same
  * calculation runs twice, once at the least and once at the most
- * favourable standing-in value for each of the three second-order fields
- * the free form does not ask about:
+ * favourable standing-in value for each of three second-order fields the
+ * free form did not ask about:
  *
  *   - gastos de comunidad      FREE_TIER_BAND_COMMUNITY_FEES_{UN,}FAVOURABLE
  *   - staat van onderhoud      FREE_TIER_BAND_RENOVATION_TIER_{UN,}FAVOURABLE
  *   - rent vs. wijk average    FREE_TIER_BAND_RENT_MARGIN
  *
+ * Fase A stap 1: the free form now asks for all three anyway, optionally.
+ * Left blank, a dimension still runs the favourable/unfavourable pair
+ * above, exactly as before this fix. Given, that dimension's customer
+ * figure replaces the pair at BOTH ends - resolveCommunityFeesAnnual(),
+ * resolveRenovationStrategy() and resolveRentMarginDirection() below each
+ * do this for their own dimension, independently: filling in one, two or
+ * all three narrows the band by however much that dimension used to
+ * contribute to the spread, nothing more. Filling in all three collapses
+ * both ends to the same number - a deliberate point estimate, not a bug -
+ * because it is now built entirely from the customer's own figures rather
+ * than a standing-in placeholder pair.
+ *
  * Three deliberate non-drivers, held at a single value in both runs
  * because no documented range exists to span them with, and reported as
  * unverified instead (UI_SPEC.md §6.9): the cadastral/purchase-price
- * ratio, the usable/built area ratio, and long-term occupancy.
+ * ratio, the usable/built area ratio, and long-term occupancy. Unaffected
+ * by fase A stap 1 - the free form still does not ask about any of them.
  *
  * Short-term rental is not a band dimension. The título habilitante is a
  * yes/no gate that makes scenarios disappear (UI_SPEC.md §4), not a
@@ -64,12 +77,15 @@ import {
   NEIGHBORHOOD_RENT_LONG_TERM,
   PROPERTY_MANAGEMENT_FEE,
   RENOVATION_STRATEGIES,
+  RENOVATION_TIER_BY_MAINTENANCE_CONDITION,
 } from "../parameters";
 import type {
   FreeTierBand,
   FreeTierBandEnd,
   FreeTierBandInput,
   FreeTierDisclosureKey,
+  FreeTierRentLevel,
+  MaintenanceCondition,
   Parameter,
   RenovationStrategyId,
 } from "../types";
@@ -108,11 +124,20 @@ export const FREE_TIER_DISCLOSURE_KEYS: readonly FreeTierDisclosureKey[] = [
  *   outcome.ts makes them conditional because the paid path can be given a
  *   measured usable area and a real cadastral value; the free form asks
  *   for neither, by design, so both always apply.
+ * - FREE_TIER_BAND_RENT_MARGIN (fase A stap 1) is conditional on
+ *   `rentMarginUsed`: still a real driver whenever the ±8% figure itself
+ *   is what produces this end's rentPerM2 - which is every case except
+ *   rentLevel "average", where the margin is exactly 0 and this
+ *   PLACEHOLDER genuinely plays no role.
  */
-function collectPlaceholders(renovationStrategy: RenovationStrategyId): Parameter<unknown>[] {
+function collectPlaceholders(
+  renovationStrategy: RenovationStrategyId,
+  rentMarginUsed: boolean,
+): Parameter<unknown>[] {
   const renovation = RENOVATION_STRATEGIES[renovationStrategy];
-  return [
-    FREE_TIER_BAND_RENT_MARGIN,
+  const placeholders: Parameter<unknown>[] = [];
+  if (rentMarginUsed) placeholders.push(FREE_TIER_BAND_RENT_MARGIN);
+  placeholders.push(
     DEFAULT_USABLE_TO_BUILT_AREA_RATIO,
     DEFAULT_CADASTRAL_TO_PURCHASE_PRICE_RATIO,
     BASE_OCCUPANCY_LONG_TERM,
@@ -121,20 +146,70 @@ function collectPlaceholders(renovationStrategy: RenovationStrategyId): Paramete
     renovation.rentMultiplier,
     renovation.maintenanceFactor,
     renovation.utilitiesEfficiency,
-  ];
+  );
+  return placeholders;
+}
+
+/**
+ * Resolves "staat van onderhoud" to a single renovation tier when the
+ * customer supplied one (fase A stap 1), via the same
+ * RENOVATION_TIER_BY_MAINTENANCE_CONDITION mapping deriveRenovationStrategy()
+ * already uses for the paid wizard - no new derivation rule, no new
+ * PLACEHOLDER. Falls back to the caller's own end-specific standing-in
+ * tier (FREE_TIER_BAND_RENOVATION_TIER_{UN,}FAVOURABLE) when not given.
+ */
+function resolveRenovationStrategy(
+  maintenanceCondition: MaintenanceCondition | undefined,
+  fallback: RenovationStrategyId,
+): RenovationStrategyId {
+  return maintenanceCondition !== undefined
+    ? RENOVATION_TIER_BY_MAINTENANCE_CONDITION.value[maintenanceCondition]
+    : fallback;
+}
+
+/**
+ * Resolves gastos de comunidad to a single figure when the customer
+ * supplied one (fase A stap 1), replacing the caller's own end-specific
+ * standing-in value (FREE_TIER_BAND_COMMUNITY_FEES_{UN,}FAVOURABLE).
+ */
+function resolveCommunityFeesAnnual(override: number | undefined, fallback: number): number {
+  return override ?? fallback;
+}
+
+/**
+ * Resolves how this property's rent compares to the wijk average to a
+ * single margin direction when the customer supplied one (fase A stap 1):
+ * "below"/"above" collapse both ends to the same -1/+1 direction
+ * FREE_TIER_BAND_RENT_MARGIN.value already defines; "average" drops the
+ * margin to exactly 0, at which point FREE_TIER_BAND_RENT_MARGIN's own
+ * value plays no role at all (see collectPlaceholders() above). Falls back
+ * to the caller's own end-specific direction when not given, reproducing
+ * today's ±8% split exactly.
+ */
+function resolveRentMarginDirection(
+  rentLevel: FreeTierRentLevel | undefined,
+  fallback: 1 | -1,
+): 1 | -1 | 0 {
+  if (rentLevel === undefined) return fallback;
+  if (rentLevel === "below") return -1;
+  if (rentLevel === "above") return 1;
+  return 0;
 }
 
 /**
  * One end of the band. `rentMarginDirection` is +1 at the favourable end
- * and -1 at the unfavourable one: the margin is symmetric around the
- * neighbourhood average by construction, so both ends read the same
- * parameter rather than two separately maintained numbers.
+ * and -1 at the unfavourable one when the customer left rentLevel blank:
+ * the margin is symmetric around the neighbourhood average by
+ * construction, so both ends read the same parameter rather than two
+ * separately maintained numbers. Given a rentLevel, both ends receive the
+ * same resolved direction instead (fase A stap 1) - 0 is "average", where
+ * the margin plays no role at either end.
  */
 function computeEnd(args: {
   end: "unfavourable" | "favourable";
   input: FreeTierBandInput;
   referenceRentPerM2: number;
-  rentMarginDirection: 1 | -1;
+  rentMarginDirection: 1 | -1 | 0;
   renovationStrategy: RenovationStrategyId;
   communityFeesAnnual: number;
 }): FreeTierBandEnd {
@@ -196,7 +271,7 @@ function computeEnd(args: {
     annualCashflowBeforeFinancing,
     monthlyCashflowBeforeFinancing: annualCashflowBeforeFinancing / MONTHS_PER_YEAR,
     renovationStrategy: args.renovationStrategy,
-    placeholdersUsed: collectPlaceholders(args.renovationStrategy),
+    placeholdersUsed: collectPlaceholders(args.renovationStrategy, args.rentMarginDirection !== 0),
   };
 }
 
@@ -242,18 +317,42 @@ export function computeFreeTierBand(input: FreeTierBandInput): FreeTierBand {
     end: "unfavourable",
     input,
     referenceRentPerM2,
-    rentMarginDirection: -1,
-    renovationStrategy: FREE_TIER_BAND_RENOVATION_TIER_UNFAVOURABLE.value,
-    communityFeesAnnual: FREE_TIER_BAND_COMMUNITY_FEES_UNFAVOURABLE.value,
+    rentMarginDirection: resolveRentMarginDirection(input.rentLevel, -1),
+    renovationStrategy: resolveRenovationStrategy(
+      input.maintenanceCondition,
+      FREE_TIER_BAND_RENOVATION_TIER_UNFAVOURABLE.value,
+    ),
+    communityFeesAnnual: resolveCommunityFeesAnnual(
+      input.communityFeesAnnual,
+      FREE_TIER_BAND_COMMUNITY_FEES_UNFAVOURABLE.value,
+    ),
   });
   const favourable = computeEnd({
     end: "favourable",
     input,
     referenceRentPerM2,
-    rentMarginDirection: 1,
-    renovationStrategy: FREE_TIER_BAND_RENOVATION_TIER_FAVOURABLE.value,
-    communityFeesAnnual: FREE_TIER_BAND_COMMUNITY_FEES_FAVOURABLE.value,
+    rentMarginDirection: resolveRentMarginDirection(input.rentLevel, 1),
+    renovationStrategy: resolveRenovationStrategy(
+      input.maintenanceCondition,
+      FREE_TIER_BAND_RENOVATION_TIER_FAVOURABLE.value,
+    ),
+    communityFeesAnnual: resolveCommunityFeesAnnual(
+      input.communityFeesAnnual,
+      FREE_TIER_BAND_COMMUNITY_FEES_FAVOURABLE.value,
+    ),
   });
+
+  // Fase A stap 1: present only when the customer narrowed at least one of
+  // the three dimensions above. Kept as a reference to the shared constant
+  // when not narrowed, not a freshly allocated copy, so a caller comparing
+  // disclosures by reference for the unnarrowed case is unaffected.
+  const narrowed =
+    input.communityFeesAnnual !== undefined ||
+    input.maintenanceCondition !== undefined ||
+    input.rentLevel !== undefined;
+  const disclosures: readonly FreeTierDisclosureKey[] = narrowed
+    ? [...FREE_TIER_DISCLOSURE_KEYS, "narrowedByCustomerInput"]
+    : FREE_TIER_DISCLOSURE_KEYS;
 
   return {
     neighborhood: input.neighborhood,
@@ -268,6 +367,6 @@ export function computeFreeTierBand(input: FreeTierBandInput): FreeTierBand {
       unfavourable.placeholdersUsed,
       favourable.placeholdersUsed,
     ),
-    disclosures: FREE_TIER_DISCLOSURE_KEYS,
+    disclosures,
   };
 }

@@ -46,11 +46,19 @@ export default async function GratisIndicatieResultaatPage({
     );
   }
 
-  const { neighborhood, purchasePrice, builtAreaM2 } = parsed.value;
+  const { neighborhood, purchasePrice, builtAreaM2, communityFeesAnnual, maintenanceCondition, rentLevel } =
+    parsed.value;
 
   let band;
   try {
-    band = computeFreeTierBand({ neighborhood, purchasePrice, builtAreaM2 });
+    band = computeFreeTierBand({
+      neighborhood,
+      purchasePrice,
+      builtAreaM2,
+      communityFeesAnnual,
+      maintenanceCondition,
+      rentLevel,
+    });
   } catch {
     // computeFreeTierBand() is the sole authority on which wijken are
     // covered (band.ts's own docstring) - it throws on an unrecognised

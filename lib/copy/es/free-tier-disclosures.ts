@@ -34,6 +34,8 @@ export const FREE_TIER_DISCLOSURE_COPY_NL: Readonly<Record<FreeTierDisclosureKey
     "Niet geverifieerd in deze indicatie: het bruikbaar oppervlak (afgeleid uit het " +
     "gebouwde oppervlak), de kadastrale waarde (benaderd met de vraagprijs) en de " +
     "bezettingsgraad. In het betaalde rapport vult u deze zelf in.",
+  narrowedByCustomerInput:
+    "Deze bandbreedte is versmald op basis van wat u zelf heeft ingevuld.",
   indicativeScoreScope:
     "Deze indicatie is gebaseerd op twee van de vijf factoren die het volledige " +
     "rapport beoordeelt. Rendement, schuldbestendigheid en haalbaarheid worden pas " +
@@ -57,6 +59,8 @@ export function translateFreeTierDisclosure(key: FreeTierDisclosureKey): string 
       return FREE_TIER_DISCLOSURE_COPY_NL.financing;
     case "unverified":
       return FREE_TIER_DISCLOSURE_COPY_NL.unverified;
+    case "narrowedByCustomerInput":
+      return FREE_TIER_DISCLOSURE_COPY_NL.narrowedByCustomerInput;
     case "indicativeScoreScope":
       return FREE_TIER_DISCLOSURE_COPY_NL.indicativeScoreScope;
     default: {

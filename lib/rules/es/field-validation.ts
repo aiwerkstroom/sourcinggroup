@@ -51,7 +51,8 @@ export type FieldValidationKey =
   | "rentPerM2ShortTermMustBePositive"
   | "occupancyLongTermMustBeFraction"
   | "occupancyShortTermMustBeFraction"
-  | "upcomingDerramasAmountMustBeZeroOrPositive";
+  | "upcomingDerramasAmountMustBeZeroOrPositive"
+  | "freeTierCommunityFeesMustBeZeroOrPositive";
 
 export function isFiniteNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
@@ -226,4 +227,19 @@ export function checkOccupancyShortTerm(value: unknown): FieldValidationKey | nu
 export function checkUpcomingDerramasAmount(value: unknown): FieldValidationKey | null {
   if (value === undefined) return null;
   return !isFiniteNumber(value) || value < 0 ? "upcomingDerramasAmountMustBeZeroOrPositive" : null;
+}
+
+/**
+ * Servicekosten (gastos de comunidad) on the free indication's own
+ * narrowing field - fase A stap 1. Deliberately a separate key from
+ * checkCommunityFeesAnnual/"communityFeesMustBeZeroOrPositive": that
+ * one's own copy says "leeg laten niet" because the paid wizard's
+ * community-fees field is mandatory there (MODEL_SPEC.md §15). Here it is
+ * optional - blank means "narrow this dimension later, in the paid
+ * report" - so reusing that copy would tell the customer their blank
+ * answer is wrong when it is not.
+ */
+export function checkFreeTierCommunityFeesAnnual(value: unknown): FieldValidationKey | null {
+  if (value === undefined) return null;
+  return !isFiniteNumber(value) || value < 0 ? "freeTierCommunityFeesMustBeZeroOrPositive" : null;
 }

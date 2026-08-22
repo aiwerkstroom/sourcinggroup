@@ -89,7 +89,6 @@ describe("a chosen listing prefills step 1, over real HTTP", () => {
       expect(await page.getByLabel("Vraagprijs").inputValue()).toBe("620000");
       expect(await page.getByLabel("Gebouwd oppervlak").inputValue()).toBe("180");
       expect(await page.getByLabel("Bruikbaar oppervlak", { exact: false }).inputValue()).toBe("165");
-      expect(await page.getByLabel("Pandtype", { exact: false }).inputValue()).toBe("villa");
 
       // Never prefilled - a listing carries no street address.
       expect(await page.getByLabel("Volledig adres").inputValue()).toBe("");

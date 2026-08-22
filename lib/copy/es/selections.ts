@@ -9,7 +9,7 @@
  * to compile.
  */
 
-import type { MaintenanceCondition, RentalStrategy } from "../../rules/es/types";
+import type { FreeTierRentLevel, MaintenanceCondition, RentalStrategy } from "../../rules/es/types";
 
 /**
  * "Staat van onderhoud" (UI_SPEC.md §3). The wording is deliberately
@@ -48,3 +48,22 @@ export const RENTAL_STRATEGY_COPY_NL: Readonly<Record<RentalStrategy, string>> =
   shortTerm: "Kortetermijnverhuur",
   hybrid: "Hybride (combinatie)",
 };
+
+/**
+ * "Hoe verhoudt de huur zich tot het wijkgemiddelde?" (fase A stap 1, gratis
+ * indicatie). A qualitative choice rather than an exact €/m² figure -
+ * FreeTierBandInput.rentLevel narrows FREE_TIER_BAND_RENT_MARGIN's ±8%
+ * split to a single direction, so a direction is all the customer needs to
+ * supply, not a number they may not know precisely.
+ */
+export const FREE_TIER_RENT_LEVEL_COPY_NL: Readonly<Record<FreeTierRentLevel, string>> = {
+  below: "Onder het wijkgemiddelde",
+  average: "Rond het wijkgemiddelde",
+  above: "Boven het wijkgemiddelde",
+};
+
+export const FREE_TIER_RENT_LEVEL_ORDER: readonly FreeTierRentLevel[] = [
+  "below",
+  "average",
+  "above",
+];
