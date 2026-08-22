@@ -399,6 +399,98 @@ describe("free indication band - narrowing via customer input (fase A stap 1)", 
       }
     });
   });
+
+  /**
+   * Fase A stap 2: the point-estimate collapse, and its disclosure
+   * swap, across all eight 0/1/2/3-given combinations of the three
+   * optional fields - the exhaustive matrix this task's own instruction
+   * asked for.
+   */
+  describe("point estimate collapse (fase A stap 2) - all eight combinations", () => {
+    const NARROWING_FIELDS = {
+      communityFeesAnnual: 1_200,
+      maintenanceCondition: "poor" as const,
+      rentLevel: "above" as const,
+    };
+
+    function inputWith(keys: (keyof typeof NARROWING_FIELDS)[]) {
+      const extra: Partial<typeof NARROWING_FIELDS> = {};
+      for (const key of keys) {
+        (extra as Record<string, unknown>)[key] = NARROWING_FIELDS[key];
+      }
+      return { ...base, ...extra };
+    }
+
+    const COMBINATIONS: {
+      name: string;
+      keys: (keyof typeof NARROWING_FIELDS)[];
+      expectedGivenCount: 0 | 1 | 2 | 3;
+    }[] = [
+      { name: "0 given", keys: [], expectedGivenCount: 0 },
+      { name: "1 given (communityFeesAnnual)", keys: ["communityFeesAnnual"], expectedGivenCount: 1 },
+      { name: "1 given (maintenanceCondition)", keys: ["maintenanceCondition"], expectedGivenCount: 1 },
+      { name: "1 given (rentLevel)", keys: ["rentLevel"], expectedGivenCount: 1 },
+      {
+        name: "2 given (communityFeesAnnual + maintenanceCondition)",
+        keys: ["communityFeesAnnual", "maintenanceCondition"],
+        expectedGivenCount: 2,
+      },
+      {
+        name: "2 given (communityFeesAnnual + rentLevel)",
+        keys: ["communityFeesAnnual", "rentLevel"],
+        expectedGivenCount: 2,
+      },
+      {
+        name: "2 given (maintenanceCondition + rentLevel)",
+        keys: ["maintenanceCondition", "rentLevel"],
+        expectedGivenCount: 2,
+      },
+      {
+        name: "3 given (all)",
+        keys: ["communityFeesAnnual", "maintenanceCondition", "rentLevel"],
+        expectedGivenCount: 3,
+      },
+    ];
+
+    for (const combo of COMBINATIONS) {
+      it(`${combo.name}: pointEstimate is ${combo.expectedGivenCount === 3}, low===high is ${combo.expectedGivenCount === 3}, and the right disclosure key applies`, () => {
+        const band = computeFreeTierBand(inputWith(combo.keys));
+        const isPoint = combo.expectedGivenCount === 3;
+
+        expect(band.pointEstimate).toBe(isPoint);
+        expect(
+          band.monthlyCashflowBeforeFinancing.low === band.monthlyCashflowBeforeFinancing.high,
+        ).toBe(isPoint);
+
+        if (isPoint) {
+          expect(band.disclosures).toContain("pointEstimateFromCustomerInput");
+          expect(band.disclosures).not.toContain("narrowedByCustomerInput");
+          expect(band.disclosures).not.toContain("band");
+        } else if (combo.expectedGivenCount > 0) {
+          expect(band.disclosures).toContain("narrowedByCustomerInput");
+          expect(band.disclosures).not.toContain("pointEstimateFromCustomerInput");
+          expect(band.disclosures).toContain("band");
+        } else {
+          expect(band.disclosures).not.toContain("narrowedByCustomerInput");
+          expect(band.disclosures).not.toContain("pointEstimateFromCustomerInput");
+          expect(band.disclosures).toContain("band");
+        }
+
+        // shortTermLicence/financing/unverified are never affected by
+        // narrowing - they describe things this fix does not touch.
+        expect(band.disclosures).toContain("shortTermLicence");
+        expect(band.disclosures).toContain("financing");
+        expect(band.disclosures).toContain("unverified");
+      });
+    }
+
+    it("the score's own midpoint calculation needs no special-casing: at the point, midpoint equals the point itself", () => {
+      const band = computeFreeTierBand(inputWith(["communityFeesAnnual", "maintenanceCondition", "rentLevel"]));
+      const midpoint =
+        (band.monthlyCashflowBeforeFinancing.low + band.monthlyCashflowBeforeFinancing.high) / 2;
+      expect(midpoint).toBe(band.monthlyCashflowBeforeFinancing.low);
+    });
+  });
 });
 
 describe("free indication band - Dutch copy (lib/copy/es/free-tier-disclosures.ts)", () => {

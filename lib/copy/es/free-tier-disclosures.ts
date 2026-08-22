@@ -36,6 +36,9 @@ export const FREE_TIER_DISCLOSURE_COPY_NL: Readonly<Record<FreeTierDisclosureKey
     "bezettingsgraad. In het betaalde rapport vult u deze zelf in.",
   narrowedByCustomerInput:
     "Deze bandbreedte is versmald op basis van wat u zelf heeft ingevuld.",
+  pointEstimateFromCustomerInput:
+    "Dit is geen bandbreedte meer: omdat u alle drie de velden hierboven zelf heeft " +
+    "ingevuld, is dit een preciezere schatting op basis van uw eigen cijfers.",
   indicativeScoreScope:
     "Deze indicatie is gebaseerd op twee van de vijf factoren die het volledige " +
     "rapport beoordeelt. Rendement, schuldbestendigheid en haalbaarheid worden pas " +
@@ -61,6 +64,8 @@ export function translateFreeTierDisclosure(key: FreeTierDisclosureKey): string 
       return FREE_TIER_DISCLOSURE_COPY_NL.unverified;
     case "narrowedByCustomerInput":
       return FREE_TIER_DISCLOSURE_COPY_NL.narrowedByCustomerInput;
+    case "pointEstimateFromCustomerInput":
+      return FREE_TIER_DISCLOSURE_COPY_NL.pointEstimateFromCustomerInput;
     case "indicativeScoreScope":
       return FREE_TIER_DISCLOSURE_COPY_NL.indicativeScoreScope;
     default: {

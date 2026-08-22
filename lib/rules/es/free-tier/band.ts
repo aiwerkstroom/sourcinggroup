@@ -24,10 +24,17 @@
  * resolveRenovationStrategy() and resolveRentMarginDirection() below each
  * do this for their own dimension, independently: filling in one, two or
  * all three narrows the band by however much that dimension used to
- * contribute to the spread, nothing more. Filling in all three collapses
- * both ends to the same number - a deliberate point estimate, not a bug -
- * because it is now built entirely from the customer's own figures rather
- * than a standing-in placeholder pair.
+ * contribute to the spread, nothing more.
+ *
+ * Fase A stap 2: filling in all three collapses both ends to the same
+ * number - not a bug, and not schijnprecisie (UI_SPEC.md §1's own
+ * objection to false precision): the figure is now built entirely from
+ * the customer's own three answers rather than a standing-in placeholder
+ * pair, so the extra precision is earned, not invented. FreeTierBand.
+ * pointEstimate is true exactly then, and a page is expected to render a
+ * single figure rather than a range at that point - see this function's
+ * own comment on `pointEstimate` below for how the disclosure list stays
+ * in lockstep with it.
  *
  * Three deliberate non-drivers, held at a single value in both runs
  * because no documented range exists to span them with, and reported as
@@ -342,17 +349,39 @@ export function computeFreeTierBand(input: FreeTierBandInput): FreeTierBand {
     ),
   });
 
-  // Fase A stap 1: present only when the customer narrowed at least one of
-  // the three dimensions above. Kept as a reference to the shared constant
-  // when not narrowed, not a freshly allocated copy, so a caller comparing
-  // disclosures by reference for the unnarrowed case is unaffected.
-  const narrowed =
-    input.communityFeesAnnual !== undefined ||
-    input.maintenanceCondition !== undefined ||
-    input.rentLevel !== undefined;
-  const disclosures: readonly FreeTierDisclosureKey[] = narrowed
-    ? [...FREE_TIER_DISCLOSURE_KEYS, "narrowedByCustomerInput"]
-    : FREE_TIER_DISCLOSURE_KEYS;
+  // Fase A stap 2: three given, not just some, is qualitatively different
+  // from "narrowed" - both ends are now built entirely from the
+  // customer's own figures, so the band has collapsed to a point rather
+  // than merely shrunk. `pointEstimate` is the structural signal a page
+  // branches its layout on (a point vs. a range); the disclosure key
+  // swapped in below is the text signal, kept in lockstep with it rather
+  // than derived independently, so the two can never disagree about
+  // which case this is.
+  const givenCount = [
+    input.communityFeesAnnual !== undefined,
+    input.maintenanceCondition !== undefined,
+    input.rentLevel !== undefined,
+  ].filter(Boolean).length;
+  const pointEstimate = givenCount === 3;
+
+  // Kept as a reference to the shared constant when nothing is narrowed,
+  // not a freshly allocated copy, so a caller comparing disclosures by
+  // reference for the unnarrowed case is unaffected. "band" explains what
+  // a range means (favourable/unfavourable ends, not a probability) -
+  // once collapsed to a point there are no ends left for that text to
+  // describe, so pointEstimateFromCustomerInput replaces it rather than
+  // sitting alongside narrowedByCustomerInput.
+  let disclosures: readonly FreeTierDisclosureKey[];
+  if (pointEstimate) {
+    disclosures = [
+      ...FREE_TIER_DISCLOSURE_KEYS.filter((key) => key !== "band"),
+      "pointEstimateFromCustomerInput",
+    ];
+  } else if (givenCount > 0) {
+    disclosures = [...FREE_TIER_DISCLOSURE_KEYS, "narrowedByCustomerInput"];
+  } else {
+    disclosures = FREE_TIER_DISCLOSURE_KEYS;
+  }
 
   return {
     neighborhood: input.neighborhood,
@@ -363,6 +392,7 @@ export function computeFreeTierBand(input: FreeTierBandInput): FreeTierBand {
       low: unfavourable.monthlyCashflowBeforeFinancing,
       high: favourable.monthlyCashflowBeforeFinancing,
     },
+    pointEstimate,
     placeholdersUsed: mergePlaceholders(
       unfavourable.placeholdersUsed,
       favourable.placeholdersUsed,

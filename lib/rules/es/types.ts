@@ -990,14 +990,22 @@ export interface FreeTierBandEnd {
  * - `unverified`: which assumptions were held fixed because no documented
  *   range exists (UI_SPEC.md §6.9).
  * - `narrowedByCustomerInput`: fase A stap 1. Present only when the
- *   customer supplied at least one of the three optional FreeTierBandInput
- *   fields (communityFeesAnnual, maintenanceCondition, rentLevel) -
+ *   customer supplied one or two (not three - see pointEstimateFromCustomerInput
+ *   below) of the three optional FreeTierBandInput fields
+ *   (communityFeesAnnual, maintenanceCondition, rentLevel) -
  *   computeFreeTierBand() decides per call whether this key is included,
- *   the one FreeTierDisclosureKey that is not unconditional. Deliberately
- *   generic text, naming that the band was narrowed without naming which
- *   field did it: a dynamic, per-field sentence would need the calculation
- *   layer to hand structured data to the copy layer, a bigger break from
- *   "keys only, no dynamic content" than this fix calls for.
+ *   one of two FreeTierDisclosureKey that are not unconditional.
+ *   Deliberately generic text, naming that the band was narrowed without
+ *   naming which field did it: a dynamic, per-field sentence would need
+ *   the calculation layer to hand structured data to the copy layer, a
+ *   bigger break from "keys only, no dynamic content" than this fix
+ *   calls for.
+ * - `pointEstimateFromCustomerInput`: fase A stap 2. Replaces both `band`
+ *   and `narrowedByCustomerInput` when all three optional fields are
+ *   given (FreeTierBand.pointEstimate true) - the figure is a single
+ *   point built entirely from the customer's own answers at that point,
+ *   not a range with two describable ends, so neither of those two keys'
+ *   text still applies.
  * - `indicativeScoreScope`: the indicative score rests on two of the five
  *   dimensions the paid report scores (SCORE_SPEC.md §8.3). Emitted by
  *   indicative-score.ts, not by the band - the keys above apply to the
@@ -1015,6 +1023,7 @@ export type FreeTierDisclosureKey =
   | "financing"
   | "unverified"
   | "narrowedByCustomerInput"
+  | "pointEstimateFromCustomerInput"
   | "indicativeScoreScope";
 
 /**
@@ -1026,9 +1035,10 @@ export type FreeTierDisclosureKey =
  *
  * Not the same thing as the keys any one result emits - the band emits
  * four unconditionally (FREE_TIER_DISCLOSURE_KEYS in free-tier/band.ts)
- * plus `narrowedByCustomerInput` when it applies, and the indicative score
- * emits the sixth (`indicativeScoreScope`). This is the union of
- * everything the copy layer must be able to translate.
+ * plus `narrowedByCustomerInput` or `pointEstimateFromCustomerInput` when
+ * one applies (never both), and the indicative score emits the seventh
+ * (`indicativeScoreScope`). This is the union of everything the copy
+ * layer must be able to translate.
  */
 const FREE_TIER_DISCLOSURE_KEY_SET: Readonly<Record<FreeTierDisclosureKey, true>> = {
   band: true,
@@ -1036,6 +1046,7 @@ const FREE_TIER_DISCLOSURE_KEY_SET: Readonly<Record<FreeTierDisclosureKey, true>
   financing: true,
   unverified: true,
   narrowedByCustomerInput: true,
+  pointEstimateFromCustomerInput: true,
   indicativeScoreScope: true,
 };
 
@@ -1053,11 +1064,32 @@ export interface FreeTierBand {
   referenceRentPerM2: number;
   unfavourable: FreeTierBandEnd;
   favourable: FreeTierBandEnd;
-  /** The two ends as one figure, for display: € low - € high per month. */
+  /**
+   * The two ends as one figure, for display: € low - € high per month.
+   * Numerically equal (low === high) exactly when `pointEstimate` is
+   * true - both ends were built from the same three customer figures at
+   * that point, not two different standing-in pairs.
+   */
   monthlyCashflowBeforeFinancing: { low: number; high: number };
+  /**
+   * True when the customer supplied all three of FreeTierBandInput's
+   * optional narrowing fields (fase A stap 2) - the band has collapsed to
+   * a point rather than merely narrowed. A page is expected to render a
+   * single figure, not a range, when this is true; see
+   * computeFreeTierBand()'s own comment for how `disclosures` stays in
+   * lockstep with this flag.
+   */
+  pointEstimate: boolean;
   /** Union of both ends' placeholdersUsed, de-duplicated by name. */
   placeholdersUsed: Parameter<unknown>[];
-  /** The disclosures that apply to the band itself - the five in FREE_TIER_DISCLOSURE_KEYS, unconditionally. */
+  /**
+   * The disclosures that apply to the band itself. The four in
+   * FREE_TIER_DISCLOSURE_KEYS apply unconditionally, except that "band" is
+   * swapped out for "pointEstimateFromCustomerInput" when `pointEstimate`
+   * is true - there are no favourable/unfavourable ends left for "band"'s
+   * own text to describe at that point. "narrowedByCustomerInput" is
+   * added whenever 1 or 2 (not 3) of the three optional fields are given.
+   */
   disclosures: readonly FreeTierDisclosureKey[];
 }
 

@@ -8,12 +8,19 @@
  * react-dom/server.
  *
  * Visual weight follows this task's own instruction: the indicative
- * labels come first and large, the cashflow band with its own disclosure
- * directly under it, then the remaining four disclosures read in full -
- * none of the five FreeTierDisclosureKey entries sits behind a fold or an
- * accordion. The underlying 0-10 scores are never rendered, because
+ * labels come first and large, the cashflow figure with its own
+ * disclosure directly under it, then the remaining disclosures read in
+ * full - none of the FreeTierDisclosureKey entries sits behind a fold or
+ * an accordion. The underlying 0-10 scores are never rendered, because
  * IndicativeScore never carries them (SCORE_SPEC.md §8.2's own point -
  * see that type's docstring).
+ *
+ * Fase A stap 2: the cashflow card renders a range or a point depending
+ * on band.pointEstimate, never both - "band" and
+ * "pointEstimateFromCustomerInput" are mutually exclusive in
+ * band.disclosures for exactly this reason (band.ts's own comment on
+ * this), so picking the matching heading/figure/disclosure by that same
+ * flag keeps the layout and the text describing it from ever disagreeing.
  *
  * No colour on the labels: UI_SPEC.md §1 reserves colour for a pass/fail
  * threshold, and Laag/Gemiddeld/Hoog is a coarse grade, not a threshold -
@@ -63,7 +70,12 @@ const FULL_REPORT_ADDITIONS: readonly string[] = [
 ];
 
 export function IndicatieResult({ input, band, score }: IndicatieResultProps) {
-  const remainingDisclosures = [...band.disclosures.filter((key) => key !== "band"), ...score.disclosures];
+  const remainingDisclosures = [
+    ...band.disclosures.filter(
+      (key) => key !== "band" && key !== "pointEstimateFromCustomerInput",
+    ),
+    ...score.disclosures,
+  ];
 
   return (
     <div className="flex flex-col gap-8">
@@ -90,15 +102,24 @@ export function IndicatieResult({ input, band, score }: IndicatieResultProps) {
       <Card>
         <section aria-labelledby="sectie-bandbreedte" className="flex flex-col gap-4">
           <h2 id="sectie-bandbreedte" className="text-text-faint text-xs tracking-widest uppercase">
-            Cashflow-bandbreedte
+            {band.pointEstimate ? "Cashflow-schatting" : "Cashflow-bandbreedte"}
           </h2>
-          <p className="tabular text-2xl">
-            {formatEuro(band.monthlyCashflowBeforeFinancing.low)} –{" "}
-            {formatEuro(band.monthlyCashflowBeforeFinancing.high)}
-            <span className="text-text-muted ml-2 text-sm">per maand</span>
-          </p>
+          {band.pointEstimate ? (
+            <p className="tabular text-2xl">
+              {formatEuro(band.monthlyCashflowBeforeFinancing.low)}
+              <span className="text-text-muted ml-2 text-sm">per maand</span>
+            </p>
+          ) : (
+            <p className="tabular text-2xl">
+              {formatEuro(band.monthlyCashflowBeforeFinancing.low)} –{" "}
+              {formatEuro(band.monthlyCashflowBeforeFinancing.high)}
+              <span className="text-text-muted ml-2 text-sm">per maand</span>
+            </p>
+          )}
           <p className="text-text-muted max-w-prose text-sm leading-relaxed">
-            {translateFreeTierDisclosure("band")}
+            {translateFreeTierDisclosure(
+              band.pointEstimate ? "pointEstimateFromCustomerInput" : "band",
+            )}
           </p>
         </section>
       </Card>

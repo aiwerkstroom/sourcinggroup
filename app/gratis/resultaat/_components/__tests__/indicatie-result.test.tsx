@@ -142,3 +142,72 @@ describe.each(CASES)("IndicatieResult - golden render ($name)", (testCase) => {
     expect(html).not.toContain("URL gekopieerd");
   });
 });
+
+/**
+ * Fase A stap 2: rendering when all three narrowing fields collapse the
+ * band to a point (band.pointEstimate true). Uses the same Ruzafa case
+ * free-tier-band.test.ts's own golden test is built on, so the figure
+ * asserted here is independently checkable against that file too.
+ */
+describe("IndicatieResult - point estimate (fase A stap 2, alle drie velden ingevuld)", () => {
+  function buildPointProps() {
+    const input = {
+      neighborhood: "Ruzafa",
+      purchasePrice: 350_000,
+      builtAreaM2: 90,
+      communityFeesAnnual: 1_200,
+      maintenanceCondition: "poor" as const,
+      rentLevel: "above" as const,
+    };
+    const band = computeFreeTierBand(input);
+    const score = computeIndicativeScore(band);
+    return { input, band, score };
+  }
+
+  it("band.pointEstimate is true and low equals high - the precondition this whole test rests on", () => {
+    const { band } = buildPointProps();
+    expect(band.pointEstimate).toBe(true);
+    expect(band.monthlyCashflowBeforeFinancing.low).toBe(band.monthlyCashflowBeforeFinancing.high);
+  });
+
+  it("renders 'Cashflow-schatting', not 'Cashflow-bandbreedte'", () => {
+    const props = buildPointProps();
+    const html = renderToStaticMarkup(<IndicatieResult {...props} />);
+    expect(html).toContain("Cashflow-schatting");
+    expect(html).not.toContain("Cashflow-bandbreedte");
+  });
+
+  it("renders a single figure, not a 'low – high' range", () => {
+    const props = buildPointProps();
+    const html = renderToStaticMarkup(<IndicatieResult {...props} />);
+    const figure = formatEuro(props.band.monthlyCashflowBeforeFinancing.low);
+    expect(html).toContain(figure);
+    // The en dash only ever separates a range in this component - its
+    // absence is the actual claim, not the figure's presence alone.
+    expect(html).not.toContain(`${figure} –`);
+  });
+
+  it("renders pointEstimateFromCustomerInput's text, not band's own range-framing text", () => {
+    const props = buildPointProps();
+    const html = renderToStaticMarkup(<IndicatieResult {...props} />);
+    expect(html).toContain(translateFreeTierDisclosure("pointEstimateFromCustomerInput"));
+    expect(html).not.toContain(translateFreeTierDisclosure("band"));
+    // Nor duplicated into the Toelichting list further down the page.
+    const occurrences = html.split(translateFreeTierDisclosure("pointEstimateFromCustomerInput")).length - 1;
+    expect(occurrences).toBe(1);
+  });
+
+  it("does not render narrowedByCustomerInput's text - that key does not apply once collapsed to a point", () => {
+    const props = buildPointProps();
+    const html = renderToStaticMarkup(<IndicatieResult {...props} />);
+    expect(html).not.toContain(translateFreeTierDisclosure("narrowedByCustomerInput"));
+  });
+
+  it("still renders the three unaffected disclosures (shortTermLicence, financing, unverified) and the score's own", () => {
+    const props = buildPointProps();
+    const html = renderToStaticMarkup(<IndicatieResult {...props} />);
+    for (const key of ["shortTermLicence", "financing", "unverified", "indicativeScoreScope"] as const) {
+      expect(html).toContain(translateFreeTierDisclosure(key));
+    }
+  });
+});
