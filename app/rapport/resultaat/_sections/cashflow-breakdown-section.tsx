@@ -40,7 +40,7 @@ export interface CashflowBreakdownSectionProps {
   /** Base-year fixed cost breakdown - constant across scenarios, so it is not scenario-specific. */
   fixedCosts: Pick<
     FixedOperatingCosts,
-    "propertyTaxIBI" | "insurance" | "bankAccountFee" | "communityFees"
+    "propertyTaxIBI" | "insurance" | "bankAccountFee" | "communityFees" | "derramas"
   >;
   /** Base scenario's annual income tax. */
   annualIncomeTax: TaxResult["taxDueBase"];
@@ -98,6 +98,9 @@ export function CashflowBreakdownSection({
       <Row label="Verzekeringen" annualAmount={-fixedCosts.insurance} />
       <Row label="Bankkosten" annualAmount={-fixedCosts.bankAccountFee} />
       <Row label="Gastos de comunidad" annualAmount={-fixedCosts.communityFees} />
+      {fixedCosts.derramas > 0 ? (
+        <Row label="Derramas (gespreid)" annualAmount={-fixedCosts.derramas} />
+      ) : null}
 
       <Subtotal label="Bedrijfsresultaat (NOI)" annualAmount={scenario.noi} />
 

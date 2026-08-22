@@ -62,6 +62,10 @@ export interface StaatEnLastenStepData {
   currentRentMonthly: string;
   /** "" (unanswered) | "yes" | "no". Never defaulted - see the note above. */
   hasTouristRentalLicense: string;
+  /** Datakwaliteitsfix stap 4: gates whether upcomingDerramasAmount is asked/used at all. Unchecked -> no change in existing behaviour. */
+  hasUpcomingDerramas: boolean;
+  /** Optional even when hasUpcomingDerramas is checked - the customer may know an assessment is coming without yet knowing the amount. */
+  upcomingDerramasAmount: string;
 }
 
 /**
@@ -184,6 +188,8 @@ export const EMPTY_STAAT_EN_LASTEN: StaatEnLastenStepData = {
   currentRentStatus: "",
   currentRentMonthly: "",
   hasTouristRentalLicense: "",
+  hasUpcomingDerramas: false,
+  upcomingDerramasAmount: "",
 };
 
 export const EMPTY_BELEGGER: BeleggerStepData = {

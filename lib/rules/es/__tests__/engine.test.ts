@@ -124,6 +124,9 @@ describe("reference case Avenida Primado Reig 19 (Excel parity)", () => {
     expect(result.fixedOperatingCosts.propertyTaxIBI).toBeCloseTo(1320, 9);
     expect(result.fixedOperatingCosts.insurance).toBe(1030);
     expect(result.fixedOperatingCosts.communityFees).toBe(900);
+    // Datakwaliteitsfix stap 4: referenceCase sets no upcomingDerramasEstimate
+    // (the "unchecked" path), so this stays 0 and .total is unchanged.
+    expect(result.fixedOperatingCosts.derramas).toBe(0);
     expect(result.fixedOperatingCosts.mortgageInterest).toBeCloseTo(10395, 9);
     expect(result.fixedOperatingCosts.total).toBeCloseTo(13745, 9);
   });

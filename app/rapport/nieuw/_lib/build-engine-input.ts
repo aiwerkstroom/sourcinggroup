@@ -227,6 +227,11 @@ export function buildEngineInput(data: WizardData): EngineInput {
         staatEnLasten.cadastralConstruccion,
       ),
       hasTouristRentalLicense: staatEnLasten.hasTouristRentalLicense === "yes",
+      // Datakwaliteitsfix stap 4: unticked, or ticked with an empty amount,
+      // both collapse to undefined here - no change in existing behaviour.
+      upcomingDerramasEstimate: staatEnLasten.hasUpcomingDerramas
+        ? optionalNumber(staatEnLasten.upcomingDerramasAmount)
+        : undefined,
     },
     constraints: {
       totalBudget: number(belegger.totalBudget, "totalBudget"),

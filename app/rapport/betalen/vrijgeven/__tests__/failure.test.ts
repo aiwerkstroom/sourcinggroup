@@ -92,6 +92,8 @@ const computable: WizardData = {
     currentRentStatus: "vacant",
     currentRentMonthly: "",
     hasTouristRentalLicense: "yes",
+    hasUpcomingDerramas: false,
+    upcomingDerramasAmount: "",
   },
   belegger: {
     ownMoney: "115.000",

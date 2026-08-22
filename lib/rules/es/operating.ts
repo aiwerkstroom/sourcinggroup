@@ -6,6 +6,7 @@
 import {
   BANK_FEE,
   DEFAULT_CADASTRAL_TO_PURCHASE_PRICE_RATIO,
+  PROJECTION_YEARS,
   PROPERTY_TAX_IBI_RATE,
   TOTAL_INSURANCE_ANNUAL,
   TOTAL_UTILITIES_PER_M2_ANNUAL,
@@ -31,6 +32,17 @@ export function fixedOperatingCosts(args: {
   communityFeesAnnual: number;
   /** PropertyInput.cadastralValue - when given, IBI is computed over it instead of approximating with purchasePrice (MODEL_SPEC.md §16). */
   cadastralValue?: CadastralValue;
+  /**
+   * PropertyInput.upcomingDerramasEstimate, €, total - datakwaliteitsfix
+   * stap 4. Spread evenly over PROJECTION_YEARS.value rather than charged
+   * as a one-off: this figure feeds the same steady-state annual cost
+   * lines (scenarios.ts, tax.ts) that never see year-specific timing, so a
+   * one-off would have to land somewhere arbitrary in that pipeline. An
+   * even spread is the simplest change that is still defensible - it is
+   * the anticipated cost's honest annual run-rate over the model's own
+   * horizon, not a claim about which calendar year the levy is actually due.
+   */
+  upcomingDerramasEstimate?: number;
 }): FixedOperatingCosts {
   const propertyTaxIBI = args.cadastralValue
     ? (args.cadastralValue.suelo + args.cadastralValue.construccion) * PROPERTY_TAX_IBI_RATE.value
@@ -40,13 +52,16 @@ export function fixedOperatingCosts(args: {
   const insurance = TOTAL_INSURANCE_ANNUAL.value;
   const bankAccountFee = BANK_FEE.value;
   const communityFees = args.communityFeesAnnual;
+  const derramas = (args.upcomingDerramasEstimate ?? 0) / PROJECTION_YEARS.value;
   const mortgageInterest = args.mortgageAmount * args.effectiveInterestRate;
   return {
     propertyTaxIBI,
     insurance,
     bankAccountFee,
     communityFees,
+    derramas,
     mortgageInterest,
-    total: propertyTaxIBI + insurance + bankAccountFee + communityFees + mortgageInterest,
+    total:
+      propertyTaxIBI + insurance + bankAccountFee + communityFees + derramas + mortgageInterest,
   };
 }

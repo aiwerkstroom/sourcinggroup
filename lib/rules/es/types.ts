@@ -208,6 +208,17 @@ export interface PropertyInput {
    * silently as zero.
    */
   hasTouristRentalLicense: boolean;
+  /**
+   * Anticipated community special assessment (derrama) for upcoming works
+   * or repairs, €, total - datakwaliteitsfix stap 4. Optional: unlike
+   * communityFeesAnnual this is a one-off, not-yet-certain cost, so the
+   * wizard offers it behind a checkbox rather than asking outright. When
+   * given, spread evenly over PROJECTION_YEARS.value and added to
+   * FixedOperatingCosts.derramas - see operating.ts's own reasoning for
+   * why spreading, not a one-off year-1 charge, is this fix's chosen
+   * approach.
+   */
+  upcomingDerramasEstimate?: number;
 }
 
 /** Valor catastral desglosado - suelo (land) and construcción (building), both in €. */
@@ -436,6 +447,13 @@ export interface FixedOperatingCosts {
   bankAccountFee: number;
   /** Gastos de comunidad - PropertyInput.communityFeesAnnual, passed through unchanged; not rate-derived like the other lines. */
   communityFees: number;
+  /**
+   * PropertyInput.upcomingDerramasEstimate / PROJECTION_YEARS.value -
+   * datakwaliteitsfix stap 4. Always present (0 when no estimate was
+   * given), so callers can sum it unconditionally the same way they
+   * already sum communityFees.
+   */
+  derramas: number;
   /** mortgage x (selected rate + non-resident spread) - Excel D165. */
   mortgageInterest: number;
   total: number;
@@ -515,6 +533,13 @@ export interface ProjectionYear {
   bankAccountFee: number;
   /** Gastos de comunidad for this calendar year, CPI-indexed like the other fixed cost lines. */
   communityFees: number;
+  /**
+   * The derrama amortization for this calendar year - datakwaliteitsfix
+   * stap 4. Not CPI-indexed, unlike the lines above: it is a fixed total
+   * the customer already estimated in today's euros, already spread evenly
+   * over the projection; indexing it too would inflate it a second time.
+   */
+  derramas: number;
   fixedCosts: number;
   noi: number;
   interestPaid: number;

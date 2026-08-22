@@ -57,7 +57,7 @@ export function taxCalculator(args: {
   scenarios: ScenarioResult[];
   fixedCosts: Pick<
     FixedOperatingCosts,
-    "propertyTaxIBI" | "insurance" | "bankAccountFee" | "communityFees"
+    "propertyTaxIBI" | "insurance" | "bankAccountFee" | "communityFees" | "derramas"
   >;
   /** Legacy; taxResidency takes precedence when both are given. */
   euResident?: boolean;
@@ -68,7 +68,13 @@ export function taxCalculator(args: {
     const depreciation = base * DEPRECIATION_SCENARIO_FACTORS[sc.id].value;
     // Reference Info M63/N63/O63, plus gastos de comunidad (not in the
     // Excel; a deductible cost of obtaining the rental income, the same
-    // category as IBI/insurance/maintenance under IRNR rules).
+    // category as IBI/insurance/maintenance under IRNR rules) and, since
+    // datakwaliteitsfix stap 4, the derrama amortization - the same
+    // category as gastos de comunidad, on the same reasoning: a community
+    // special assessment for building repairs is an expense of obtaining
+    // the rental income, not a capital cost. No separate citation beyond
+    // that precedent, which this codebase already treats as sufficient for
+    // ordinary community fees.
     const deductibleCosts =
       sc.annualInterestOnly +
       args.fixedCosts.propertyTaxIBI +
@@ -77,7 +83,8 @@ export function taxCalculator(args: {
       sc.propertyManagement +
       depreciation +
       args.fixedCosts.bankAccountFee +
-      args.fixedCosts.communityFees;
+      args.fixedCosts.communityFees +
+      args.fixedCosts.derramas;
     return { id: sc.id, depreciation, deductibleCosts };
   });
 

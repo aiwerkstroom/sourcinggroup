@@ -16,6 +16,7 @@ import {
   checkPreferredLtv,
   checkPurchasePrice,
   checkTotalBudget,
+  checkUpcomingDerramasAmount,
   checkUsableAreaM2,
 } from "../field-validation";
 import type { FieldValidationKey } from "../field-validation";
@@ -164,6 +165,7 @@ describe("Dutch copy covers every field-validation key", () => {
     "rentPerM2ShortTermMustBePositive",
     "occupancyLongTermMustBeFraction",
     "occupancyShortTermMustBeFraction",
+    "upcomingDerramasAmountMustBeZeroOrPositive",
   ];
 
   it("has exactly one Record entry per key", () => {
@@ -222,6 +224,13 @@ describe("investor constraint rules (wizard step 3)", () => {
     expect(checkOccupancyShortTerm(undefined)).toBeNull();
     expect(checkOccupancyShortTerm(0.6)).toBeNull();
     expect(checkOccupancyShortTerm(1.5)).toBe("occupancyShortTermMustBeFraction");
+  });
+
+  it("upcoming derramas amount is optional (even when the checkbox is ticked) but zero-or-positive when present - datakwaliteitsfix stap 4", () => {
+    expect(checkUpcomingDerramasAmount(undefined)).toBeNull();
+    expect(checkUpcomingDerramasAmount(0)).toBeNull();
+    expect(checkUpcomingDerramasAmount(5000)).toBeNull();
+    expect(checkUpcomingDerramasAmount(-1)).toBe("upcomingDerramasAmountMustBeZeroOrPositive");
   });
 
   it("the LTV range must not be inverted", () => {

@@ -47,6 +47,8 @@ const referenceWizardData: WizardData = {
     currentRentStatus: "",
     currentRentMonthly: "",
     hasTouristRentalLicense: "yes",
+    hasUpcomingDerramas: false,
+    upcomingDerramasAmount: "",
   },
   belegger: {
     ownMoney: "115.000",

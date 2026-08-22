@@ -119,6 +119,8 @@ const secondCase: WizardData = {
     currentRentStatus: "vacant",
     currentRentMonthly: "",
     hasTouristRentalLicense: "no",
+    hasUpcomingDerramas: false,
+    upcomingDerramasAmount: "",
   },
   belegger: {
     ownMoney: "80000",

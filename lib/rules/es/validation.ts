@@ -29,6 +29,7 @@ import {
   checkRentPerM2LongTerm,
   checkRentPerM2ShortTerm,
   checkTotalBudget,
+  checkUpcomingDerramasAmount,
   checkUsableAreaM2,
 } from "./field-validation";
 import type { FieldValidationKey } from "./field-validation";
@@ -74,6 +75,7 @@ const FIELD_ISSUE_EN: Record<FieldValidationKey, string> = {
   rentPerM2ShortTermMustBePositive: "rentPerM2ShortTerm must be a positive number",
   occupancyLongTermMustBeFraction: "occupancyLongTerm must be between 0 and 1",
   occupancyShortTermMustBeFraction: "occupancyShortTerm must be between 0 and 1",
+  upcomingDerramasAmountMustBeZeroOrPositive: "upcomingDerramasEstimate must be zero or positive",
 };
 
 export function validateEngineInput(input: EngineInput): string[] {
@@ -92,6 +94,7 @@ export function validateEngineInput(input: EngineInput): string[] {
     pushField(checkCadastralSuelo(property.cadastralValue.suelo));
     pushField(checkCadastralConstruccion(property.cadastralValue.construccion));
   }
+  pushField(checkUpcomingDerramasAmount(property.upcomingDerramasEstimate));
   if (typeof property.hasTouristRentalLicense !== "boolean") {
     issues.push("hasTouristRentalLicense must be true or false (no default)");
   } else if (

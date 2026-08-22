@@ -142,6 +142,40 @@ export function NumberField({
   );
 }
 
+interface CheckboxFieldProps {
+  label: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  hint?: string;
+}
+
+/** A single yes/no toggle, e.g. "verwacht u aankomende gemeenschapskosten?" - not part of the label/hint/error FieldShell, since a checkbox reads its own label inline rather than above the control. */
+export function CheckboxField({ label, checked, onChange, hint }: CheckboxFieldProps) {
+  const id = useId();
+  const hintId = `${id}-hint`;
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label className="flex cursor-pointer items-start gap-2.5">
+        <input
+          id={id}
+          type="checkbox"
+          checked={checked}
+          aria-describedby={hint ? hintId : undefined}
+          onChange={(event) => onChange(event.target.checked)}
+          className="[accent-color:var(--color-accent)] mt-0.5 outline-none"
+        />
+        <span className="text-sm font-medium">{label}</span>
+      </label>
+      {hint ? (
+        <p id={hintId} className="text-text-muted max-w-prose text-xs leading-relaxed">
+          {hint}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 interface SelectFieldProps {
   label: string;
   value: string;

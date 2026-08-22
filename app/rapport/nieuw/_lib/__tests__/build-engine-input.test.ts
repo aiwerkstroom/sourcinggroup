@@ -53,6 +53,8 @@ const referenceWizardData: WizardData = {
     currentRentStatus: "",
     currentRentMonthly: "",
     hasTouristRentalLicense: "yes",
+    hasUpcomingDerramas: false,
+    upcomingDerramasAmount: "",
   },
   belegger: {
     ownMoney: "115.000",
@@ -225,6 +227,49 @@ describe("buildEngineInput - occupancy (datakwaliteitsfix stap 3)", () => {
     });
     expect(assembled.selections.occupancyLongTerm).toBeCloseTo(0.75, 12);
     expect(assembled.selections.occupancyShortTerm).toBeCloseTo(0.5, 12);
+  });
+});
+
+describe("buildEngineInput - derramas (datakwaliteitsfix stap 4)", () => {
+  it("the unticked path: referenceWizardData's own default leaves the estimate undefined", () => {
+    const assembled = buildEngineInput(referenceWizardData);
+    expect(assembled.property.upcomingDerramasEstimate).toBeUndefined();
+  });
+
+  it("the ticked-but-blank path: checked with no amount yet also stays undefined, not zero", () => {
+    const assembled = buildEngineInput({
+      ...referenceWizardData,
+      staatEnLasten: {
+        ...referenceWizardData.staatEnLasten,
+        hasUpcomingDerramas: true,
+        upcomingDerramasAmount: "",
+      },
+    });
+    expect(assembled.property.upcomingDerramasEstimate).toBeUndefined();
+  });
+
+  it("the ticked-with-amount path: passes the parsed amount through", () => {
+    const assembled = buildEngineInput({
+      ...referenceWizardData,
+      staatEnLasten: {
+        ...referenceWizardData.staatEnLasten,
+        hasUpcomingDerramas: true,
+        upcomingDerramasAmount: "5.000",
+      },
+    });
+    expect(assembled.property.upcomingDerramasEstimate).toBe(5000);
+  });
+
+  it("an amount typed but the checkbox left unticked is ignored - the checkbox gates whether the amount counts", () => {
+    const assembled = buildEngineInput({
+      ...referenceWizardData,
+      staatEnLasten: {
+        ...referenceWizardData.staatEnLasten,
+        hasUpcomingDerramas: false,
+        upcomingDerramasAmount: "5.000",
+      },
+    });
+    expect(assembled.property.upcomingDerramasEstimate).toBeUndefined();
   });
 });
 

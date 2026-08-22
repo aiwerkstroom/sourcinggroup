@@ -97,4 +97,23 @@ describe("CashflowBreakdownSection - golden render against the reference case", 
     const html = renderToStaticMarkup(<CashflowBreakdownSection {...props} />);
     expect(html).toContain("secties 2 en 3");
   });
+
+  it("the unticked path (this fixture's own default): no derrama row at all, not even a zero one", () => {
+    const props = buildProps();
+    expect(props.fixedCosts.derramas).toBe(0);
+    const html = renderToStaticMarkup(<CashflowBreakdownSection {...props} />);
+    expect(html).not.toContain("Derramas");
+  });
+
+  it("the ticked path: a derrama shows as its own row, and the NOI subtotal still reconciles (datakwaliteitsfix stap 4)", () => {
+    const props = buildProps();
+    const withDerrama = {
+      ...props,
+      fixedCosts: { ...props.fixedCosts, derramas: 1200 },
+      scenario: { ...props.scenario, noi: props.scenario.noi - 1200 },
+    };
+    const html = renderToStaticMarkup(<CashflowBreakdownSection {...withDerrama} />);
+    expect(html).toContain("Derramas (gespreid)");
+    expect(html).toContain("€ -100");
+  });
 });

@@ -91,6 +91,7 @@ export function runEngine(input: EngineInput): EngineResult {
       selectedFinancing.interestRate + selectedFinancing.nonResidentSpread,
     communityFeesAnnual: property.communityFeesAnnual,
     cadastralValue: property.cadastralValue,
+    upcomingDerramasEstimate: property.upcomingDerramasEstimate,
   });
 
   const utilitiesBase = utilitiesBaseAnnual(property.builtAreaM2);
@@ -102,7 +103,8 @@ export function runEngine(input: EngineInput): EngineResult {
       fixedCosts.propertyTaxIBI +
       fixedCosts.insurance +
       fixedCosts.bankAccountFee +
-      fixedCosts.communityFees,
+      fixedCosts.communityFees +
+      fixedCosts.derramas,
     renovation: selectedRenovation,
     financing: selectedFinancing,
     constraints,

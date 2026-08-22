@@ -60,7 +60,7 @@ export function buildProjectionYears(args: {
   /** Phase-1 fixed cost breakdown (IBI/insurance/bank fee/gastos de comunidad), the year-1 base each is indexed from. */
   fixedCosts: Pick<
     FixedOperatingCosts,
-    "propertyTaxIBI" | "insurance" | "bankAccountFee" | "communityFees"
+    "propertyTaxIBI" | "insurance" | "bankAccountFee" | "communityFees" | "derramas"
   >;
   /** Legacy; taxResidency takes precedence when both are given. */
   euResident?: boolean;
@@ -135,7 +135,11 @@ export function buildProjectionYears(args: {
     const insurance = args.fixedCosts.insurance * idx.costIndex;
     const bankAccountFee = args.fixedCosts.bankAccountFee * idx.costIndex;
     const communityFees = args.fixedCosts.communityFees * idx.costIndex;
-    const fixedCosts = propertyTaxIBI + insurance + bankAccountFee + communityFees;
+    // Datakwaliteitsfix stap 4: not CPI-indexed, unlike the lines above -
+    // this is a fixed total already amortized evenly (operating.ts), not an
+    // ongoing cost expected to grow with inflation.
+    const derramas = args.fixedCosts.derramas;
+    const fixedCosts = propertyTaxIBI + insurance + bankAccountFee + communityFees + derramas;
 
     const noi = grossIncome - (propertyManagement + maintenance + utilities + fixedCosts);
 
@@ -156,7 +160,8 @@ export function buildProjectionYears(args: {
       propertyManagement +
       depreciation +
       bankAccountFee +
-      communityFees;
+      communityFees +
+      derramas;
     // Gross for a non-EU investor: the costs are still computed and still
     // reported per year, they just do not reduce the taxable base.
     const taxableIncome = deductionsAllowed ? grossIncome - deductibleCosts : grossIncome;
@@ -178,6 +183,7 @@ export function buildProjectionYears(args: {
       insurance,
       bankAccountFee,
       communityFees,
+      derramas,
       fixedCosts,
       noi,
       interestPaid,

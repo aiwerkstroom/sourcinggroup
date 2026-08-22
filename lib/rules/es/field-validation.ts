@@ -50,7 +50,8 @@ export type FieldValidationKey =
   | "rentPerM2LongTermMustBePositive"
   | "rentPerM2ShortTermMustBePositive"
   | "occupancyLongTermMustBeFraction"
-  | "occupancyShortTermMustBeFraction";
+  | "occupancyShortTermMustBeFraction"
+  | "upcomingDerramasAmountMustBeZeroOrPositive";
 
 export function isFiniteNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
@@ -214,4 +215,15 @@ export function checkOccupancyLongTerm(value: unknown): FieldValidationKey | nul
 export function checkOccupancyShortTerm(value: unknown): FieldValidationKey | null {
   if (value === undefined) return null;
   return isFraction(value) ? null : "occupancyShortTermMustBeFraction";
+}
+
+/**
+ * Derramas (aankomende gemeenschapskosten/renovaties), datakwaliteitsfix
+ * stap 4: optional even when the checkbox is ticked - a customer may know
+ * an assessment is coming without yet knowing the amount - and zero or
+ * positive when given, same shape as checkCadastralSuelo.
+ */
+export function checkUpcomingDerramasAmount(value: unknown): FieldValidationKey | null {
+  if (value === undefined) return null;
+  return !isFiniteNumber(value) || value < 0 ? "upcomingDerramasAmountMustBeZeroOrPositive" : null;
 }

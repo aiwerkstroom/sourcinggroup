@@ -28,8 +28,9 @@ import {
   checkCadastralConstruccion,
   checkCadastralSuelo,
   checkCommunityFeesAnnual,
+  checkUpcomingDerramasAmount,
 } from "@/lib/rules/es/field-validation";
-import { FieldGroup, NumberField, RadioGroup, SelectField } from "../_components/fields";
+import { CheckboxField, FieldGroup, NumberField, RadioGroup, SelectField } from "../_components/fields";
 import { parseNumberInput } from "../_lib/parse-number";
 import { useWizard } from "../_state/wizard-state";
 import type { StaatEnLastenStepData } from "../_state/wizard-state";
@@ -84,6 +85,18 @@ export function StaatEnLastenForm() {
     } else {
       const key = checkCommunityFeesAnnual(fees.value);
       if (key !== null) next.communityFeesAnnual = translateFieldValidation(key);
+    }
+
+    // Datakwaliteitsfix stap 4: the amount is optional even when the
+    // checkbox is ticked, so only a non-empty, invalid value is rejected.
+    if (step.hasUpcomingDerramas) {
+      const derramas = parseNumberInput(step.upcomingDerramasAmount);
+      if (derramas.state === "invalid") {
+        next.upcomingDerramasAmount = translateFieldValidation("mustBeANumber");
+      } else if (derramas.state === "ok") {
+        const key = checkUpcomingDerramasAmount(derramas.value);
+        if (key !== null) next.upcomingDerramasAmount = translateFieldValidation(key);
+      }
     }
 
     // MODEL_SPEC.md §16: the cadastral value is optional as a whole, but
@@ -144,7 +157,9 @@ export function StaatEnLastenForm() {
     router.push("/rapport/nieuw/belegger");
   }
 
-  const field = (key: keyof StaatEnLastenStepData) => ({
+  const field = (
+    key: Exclude<keyof StaatEnLastenStepData, "hasUpcomingDerramas">,
+  ) => ({
     value: step[key],
     onChange: (value: string) => {
       setStaatEnLasten({ [key]: value });
@@ -184,6 +199,22 @@ export function StaatEnLastenForm() {
           hint="Dit bedrag staat in de advertentie of is bij de verkoper op te vragen. Er is geen standaardwaarde: dit verschilt te sterk per gebouw (lift, zwembad, conciërge) om te schatten."
           {...field("communityFeesAnnual")}
         />
+        <CheckboxField
+          label="Verwacht u aankomende gemeenschapskosten (derramas)?"
+          hint="Een derrama is een eenmalige extra aanslag van de vereniging van eigenaars, bijvoorbeeld voor gevelrenovatie of een nieuw dak. Weet u dat er een op stapel staat, vink dit dan aan."
+          checked={step.hasUpcomingDerramas}
+          onChange={(checked) => setStaatEnLasten({ hasUpcomingDerramas: checked })}
+        />
+        {step.hasUpcomingDerramas ? (
+          <NumberField
+            label="Geschat bedrag derrama"
+            unit="€"
+            placeholder="5.000"
+            optional
+            hint="Het totaalbedrag van de verwachte aanslag. Het rapport spreidt dit gelijkmatig uit over de standaard projectieperiode van 10 jaar en telt het mee in de exploitatiekosten. Weet u het bedrag nog niet, laat dit veld dan leeg."
+            {...field("upcomingDerramasAmount")}
+          />
+        ) : null}
       </FieldGroup>
 
       <FieldGroup title="Kadastrale waarde">
