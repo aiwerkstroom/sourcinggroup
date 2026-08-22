@@ -219,9 +219,11 @@ export function StaatEnLastenForm() {
 
       <FieldGroup title="Kadastrale waarde">
         <p className="text-text-muted -mt-2 max-w-prose text-xs leading-relaxed">
-          Te vinden op het IBI-aanslagbiljet (recibo del IBI), uitgesplitst naar grond en opstal.
-          Vult u dit in, dan wordt de IBI-berekening en de afschrijvingsgrondslag nauwkeuriger. Laat
-          u het leeg, dan meldt het rapport dat het met een benadering werkt.
+          Gratis op te zoeken via de Catastro-opzoekfunctie (sedecatastro.gob.es), op adres — ook
+          zonder IBI-biljet bij de hand. Zoek op adres via het referentienummer, of vraag de
+          &quot;Consulta Descriptiva y Gráfica&quot; op; die splitst de waarde uit naar grond en
+          opstal. Vult u dit in, dan wordt de IBI-berekening en de afschrijvingsgrondslag
+          nauwkeuriger. Laat u het leeg, dan meldt het rapport dat het met een benadering werkt.
         </p>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <NumberField

@@ -30,7 +30,7 @@ postcode of wijk · vraagprijs · woonoppervlak (gebouwd) · pandtype · aantal 
 
 ### Tweede orde — vereist voor het betaalde rapport
 
-volledig adres · bruikbaar én gebouwd oppervlak (apart) · indeling (kamers, slaapkamers, badkamers) · bouwjaar · energielabel · staat van onderhoud · huidige huurstatus en werkelijke huidige huur indien verhuurd · gastos de comunidad per jaar · kadastrale waarde (van het IBI-aanslagbiljet) · título habilitante voor toeristische verhuur: ja/nee
+volledig adres · bruikbaar én gebouwd oppervlak (apart) · indeling (kamers, slaapkamers, badkamers) · bouwjaar · energielabel · staat van onderhoud · huidige huurstatus en werkelijke huidige huur indien verhuurd · gastos de comunidad per jaar · kadastrale waarde (via sedecatastro.gob.es) · título habilitante voor toeristische verhuur: ja/nee
 
 ### Belegger
 
@@ -40,7 +40,7 @@ beschikbaar eigen vermogen · gewenste LTV · renovatiebudget · verhuurstrategi
 
 **Gastos de comunidad** — verplicht, geen default. Toelichting: "Dit bedrag staat in de advertentie of is bij de verkoper op te vragen."
 
-**Kadastrale waarde** — optioneel. Waar ingevuld, verbetert het de IBI-berekening en de afschrijvingsgrondslag. Waar niet ingevuld, meldt het rapport dat het met een benadering werkt. Toelichting: "Te vinden op het IBI-aanslagbiljet (recibo del IBI)."
+**Kadastrale waarde** — optioneel. Waar ingevuld, verbetert het de IBI-berekening en de afschrijvingsgrondslag. Waar niet ingevuld, meldt het rapport dat het met een benadering werkt. Toelichting (datakwaliteitsfix stap 5, verving een verwijzing naar het IBI-aanslagbiljet — niet iedere klant heeft dat bij de hand): "Gratis op te zoeken via de Catastro-opzoekfunctie (sedecatastro.gob.es), op adres — ook zonder IBI-biljet bij de hand. Zoek op adres via het referentienummer, of vraag de 'Consulta Descriptiva y Gráfica' op; die splitst de waarde uit naar grond en opstal."
 
 **Bruikbaar versus gebouwd oppervlak** — toelichting: "Spaanse advertenties vermelden doorgaans m² construidos. Uw huurschatting wordt nauwkeuriger als u ook het bruikbaar oppervlak invult."
 
