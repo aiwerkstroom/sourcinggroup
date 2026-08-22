@@ -1,12 +1,18 @@
 "use client";
 
 /**
- * The free indication's form: the five first-order fields (UI_SPEC.md
- * §3), nothing else. No wizard, no multi-step state - one form, one
- * submit, which builds a query string and navigates to the result page.
- * The URL is the only state this flow ever has (this task's own
- * instruction): there is no server round-trip to hold onto a result, so
- * the result page must be able to rebuild everything from the URL alone.
+ * The free indication's form: the three first-order fields that actually
+ * feed a calculation (UI_SPEC.md §3), nothing else. No wizard, no
+ * multi-step state - one form, one submit, which builds a query string
+ * and navigates to the result page. The URL is the only state this flow
+ * ever has (this task's own instruction): there is no server round-trip
+ * to hold onto a result, so the result page must be able to rebuild
+ * everything from the URL alone.
+ *
+ * Pandtype and aantal eenheden used to be asked here too, but neither
+ * ever entered computeFreeTierBand() - they were shown next to a note
+ * saying exactly that. Datakwaliteitsfix stap 6 removed both fields
+ * instead of continuing to display that caveat.
  *
  * Validation reuses the calculation layer's own field rules
  * (lib/rules/es/field-validation.ts) and their Dutch translations
@@ -23,29 +29,16 @@ import { FieldGroup, NumberField, SelectField } from "./_components/fields";
 import { buildFreeIndicationQuery } from "./_lib/query-params";
 import { parseNumberInput } from "./_lib/parse-number";
 
-const PROPERTY_TYPES = [
-  { value: "appartement", label: "Appartement" },
-  { value: "studio", label: "Studio" },
-  { value: "penthouse", label: "Penthouse" },
-  { value: "woonhuis", label: "Woonhuis" },
-  { value: "villa", label: "Villa" },
-  { value: "anders", label: "Anders" },
-];
-
 interface FormState {
   neighborhood: string;
   purchasePrice: string;
   builtAreaM2: string;
-  propertyType: string;
-  units: string;
 }
 
 const EMPTY: FormState = {
   neighborhood: "",
   purchasePrice: "",
   builtAreaM2: "",
-  propertyType: "",
-  units: "",
 };
 
 type FieldErrors = Partial<Record<keyof FormState, string>>;
@@ -80,11 +73,6 @@ export function IndicatieForm({ neighborhoods }: { neighborhoods: string[] }) {
       if (key !== null) next.builtAreaM2 = translateFieldValidation(key);
     }
 
-    if (data.units.trim() !== "") {
-      const units = parseNumberInput(data.units);
-      if (units.state === "invalid") next.units = translateFieldValidation("mustBeANumber");
-    }
-
     return next;
   }
 
@@ -96,15 +84,12 @@ export function IndicatieForm({ neighborhoods }: { neighborhoods: string[] }) {
 
     const price = parseNumberInput(data.purchasePrice);
     const area = parseNumberInput(data.builtAreaM2);
-    const units = parseNumberInput(data.units);
     if (price.state !== "ok" || area.state !== "ok") return;
 
     const params = buildFreeIndicationQuery({
       neighborhood: data.neighborhood,
       purchasePrice: price.value,
       builtAreaM2: area.value,
-      propertyType: data.propertyType === "" ? undefined : data.propertyType,
-      units: units.state === "ok" ? units.value : undefined,
     });
     router.push(`/gratis/resultaat?${params.toString()}`);
   }
@@ -136,18 +121,6 @@ export function IndicatieForm({ neighborhoods }: { neighborhoods: string[] }) {
               placeholder="90"
               {...field("builtAreaM2")}
             />
-            <SelectField
-              label="Pandtype"
-              options={PROPERTY_TYPES}
-              placeholder="Kies een type"
-              optional
-              {...field("propertyType")}
-            />
-            <NumberField label="Aantal eenheden" placeholder="1" optional {...field("units")} />
-            <p className="text-text-faint -mt-2 max-w-prose text-xs">
-              Pandtype en aantal eenheden worden vastgelegd, maar tellen nog niet mee in deze
-              berekening.
-            </p>
           </FieldGroup>
 
           <div className="border-border flex items-center justify-between border-t pt-6">

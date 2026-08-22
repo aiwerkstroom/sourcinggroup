@@ -207,11 +207,11 @@ describe("indicative score - the scope disclosure (SCORE_SPEC.md §8.3)", () => 
     }
   });
 
-  it("is additive to the band's five, giving all six together", () => {
+  it("is additive to the band's four, giving all five together", () => {
     const score = computeIndicativeScore(referenceBand);
     const shown = [...referenceBand.disclosures, ...score.disclosures];
     expect(new Set(shown).size).toBe(shown.length);
-    expect(shown).toHaveLength(6);
+    expect(shown).toHaveLength(5);
     expect(shown).toContain("indicativeScoreScope");
   });
 

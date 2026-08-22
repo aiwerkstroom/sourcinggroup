@@ -132,10 +132,8 @@ function fieldStatus(currentValue: unknown, originalValue: unknown): ListingFiel
  * neighbourhood is a closed dropdown value, so string equality is exact
  * comparison there, not an approximation.
  *
- * propertyType carries no entry here at all: SOURCING_SPEC.md §4's own
- * standard is a value that carries the outcome, and propertyType is
- * recorded but consumed by no calculation - it is prefilled without
- * being tracked, by design, not by omission.
+ * propertyType carries no entry here at all: the wizard no longer asks
+ * for it (datakwaliteitsfix stap 6), so there is nothing left to compare.
  */
 function computeListingFieldProvenance(
   pand: PandStepData,
@@ -209,7 +207,6 @@ export function buildEngineInput(data: WizardData): EngineInput {
       region: "Valencia",
       neighborhood,
       address: pand.address,
-      propertyType: pand.propertyType === "" ? undefined : pand.propertyType,
       currentRentStatus:
         staatEnLasten.currentRentStatus === "" ? undefined : staatEnLasten.currentRentStatus,
       usableAreaM2: optionalNumber(pand.usableAreaM2),

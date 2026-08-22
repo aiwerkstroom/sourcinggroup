@@ -81,7 +81,7 @@ const MONTHS_PER_YEAR = 12;
  * Dutch copy each key maps to (CLAUDE.md §6: Nederlands in de UI, Engels
  * in de code en commentaar) lives in lib/copy/es/free-tier-disclosures.ts,
  * outside the calculation layer, so this module and everything under
- * lib/rules/es stay English. All five currently apply unconditionally -
+ * lib/rules/es stay English. All four currently apply unconditionally -
  * none is specific to a wijk, a price or an area - so this is a constant,
  * not something computeFreeTierBand derives per call.
  */
@@ -90,7 +90,6 @@ export const FREE_TIER_DISCLOSURE_KEYS: readonly FreeTierDisclosureKey[] = [
   "shortTermLicence",
   "financing",
   "unverified",
-  "unmodeledFields",
 ];
 
 /**

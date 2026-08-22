@@ -26,7 +26,12 @@ Referenties: Palantir (interface), McKinsey (analytische opbouw), Upfront (toon)
 
 ### Eerste orde — gratis indicatie
 
-postcode of wijk · vraagprijs · woonoppervlak (gebouwd) · pandtype · aantal eenheden
+postcode of wijk · vraagprijs · woonoppervlak (gebouwd)
+
+Pandtype en aantal eenheden stonden hier tot datakwaliteitsfix stap 6: beide telden
+nergens mee in de berekening, en de UI zei dat zelf al ("telt nog niet mee") — dus
+geschrapt in plaats van getoond met die melding. Het betaalde formulier vroeg ze ook
+(buiten deze lijst om) en is op dezelfde manier bijgewerkt.
 
 ### Tweede orde — vereist voor het betaalde rapport
 

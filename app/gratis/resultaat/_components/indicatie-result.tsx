@@ -9,8 +9,8 @@
  *
  * Visual weight follows this task's own instruction: the indicative
  * labels come first and large, the cashflow band with its own disclosure
- * directly under it, then the remaining five disclosures read in full -
- * none of the six FreeTierDisclosureKey entries sits behind a fold or an
+ * directly under it, then the remaining four disclosures read in full -
+ * none of the five FreeTierDisclosureKey entries sits behind a fold or an
  * accordion. The underlying 0-10 scores are never rendered, because
  * IndicativeScore never carries them (SCORE_SPEC.md §8.2's own point -
  * see that type's docstring).
@@ -42,15 +42,6 @@ export interface IndicatieResultProps {
   score: IndicativeScore;
 }
 
-const PROPERTY_TYPE_LABEL_NL: Readonly<Record<string, string>> = {
-  appartement: "Appartement",
-  studio: "Studio",
-  penthouse: "Penthouse",
-  woonhuis: "Woonhuis",
-  villa: "Villa",
-  anders: "Anders",
-};
-
 function LabelStat({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex flex-col gap-1">
@@ -81,10 +72,6 @@ export function IndicatieResult({ input, band, score }: IndicatieResultProps) {
         <h1 className="mt-1 text-xl font-semibold">{input.neighborhood}</h1>
         <p className="text-text-muted mt-2 text-sm">
           {formatEuro(input.purchasePrice)} · {input.builtAreaM2} m²
-          {input.propertyType !== undefined
-            ? ` · ${PROPERTY_TYPE_LABEL_NL[input.propertyType] ?? input.propertyType}`
-            : ""}
-          {input.units !== undefined ? ` · ${input.units} eenheden` : ""}
         </p>
       </header>
 

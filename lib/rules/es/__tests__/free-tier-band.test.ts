@@ -246,15 +246,9 @@ describe("free indication band - disclosures are keys, not text (CLAUDE.md §6)"
     builtAreaM2: 90,
   });
 
-  it("attaches exactly the five known keys, in order", () => {
+  it("attaches exactly the four known keys, in order", () => {
     expect(band.disclosures).toBe(FREE_TIER_DISCLOSURE_KEYS);
-    expect(band.disclosures).toEqual([
-      "band",
-      "shortTermLicence",
-      "financing",
-      "unverified",
-      "unmodeledFields",
-    ]);
+    expect(band.disclosures).toEqual(["band", "shortTermLicence", "financing", "unverified"]);
   });
 
   it("carries no Dutch text in the calculation layer's result", () => {
@@ -280,7 +274,7 @@ describe("free indication band - Dutch copy (lib/copy/es/free-tier-disclosures.t
     // TypeScript's Record<FreeTierDisclosureKey, string> already enforces
     // this at compile time (a missing or extra key fails to compile); this
     // is the runtime mirror so the guarantee shows up in the test suite too.
-    // Checked against the full union, not the band's own five: the sixth
+    // Checked against the full union, not the band's own four: the fifth
     // key (indicativeScoreScope) is emitted by indicative-score.ts and
     // still has to be translatable.
     expect(Object.keys(FREE_TIER_DISCLOSURE_COPY_NL).sort()).toEqual(
@@ -318,13 +312,6 @@ describe("free indication band - Dutch copy (lib/copy/es/free-tier-disclosures.t
     expect(text).toContain("bruikbaar oppervlak");
     expect(text).toContain("kadastrale waarde");
     expect(text).toContain("bezettingsgraad");
-  });
-
-  it("says pandtype and aantal eenheden are asked but do not enter the calculation", () => {
-    const text = translateFreeTierDisclosure("unmodeledFields");
-    expect(text).toContain("Pandtype");
-    expect(text).toContain("aantal eenheden");
-    expect(text).toContain("tellen nog niet mee");
   });
 
   it("throws rather than silently returning empty text for an unknown key", () => {

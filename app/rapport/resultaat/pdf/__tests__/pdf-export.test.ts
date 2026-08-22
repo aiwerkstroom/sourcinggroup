@@ -100,8 +100,6 @@ const secondCase: WizardData = {
   pand: {
     address: "Carrer de Fontanars 8, Valencia",
     neighborhood: "__other__",
-    propertyType: "appartement",
-    units: "1",
     purchasePrice: "220000",
     builtAreaM2: "70",
     usableAreaM2: "60",

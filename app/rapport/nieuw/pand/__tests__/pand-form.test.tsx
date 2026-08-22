@@ -82,14 +82,6 @@ describe("PandForm - a chosen listing prefills the four tracked fields", () => {
     expect(screen.getByLabelText("Bruikbaar oppervlak", { exact: false })).toHaveValue("165");
   });
 
-  it("prefills pandtype without tracking it in listingOrigin", async () => {
-    renderForm(listingWithUsableArea);
-
-    await waitFor(() => expect(screen.getByLabelText("Pandtype", { exact: false })).toHaveValue("villa"));
-    const origin = JSON.parse(screen.getByTestId("listing-origin").textContent!);
-    expect(origin).not.toHaveProperty("propertyType");
-  });
-
   it("never prefills the address - a listing carries no street address", async () => {
     renderForm(listingWithUsableArea);
 
@@ -136,6 +128,29 @@ describe("PandForm - no listing chosen (prefillListing null)", () => {
     expect(screen.getByLabelText("Wijk")).toHaveValue("");
     expect(screen.getByLabelText("Vraagprijs")).toHaveValue("");
     expect(screen.getByTestId("listing-origin")).toHaveTextContent("null");
+  });
+});
+
+describe("PandForm - no pandtype/aantal eenheden (datakwaliteitsfix stap 6)", () => {
+  it("does not render a Pandtype field", () => {
+    renderForm(null);
+    expect(screen.queryByLabelText("Pandtype", { exact: false })).not.toBeInTheDocument();
+  });
+
+  it("does not render an Aantal eenheden field", () => {
+    renderForm(null);
+    expect(screen.queryByLabelText("Aantal eenheden", { exact: false })).not.toBeInTheDocument();
+  });
+
+  it("no longer shows the 'telt nog niet mee' caveat - there is nothing left it would apply to", () => {
+    renderForm(null);
+    expect(screen.queryByText(/telt nog niet mee/)).not.toBeInTheDocument();
+  });
+
+  it("a listing's own propertyType is not prefilled into anything - there is no field left to receive it", async () => {
+    renderForm(listingWithUsableArea);
+    await waitFor(() => expect(screen.getByLabelText("Vraagprijs")).toHaveValue("620000"));
+    expect(screen.queryByLabelText("Pandtype", { exact: false })).not.toBeInTheDocument();
   });
 });
 

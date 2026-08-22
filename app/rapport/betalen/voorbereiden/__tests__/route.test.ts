@@ -46,8 +46,6 @@ const validCase: WizardData = {
   pand: {
     address: "Carrer de Sant Vicent 40, Valencia",
     neighborhood: "__other__",
-    propertyType: "",
-    units: "",
     purchasePrice: "330.000",
     builtAreaM2: "133",
     usableAreaM2: "133",

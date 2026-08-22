@@ -73,8 +73,6 @@ const computable: WizardData = {
   pand: {
     address: "Avenida Primado Reig 19, Valencia",
     neighborhood: "__other__",
-    propertyType: "",
-    units: "",
     purchasePrice: "330.000",
     builtAreaM2: "133",
     usableAreaM2: "133",

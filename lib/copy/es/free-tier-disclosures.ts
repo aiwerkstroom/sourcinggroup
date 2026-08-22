@@ -1,7 +1,7 @@
 /**
  * Dutch copy for the free indication's disclosures (UI_SPEC.md: Nederlands
  * in de UI; CLAUDE.md §6: Engels in de code en commentaar). This is the
- * only place these five lines exist. The calculation layer
+ * only place this copy exists. The calculation layer
  * (lib/rules/es/free-tier/band.ts) emits FreeTierDisclosureKey values, not
  * text - this module is what turns a key into the sentence a page shows
  * next to the band.
@@ -34,9 +34,6 @@ export const FREE_TIER_DISCLOSURE_COPY_NL: Readonly<Record<FreeTierDisclosureKey
     "Niet geverifieerd in deze indicatie: het bruikbaar oppervlak (afgeleid uit het " +
     "gebouwde oppervlak), de kadastrale waarde (benaderd met de vraagprijs) en de " +
     "bezettingsgraad. In het betaalde rapport vult u deze zelf in.",
-  unmodeledFields:
-    "Pandtype en aantal eenheden zijn in dit formulier gevraagd, maar tellen nog " +
-    "niet mee in deze berekening.",
   indicativeScoreScope:
     "Deze indicatie is gebaseerd op twee van de vijf factoren die het volledige " +
     "rapport beoordeelt. Rendement, schuldbestendigheid en haalbaarheid worden pas " +
@@ -60,8 +57,6 @@ export function translateFreeTierDisclosure(key: FreeTierDisclosureKey): string 
       return FREE_TIER_DISCLOSURE_COPY_NL.financing;
     case "unverified":
       return FREE_TIER_DISCLOSURE_COPY_NL.unverified;
-    case "unmodeledFields":
-      return FREE_TIER_DISCLOSURE_COPY_NL.unmodeledFields;
     case "indicativeScoreScope":
       return FREE_TIER_DISCLOSURE_COPY_NL.indicativeScoreScope;
     default: {

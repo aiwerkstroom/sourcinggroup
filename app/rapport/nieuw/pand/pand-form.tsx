@@ -23,9 +23,8 @@
  * to compare against. Address is never prefilled: a Listing carries no
  * street address, only a wijk and a title, and writing the title into
  * the address field would present a marketing label as a postal address.
- * propertyType is prefilled too, but not recorded in listingOrigin -
- * SOURCING_SPEC.md §4's own standard is a value that carries the
- * outcome, and propertyType carries none.
+ * The listing's own propertyType is not prefilled into anything - the
+ * wizard no longer asks for it (datakwaliteitsfix stap 6).
  *
  * The prefill applies once per wizard session, not once per mount: the
  * guard is `data.listingOrigin === null`, not a mount ref, so a second
@@ -50,15 +49,6 @@ import { FieldGroup, NumberField, SelectField, TextField } from "../_components/
 import { parseNumberInput } from "../_lib/parse-number";
 import { OTHER_NEIGHBORHOOD, useWizard } from "../_state/wizard-state";
 import type { PandStepData } from "../_state/wizard-state";
-
-const PROPERTY_TYPES = [
-  { value: "appartement", label: "Appartement" },
-  { value: "studio", label: "Studio" },
-  { value: "penthouse", label: "Penthouse" },
-  { value: "woonhuis", label: "Woonhuis" },
-  { value: "villa", label: "Villa" },
-  { value: "anders", label: "Anders" },
-];
 
 const ENERGY_LABELS = ["A", "B", "C", "D", "E", "F", "G"].map((letter) => ({
   value: letter,
@@ -104,7 +94,6 @@ export function PandForm({
       builtAreaM2: String(prefillListing.builtAreaM2),
       usableAreaM2:
         prefillListing.usableAreaM2 !== undefined ? String(prefillListing.usableAreaM2) : "",
-      propertyType: prefillListing.propertyType,
     });
     setListingOrigin({
       neighborhood: prefillListing.neighborhood,
@@ -195,19 +184,7 @@ export function PandForm({
         />
       </FieldGroup>
 
-      <FieldGroup title="Type en prijs">
-        <SelectField
-          label="Pandtype"
-          options={PROPERTY_TYPES}
-          placeholder="Kies een type"
-          optional
-          {...field("propertyType")}
-        />
-        <NumberField label="Aantal eenheden" placeholder="1" optional {...field("units")} />
-        <p className="text-text-faint -mt-2 max-w-prose text-xs">
-          Pandtype en aantal eenheden worden vastgelegd in het rapport, maar tellen nog niet mee in
-          de berekening.
-        </p>
+      <FieldGroup title="Prijs">
         <NumberField label="Vraagprijs" unit="€" placeholder="350.000" {...field("purchasePrice")} />
       </FieldGroup>
 

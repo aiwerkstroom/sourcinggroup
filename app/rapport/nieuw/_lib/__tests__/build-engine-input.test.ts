@@ -32,8 +32,6 @@ const referenceWizardData: WizardData = {
     // The reference property carries no neighbourhood, which the wijk
     // dropdown expresses as "Anders / niet in deze lijst".
     neighborhood: "__other__",
-    propertyType: "",
-    units: "",
     purchasePrice: "330.000",
     builtAreaM2: "133",
     usableAreaM2: "133",

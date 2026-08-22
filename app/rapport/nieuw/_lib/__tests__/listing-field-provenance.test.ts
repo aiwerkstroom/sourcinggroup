@@ -28,8 +28,6 @@ const referenceWizardData: WizardData = {
   pand: {
     address: "Avenida Primado Reig 19, Valencia",
     neighborhood: "__other__",
-    propertyType: "",
-    units: "",
     purchasePrice: "330.000",
     builtAreaM2: "133",
     usableAreaM2: "133",
@@ -235,29 +233,3 @@ describe("a listing without its own usableAreaM2", () => {
   });
 });
 
-describe("propertyType is never tracked, prefilled or not", () => {
-  it("buildEngineInput() still assembles propertyType normally regardless of listingOrigin", () => {
-    const wizardData: WizardData = {
-      ...referenceWizardData,
-      pand: { ...referenceWizardData.pand, propertyType: "villa" },
-      listingOrigin: {
-        neighborhood: "El Carmen (Ciutat Vella)",
-        purchasePriceEUR: 620000,
-        builtAreaM2: 180,
-        usableAreaM2: 165,
-      },
-    };
-
-    const input = buildEngineInput(wizardData);
-    expect(input.property.propertyType).toBe("villa");
-    // ListingFieldProvenanceReport has no propertyType key at all - this
-    // is a type-level guarantee (SOURCING_SPEC.md §4's own "carries the
-    // outcome" standard), not something a runtime check could add.
-    expect(Object.keys(input.listingFieldProvenance!)).toEqual([
-      "neighborhood",
-      "purchasePrice",
-      "builtAreaM2",
-      "usableAreaM2",
-    ]);
-  });
-});

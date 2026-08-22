@@ -892,17 +892,17 @@ export interface EngineResult {
 // ---------------------------------------------------------------------------
 
 /**
- * The five first-order fields of UI_SPEC.md §3, minus the two that no
- * module in this engine currently models.
+ * The three first-order fields of UI_SPEC.md §3 that actually feed a
+ * calculation.
  *
- * `pandtype` and `aantal eenheden` are collected by the free form per the
- * spec, but nothing in the calculation layer consumes either one today.
- * Accepting them here and quietly ignoring them would suggest they moved
- * the number; giving them an effect would mean inventing one. Neither is
- * acceptable under CLAUDE.md §6, so they stay out of this type until a
- * module actually models them. FreeTierBand.disclosures carries the
- * "unmodeledFields" key so the customer sees this limitation too, not
- * only the parameters that stand in for a missing value.
+ * `pandtype` and `aantal eenheden` used to be collected by the free form
+ * too, but nothing in the calculation layer ever consumed either one
+ * (CLAUDE.md §6: accepting them here and quietly ignoring them would have
+ * suggested they moved the number). Datakwaliteitsfix stap 6 removed both
+ * fields from the form itself rather than continue asking for values the
+ * report could never use - so this type never carried them, and the
+ * "unmodeledFields" disclosure key that used to name this limitation is
+ * gone too, since there is nothing left unmodeled to disclose.
  */
 export interface FreeTierBandInput {
   /** Key into NEIGHBORHOOD_RENT_LONG_TERM - one of the 13 wijken the free form offers as a dropdown. */
@@ -955,21 +955,22 @@ export interface FreeTierBandEnd {
  * - `financing`: why financing is absent from the figure.
  * - `unverified`: which assumptions were held fixed because no documented
  *   range exists (UI_SPEC.md §6.9).
- * - `unmodeledFields`: pandtype and aantal eenheden are asked on the free
- *   form (UI_SPEC.md §3) but, per FreeTierBandInput's own docstring above,
- *   enter no calculation here - this key makes that limitation as visible
- *   to the customer as the PLACEHOLDER assumptions are.
  * - `indicativeScoreScope`: the indicative score rests on two of the five
  *   dimensions the paid report scores (SCORE_SPEC.md §8.3). Emitted by
- *   indicative-score.ts, not by the band - the first five above apply to
+ *   indicative-score.ts, not by the band - the first four above apply to
  *   the band whether or not a score is shown alongside it.
+ *
+ * A sixth key, `unmodeledFields`, used to sit here: pandtype and aantal
+ * eenheden were asked on the free form (UI_SPEC.md §3) but entered no
+ * calculation, so this key disclosed that gap. Datakwaliteitsfix stap 6
+ * removed both fields from the form instead, so there is nothing left
+ * unmodeled to disclose - the key is gone, not renamed or reworded.
  */
 export type FreeTierDisclosureKey =
   | "band"
   | "shortTermLicence"
   | "financing"
   | "unverified"
-  | "unmodeledFields"
   | "indicativeScoreScope";
 
 /**
@@ -980,8 +981,8 @@ export type FreeTierDisclosureKey =
  * falls behind.
  *
  * Not the same thing as the keys any one result emits - the band emits
- * five (FREE_TIER_DISCLOSURE_KEYS in free-tier/band.ts) and the indicative
- * score emits the sixth. This is the union of everything the copy layer
+ * four (FREE_TIER_DISCLOSURE_KEYS in free-tier/band.ts) and the indicative
+ * score emits the fifth. This is the union of everything the copy layer
  * must be able to translate.
  */
 const FREE_TIER_DISCLOSURE_KEY_SET: Readonly<Record<FreeTierDisclosureKey, true>> = {
@@ -989,7 +990,6 @@ const FREE_TIER_DISCLOSURE_KEY_SET: Readonly<Record<FreeTierDisclosureKey, true>
   shortTermLicence: true,
   financing: true,
   unverified: true,
-  unmodeledFields: true,
   indicativeScoreScope: true,
 };
 

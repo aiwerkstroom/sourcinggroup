@@ -84,7 +84,9 @@ Dit betekent: de zoekroutes zijn beschermd door dezelfde middleware als `/rappor
    "beste match")
 3. Klant kiest **één** pand
 4. Dat pand stroomt de bestaande wizard in — de bekende velden worden voorgevuld
-   (adres/wijk, prijs, oppervlak, pandtype uit de listing)
+   (wijk, prijs, oppervlak uit de listing). Pandtype is met datakwaliteitsfix stap 6
+   uit de wizard verwijderd en wordt dus niet meer voorgevuld, ook al draagt de
+   listing dat veld nog wel (zoekpagina-filter, zie §2 hierboven).
 5. Klant vult de resterende wizard-stappen aan (vermogen, financiering, exit)
 6. Vanaf daar de bestaande betaalflow: €49 → rapport
 

@@ -87,7 +87,7 @@ describe.each(CASES)("IndicatieResult - golden render ($name)", (testCase) => {
     expect(html).toContain(formatEuro(props.band.monthlyCashflowBeforeFinancing.high));
   });
 
-  it("renders all six FreeTierDisclosureKey texts directly, not behind a collapsed element", () => {
+  it("renders all five FreeTierDisclosureKey texts directly, not behind a collapsed element", () => {
     const props = buildProps(testCase.input);
     const html = renderToStaticMarkup(<IndicatieResult {...props} />);
 
@@ -96,7 +96,6 @@ describe.each(CASES)("IndicatieResult - golden render ($name)", (testCase) => {
       "shortTermLicence",
       "financing",
       "unverified",
-      "unmodeledFields",
       "indicativeScoreScope",
     ];
     for (const key of allKeys) {
@@ -105,6 +104,14 @@ describe.each(CASES)("IndicatieResult - golden render ($name)", (testCase) => {
     // Nothing collapsible: no <details>, no aria-expanded toggle.
     expect(html).not.toContain("<details");
     expect(html).not.toContain("aria-expanded");
+  });
+
+  it("no longer shows pandtype/aantal eenheden or their disclosure - datakwaliteitsfix stap 6 removed the fields, not just the caveat", () => {
+    const props = buildProps(testCase.input);
+    const html = renderToStaticMarkup(<IndicatieResult {...props} />);
+    expect(html).not.toContain("Pandtype");
+    expect(html).not.toContain("eenheden");
+    expect(html).not.toContain("tellen nog niet mee");
   });
 
   it("never renders a raw 0-10 score number for either dimension", () => {

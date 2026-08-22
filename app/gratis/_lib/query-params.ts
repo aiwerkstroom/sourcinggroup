@@ -2,32 +2,27 @@
  * The free indication has no account and no server state (UI_SPEC.md §2),
  * so the result page's only input is the URL itself - the query string
  * IS the state, which is what makes the URL shareable. This module is the
- * one place the five query keys are named, used by both the form (which
+ * one place the three query keys are named, used by both the form (which
  * builds the URL) and the result page (which reads it back), so the two
  * cannot drift apart.
  *
- * Only neighborhood/purchasePrice/builtAreaM2 feed
- * computeFreeTierBand() (FreeTierBandInput). propertyType and units are
- * carried through anyway - UI_SPEC.md §3 asks for all five first-order
- * fields, and the result page still shows what the customer entered - but
- * neither is validated as strictly as the three that drive the
- * calculation, since an unparseable one still leaves a valid indication.
+ * Datakwaliteitsfix stap 6 removed propertyType and units: UI_SPEC.md §3
+ * used to ask for all five first-order fields, but only these three ever
+ * fed computeFreeTierBand() (FreeTierBandInput) - the other two were
+ * carried through and displayed without entering the calculation, which
+ * is exactly the gap the fix closed by removing them from the form.
  */
 
 export interface FreeIndicationQuery {
   neighborhood: string;
   purchasePrice: number;
   builtAreaM2: number;
-  propertyType?: string;
-  units?: number;
 }
 
 const KEYS = {
   neighborhood: "wijk",
   purchasePrice: "prijs",
   builtAreaM2: "m2",
-  propertyType: "type",
-  units: "eenheden",
 } as const;
 
 export function buildFreeIndicationQuery(input: FreeIndicationQuery): URLSearchParams {
@@ -35,12 +30,6 @@ export function buildFreeIndicationQuery(input: FreeIndicationQuery): URLSearchP
   params.set(KEYS.neighborhood, input.neighborhood);
   params.set(KEYS.purchasePrice, String(input.purchasePrice));
   params.set(KEYS.builtAreaM2, String(input.builtAreaM2));
-  if (input.propertyType !== undefined && input.propertyType !== "") {
-    params.set(KEYS.propertyType, input.propertyType);
-  }
-  if (input.units !== undefined) {
-    params.set(KEYS.units, String(input.units));
-  }
   return params;
 }
 
@@ -76,18 +65,8 @@ export function parseFreeIndicationQuery(
   if (!Number.isFinite(purchasePrice) || purchasePrice <= 0) return { ok: false };
   if (!Number.isFinite(builtAreaM2) || builtAreaM2 <= 0) return { ok: false };
 
-  const propertyType = get(KEYS.propertyType);
-  const unitsRaw = get(KEYS.units);
-  const units = unitsRaw === undefined ? undefined : Number(unitsRaw);
-
   return {
     ok: true,
-    value: {
-      neighborhood,
-      purchasePrice,
-      builtAreaM2,
-      propertyType: propertyType === undefined || propertyType === "" ? undefined : propertyType,
-      units: units !== undefined && Number.isFinite(units) ? units : undefined,
-    },
+    value: { neighborhood, purchasePrice, builtAreaM2 },
   };
 }

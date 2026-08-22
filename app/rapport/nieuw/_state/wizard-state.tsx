@@ -22,13 +22,18 @@
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import type { EngineResult } from "@/lib/rules/es/types";
 
-/** Step 1. Mirrors UI_SPEC.md §3's first- and second-order property fields. */
+/**
+ * Step 1. Mirrors UI_SPEC.md §3's first- and second-order property fields.
+ *
+ * No propertyType/units (datakwaliteitsfix stap 6): both used to be asked
+ * here and in the free form, shown next to a note that neither counted in
+ * the calculation - which was true and stayed true, so both were removed
+ * outright rather than kept on display with that caveat.
+ */
 export interface PandStepData {
   address: string;
   /** One of NEIGHBORHOOD_RENT_LONG_TERM's keys, or OTHER_NEIGHBORHOOD. Drives the step-3 rent pre-fill. */
   neighborhood: string;
-  propertyType: string;
-  units: string;
   purchasePrice: string;
   builtAreaM2: string;
   usableAreaM2: string;
@@ -168,8 +173,6 @@ export const OTHER_NEIGHBORHOOD = "__other__";
 export const EMPTY_PAND: PandStepData = {
   address: "",
   neighborhood: "",
-  propertyType: "",
-  units: "",
   purchasePrice: "",
   builtAreaM2: "",
   usableAreaM2: "",

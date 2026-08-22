@@ -38,8 +38,6 @@ const validCase: WizardData = {
   pand: {
     address: ADDRESS,
     neighborhood: "__other__",
-    propertyType: "",
-    units: "",
     purchasePrice: "330.000",
     builtAreaM2: "133",
     usableAreaM2: "133",
