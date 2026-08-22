@@ -27,9 +27,11 @@ export const FREE_TIER_DISCLOSURE_COPY_NL: Readonly<Record<FreeTierDisclosureKey
     "Valencia. Deze indicatie rekent met langetermijnverhuur; met vergunning kan het " +
     "rendement hoger uitvallen. Dat is niet in dit bedrag verwerkt.",
   financing:
-    "Dit bedrag is de cashflow vóór financiering. De gratis indicatie vraagt geen " +
-    "hypotheek- of vermogensgegevens, dus rente en aflossing zijn er niet van " +
-    "afgetrokken.",
+    "Dit bedrag is de cashflow ná financiering. Omdat deze indicatie geen hypotheek- " +
+    "of vermogensgegevens vraagt, gaan we uit van een vaste aanname: een hypotheek " +
+    "van 70% van de vraagprijs, afgelost over 20 jaar, tegen 3,85% rente (2,85% plus " +
+    "1,0% opslag voor niet-ingezetenen). Uw eigen financieringssituatie kan hiervan " +
+    "afwijken — vul die in het betaalde rapport zelf in.",
   unverified:
     "Niet geverifieerd in deze indicatie: het bruikbaar oppervlak (afgeleid uit het " +
     "gebouwde oppervlak), de kadastrale waarde (benaderd met de vraagprijs) en de " +

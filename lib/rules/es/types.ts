@@ -962,10 +962,16 @@ export interface FreeTierBandEnd {
   insurance: number;
   bankAccountFee: number;
   communityFees: number;
-  /** IBI + insurance + bank fee + community fees. No debt service: the free tier has no financing input. */
+  /** IBI + insurance + bank fee + community fees. Excludes debt service, same split scenarios.ts (the paid engine) already keeps - see annualDebtService below for that line. */
   fixedCosts: number;
-  annualCashflowBeforeFinancing: number;
-  monthlyCashflowBeforeFinancing: number;
+  /** purchasePrice x FREE_TIER_FINANCING_TIER.ltv.value (fase A stap 3) - identical at both ends, the mortgage size does not vary with the band's other dimensions. */
+  mortgageAmount: number;
+  /** Amortising annual payment on mortgageAmount, via annualAnnuityDebtService() at the fixed financing assumption (fase A stap 3) - identical at both ends, same reason as mortgageAmount. */
+  annualDebtService: number;
+  /** Was annualCashflowBeforeFinancing until fase A stap 3 added financing - the qualifier is gone rather than kept and misleading now that it is included. */
+  annualCashflow: number;
+  /** Was monthlyCashflowBeforeFinancing - see annualCashflow's own note. */
+  monthlyCashflow: number;
   /** The renovation tier standing in for an unknown state of repair at this end. */
   renovationStrategy: RenovationStrategyId;
   /** The PLACEHOLDER parameters this end's number actually rests on (CLAUDE.md §6). */
@@ -1068,9 +1074,13 @@ export interface FreeTierBand {
    * The two ends as one figure, for display: € low - € high per month.
    * Numerically equal (low === high) exactly when `pointEstimate` is
    * true - both ends were built from the same three customer figures at
-   * that point, not two different standing-in pairs.
+   * that point, not two different standing-in pairs. Was
+   * monthlyCashflowBeforeFinancing until fase A stap 3 added financing to
+   * both ends (FreeTierBandEnd's own annualCashflow/monthlyCashflow) -
+   * the qualifier is gone rather than kept and misleading now that this
+   * is the figure a customer could actually bank.
    */
-  monthlyCashflowBeforeFinancing: { low: number; high: number };
+  monthlyCashflow: { low: number; high: number };
   /**
    * True when the customer supplied all three of FreeTierBandInput's
    * optional narrowing fields (fase A stap 2) - the band has collapsed to

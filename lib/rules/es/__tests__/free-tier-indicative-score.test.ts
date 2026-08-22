@@ -31,9 +31,18 @@ import type { IndicativeLabel } from "../types";
  *   curve, which is "Laag" - not the "Gemiddeld" §8.4 expected from its own
  *   partial enumeration of five parameters (which would have given 6.7).
  * - Cashflow midpoint. § 8.4 rounds the band to € 350 - € 831 and reports
- *   ≈ 7,64 for the midpoint. The unrounded band gives a midpoint of
- *   € 590,239275 and a score of 7.8. The label is "Hoog" either way, so
- *   the difference does not reach the customer.
+ *   ≈ 7,64 for the midpoint, and that stood until fase A stap 3: before
+ *   financing, the unrounded band gave a midpoint of € 590,239275 and a
+ *   score of 7.8, graded "Hoog". Fase A stap 3 added the fixed financing
+ *   assumption (FINANCING_STRATEGIES.medium + NON_RESIDENT_INTEREST_SPREAD)
+ *   to both ends, which - at this particular price/rent combination -
+ *   swings the band deeply negative: € -1.115,75 to € -634,49/month,
+ *   midpoint € -875,12, clamped to score 0.0 and graded "Laag". This is
+ *   not a bug in this fix - it is the bait-and-switch fase A stap 3 exists
+ *   to close, made visible for the first time. Whether
+ *   FREE_TIER_INDICATIVE_LABEL_THRESHOLDS itself still grades sensibly
+ *   now that every free indication includes debt service is fase A stap
+ *   4's own question, deliberately not answered here.
  */
 
 const referenceBand = computeFreeTierBand({
@@ -45,8 +54,8 @@ const referenceBand = computeFreeTierBand({
 describe("indicative score - reference case (SCORE_SPEC.md §8.4)", () => {
   const score = computeIndicativeScore(referenceBand);
 
-  it("grades the cashflow midpoint Hoog", () => {
-    expect(score.cashflowLabel).toBe("high");
+  it("grades the cashflow midpoint Laag, now that financing is included (fase A stap 3)", () => {
+    expect(score.cashflowLabel).toBe("low");
   });
 
   it("grades data confidence Laag, on 12 placeholders", () => {
@@ -55,12 +64,13 @@ describe("indicative score - reference case (SCORE_SPEC.md §8.4)", () => {
   });
 
   it("scores the midpoint of the band, not either end", () => {
-    const { low, high } = referenceBand.monthlyCashflowBeforeFinancing;
+    const { low, high } = referenceBand.monthlyCashflow;
     const midpoint = (low + high) / 2;
-    expect(midpoint).toBeCloseTo(590.239275, 6);
+    expect(midpoint).toBeCloseTo(-875.1193997746966, 6);
     // The underlying 0-10 figures, checked here and nowhere exposed on the
-    // result (SCORE_SPEC.md §8.2).
-    expect(cashflowScore(midpoint)).toBeCloseTo(7.8, 10);
+    // result (SCORE_SPEC.md §8.2). Clamped to the curve's floor - see the
+    // module docstring above for what changed here in fase A stap 3.
+    expect(cashflowScore(midpoint)).toBeCloseTo(0, 10);
     expect(dataCertaintyScore(referenceBand.placeholdersUsed.length)).toBeCloseTo(3.2, 10);
   });
 
@@ -130,16 +140,19 @@ describe("indicative score - grading (SCORE_SPEC.md §8.2)", () => {
 
 describe("indicative score - it reuses the paid score's curves, not a copy", () => {
   it("moves with the §2.1 cashflow curve across the whole range", () => {
-    // Three properties chosen to land in three different grades, each
-    // checked against cashflowScore() on the band's own midpoint - so if
-    // the curve is ever re-anchored, these follow rather than contradict.
+    // Three properties that spanned three different grades before fase A
+    // stap 3 added financing; now all three clamp to "low" (see the module
+    // docstring above), but the point of this test is unchanged - each
+    // case is checked against cashflowScore() on the band's own midpoint,
+    // not a hardcoded label, so if the curve is ever re-anchored these
+    // follow rather than contradict.
     for (const input of [
       { neighborhood: "Oliva", purchasePrice: 150_000, builtAreaM2: 70 },
       { neighborhood: "Ruzafa", purchasePrice: 350_000, builtAreaM2: 90 },
       { neighborhood: "El Carmen (Ciutat Vella)", purchasePrice: 600_000, builtAreaM2: 120 },
     ]) {
       const band = computeFreeTierBand(input);
-      const { low, high } = band.monthlyCashflowBeforeFinancing;
+      const { low, high } = band.monthlyCashflow;
       const expected = toIndicativeLabel(cashflowScore((low + high) / 2));
       expect(computeIndicativeScore(band).cashflowLabel).toBe(expected);
     }
@@ -157,18 +170,19 @@ describe("indicative score - it reuses the paid score's curves, not a copy", () 
   });
 
   it("grades a low-cashflow property Laag", () => {
-    // Oliva's band is € -56 to € 223/month; its midpoint sits just above
-    // break-even, so this pins that the grade tracks the midpoint rather
-    // than the favourable end.
+    // Oliva's band is € -683,56 to € -404,80/month after fase A stap 3's
+    // financing (was € -56 to € 223 before it, straddling break-even) -
+    // this pins that the grade tracks the midpoint rather than the
+    // favourable end.
     const band = computeFreeTierBand({
       neighborhood: "Oliva",
       purchasePrice: 150_000,
       builtAreaM2: 70,
     });
-    const { low, high } = band.monthlyCashflowBeforeFinancing;
+    const { low, high } = band.monthlyCashflow;
     expect(low).toBeLessThan(0);
-    expect((low + high) / 2).toBeCloseTo(83.828533, 6);
-    expect(computeIndicativeScore(band).cashflowLabel).toBe("medium");
+    expect((low + high) / 2).toBeCloseTo(-544.1823275439177, 6);
+    expect(computeIndicativeScore(band).cashflowLabel).toBe("low");
   });
 });
 

@@ -23,22 +23,31 @@ import { IndicatieResult } from "../indicatie-result";
  * therefore its grade - is structurally constant across every possible
  * free-indication input. That is asserted explicitly below, not treated
  * as an oversight in case selection.
+ *
+ * The three cases were originally chosen to land on Laag/Gemiddeld/Hoog.
+ * Fase A stap 3 added financing to the cashflow figure, which pulled two
+ * of the three down a grade (Mislata was "medium", El Carmen was "high");
+ * none of the three reaches "high" any more. The labels below are the
+ * post-financing values, re-derived against the real code rather than
+ * kept at their old grades - retuning the cases themselves, or the
+ * thresholds they're graded against, is fase A stap 4's question, not
+ * this one's.
  */
 const CASES = [
   {
-    name: "low cashflow grade",
+    name: "low cashflow grade (Oliva)",
     input: { neighborhood: "Oliva", purchasePrice: 400_000, builtAreaM2: 40 },
     expectedCashflowLabel: "low" as const,
   },
   {
-    name: "medium cashflow grade",
+    name: "low cashflow grade (Mislata, was medium before fase A stap 3)",
     input: { neighborhood: "Mislata", purchasePrice: 250_000, builtAreaM2: 70 },
-    expectedCashflowLabel: "medium" as const,
+    expectedCashflowLabel: "low" as const,
   },
   {
-    name: "high cashflow grade",
+    name: "medium cashflow grade (El Carmen, was high before fase A stap 3)",
     input: { neighborhood: "El Carmen (Ciutat Vella)", purchasePrice: 150_000, builtAreaM2: 90 },
-    expectedCashflowLabel: "high" as const,
+    expectedCashflowLabel: "medium" as const,
   },
 ];
 
@@ -83,8 +92,8 @@ describe.each(CASES)("IndicatieResult - golden render ($name)", (testCase) => {
     const props = buildProps(testCase.input);
     const html = renderToStaticMarkup(<IndicatieResult {...props} />);
 
-    expect(html).toContain(formatEuro(props.band.monthlyCashflowBeforeFinancing.low));
-    expect(html).toContain(formatEuro(props.band.monthlyCashflowBeforeFinancing.high));
+    expect(html).toContain(formatEuro(props.band.monthlyCashflow.low));
+    expect(html).toContain(formatEuro(props.band.monthlyCashflow.high));
   });
 
   it("renders all five FreeTierDisclosureKey texts directly, not behind a collapsed element", () => {
@@ -167,7 +176,7 @@ describe("IndicatieResult - point estimate (fase A stap 2, alle drie velden inge
   it("band.pointEstimate is true and low equals high - the precondition this whole test rests on", () => {
     const { band } = buildPointProps();
     expect(band.pointEstimate).toBe(true);
-    expect(band.monthlyCashflowBeforeFinancing.low).toBe(band.monthlyCashflowBeforeFinancing.high);
+    expect(band.monthlyCashflow.low).toBe(band.monthlyCashflow.high);
   });
 
   it("renders 'Cashflow-schatting', not 'Cashflow-bandbreedte'", () => {
@@ -180,7 +189,7 @@ describe("IndicatieResult - point estimate (fase A stap 2, alle drie velden inge
   it("renders a single figure, not a 'low – high' range", () => {
     const props = buildPointProps();
     const html = renderToStaticMarkup(<IndicatieResult {...props} />);
-    const figure = formatEuro(props.band.monthlyCashflowBeforeFinancing.low);
+    const figure = formatEuro(props.band.monthlyCashflow.low);
     expect(html).toContain(figure);
     // The en dash only ever separates a range in this component - its
     // absence is the actual claim, not the figure's presence alone.

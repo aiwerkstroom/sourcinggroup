@@ -73,7 +73,7 @@ export function toIndicativeLabel(score: number): IndicativeLabel {
  * unverified assumptions, the score moves with it automatically.
  */
 export function computeIndicativeScore(band: FreeTierBand): IndicativeScore {
-  const { low, high } = band.monthlyCashflowBeforeFinancing;
+  const { low, high } = band.monthlyCashflow;
   const midpoint = (low + high) / 2;
 
   return {

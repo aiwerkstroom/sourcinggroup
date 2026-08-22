@@ -5,8 +5,20 @@
  * runEngine() with the missing second-order fields filled in. CLAUDE.md §6
  * is explicit that a value the customer has not supplied is a reason to
  * write a smaller function, never a reason to feed the main engine an
- * assumption. So: no financing, no exit, no IRR, no projection, no
- * scenario layer, and long-term rental only.
+ * assumption. So: no exit, no IRR, no projection, no scenario layer, and
+ * long-term rental only.
+ *
+ * Financing is the one deliberate exception (fase A stap 3), and it is
+ * exactly that: a documented exception, not a quiet reversal of the rule
+ * above. Showing a cashflow figure with debt service left out was the
+ * core of the bait-and-switch this fix exists to close - a number that
+ * looked like real monthly cashflow but was not one a customer could
+ * actually bank. Rather than ask for LTV/equity the free form still does
+ * not collect, this reuses FINANCING_STRATEGIES.medium (70% LTV, 20
+ * years) plus NON_RESIDENT_INTEREST_SPREAD exactly as the paid engine
+ * already defines and documents them - no new parameter, and the
+ * assumption is disclosed by name (LTV/term/rate) via the "financing" key
+ * below, not left implicit.
  *
  * What the customer sees is a band rather than a point. The same
  * calculation runs twice, once at the least and once at the most
@@ -68,6 +80,7 @@
  * framing.
  */
 
+import { annualAnnuityDebtService } from "../financing";
 import { incomeLine } from "../income";
 import { fixedOperatingCosts, utilitiesBaseAnnual } from "../operating";
 import {
@@ -75,6 +88,7 @@ import {
   BASE_OCCUPANCY_LONG_TERM,
   DEFAULT_CADASTRAL_TO_PURCHASE_PRICE_RATIO,
   DEFAULT_USABLE_TO_BUILT_AREA_RATIO,
+  FINANCING_STRATEGIES,
   FREE_TIER_BAND_COMMUNITY_FEES_FAVOURABLE,
   FREE_TIER_BAND_COMMUNITY_FEES_UNFAVOURABLE,
   FREE_TIER_BAND_RENOVATION_TIER_FAVOURABLE,
@@ -82,6 +96,7 @@ import {
   FREE_TIER_BAND_RENT_MARGIN,
   MAINTENANCE_RATE,
   NEIGHBORHOOD_RENT_LONG_TERM,
+  NON_RESIDENT_INTEREST_SPREAD,
   PROPERTY_MANAGEMENT_FEE,
   RENOVATION_STRATEGIES,
   RENOVATION_TIER_BY_MAINTENANCE_CONDITION,
@@ -204,6 +219,21 @@ function resolveRentMarginDirection(
 }
 
 /**
+ * Fase A stap 3: the fixed financing assumption every free indication
+ * uses, since the free form asks for no LTV/equity preference to derive
+ * one from. FINANCING_STRATEGIES.medium exactly, the paid engine's own
+ * middle tier (Costs & Income!F104/F106) - reused, not duplicated, so
+ * this figure and the paid report's own "medium" tier can never drift
+ * apart. NON_RESIDENT_INTEREST_SPREAD applies unconditionally: CLAUDE.md
+ * §1's audience is a Dutch investor, non-resident by definition, the same
+ * fixed premise build-engine-input.ts's own FIXED_RESIDENCY already
+ * hard-codes for the paid wizard.
+ */
+const FREE_TIER_FINANCING_TIER = FINANCING_STRATEGIES.medium;
+const FREE_TIER_EFFECTIVE_INTEREST_RATE =
+  FREE_TIER_FINANCING_TIER.interestRate.value + NON_RESIDENT_INTEREST_SPREAD.value;
+
+/**
  * One end of the band. `rentMarginDirection` is +1 at the favourable end
  * and -1 at the unfavourable one when the customer left rentLevel blank:
  * the margin is symmetric around the neighbourhood average by
@@ -245,10 +275,14 @@ function computeEnd(args: {
   const utilities =
     utilitiesBaseAnnual(args.input.builtAreaM2) * renovation.utilitiesEfficiency.value;
 
-  // mortgageAmount 0 / rate 0 is not a stand-in for an unknown loan: the
-  // free indication genuinely has no debt, so the mortgage interest line
-  // is exactly zero. Reusing fixedOperatingCosts keeps the IBI base
-  // (incl. DEFAULT_CADASTRAL_TO_PURCHASE_PRICE_RATIO) defined in one place
+  // mortgageAmount 0 / rate 0 here on purpose, unrelated to fase A stap 3:
+  // fixedOperatingCosts()'s own mortgageInterest line is an interest-only
+  // figure the paid engine's tax layer uses, not the amortising annuity a
+  // real monthly payment is - scenarios.ts (the paid engine) keeps that
+  // line out of its own cashflow for the exact same reason and computes
+  // debt service separately via annualAnnuityDebtService(), same as
+  // below. Reusing fixedOperatingCosts still keeps the IBI base (incl.
+  // DEFAULT_CADASTRAL_TO_PURCHASE_PRICE_RATIO) defined in one place
   // instead of restating the formula here.
   const fixed = fixedOperatingCosts({
     purchasePrice: args.input.purchasePrice,
@@ -259,8 +293,26 @@ function computeEnd(args: {
   const fixedCosts =
     fixed.propertyTaxIBI + fixed.insurance + fixed.bankAccountFee + fixed.communityFees;
 
-  const annualCashflowBeforeFinancing =
-    grossAnnualRent - (propertyManagement + maintenance + utilities + fixedCosts);
+  // Fase A stap 3: the amortising annual payment on FREE_TIER_FINANCING_TIER's
+  // fixed assumption - same function, same shape as the paid engine's own
+  // debt service (financing.ts), applied to a mortgage sized off this
+  // property's own purchasePrice. Identical at both ends: neither the LTV
+  // nor the rate nor the term is a band dimension (this fix's own design:
+  // "de financieringsaanname is altijd vast, geen band-driver"), only the
+  // purchasePrice-derived mortgageAmount varies per property, and that is
+  // shared between both ends already.
+  const mortgageAmount = args.input.purchasePrice * FREE_TIER_FINANCING_TIER.ltv.value;
+  const annualDebtService = annualAnnuityDebtService(
+    FREE_TIER_EFFECTIVE_INTEREST_RATE,
+    FREE_TIER_FINANCING_TIER.loanTermYears.value,
+    mortgageAmount,
+  );
+
+  // Fase A stap 3: was annualCashflowBeforeFinancing. Financing is no
+  // longer excluded, so the qualifier is gone rather than kept and
+  // misleading - this is now the figure a customer could actually bank.
+  const annualCashflow =
+    grossAnnualRent - (propertyManagement + maintenance + utilities + fixedCosts + annualDebtService);
 
   return {
     end: args.end,
@@ -275,8 +327,10 @@ function computeEnd(args: {
     bankAccountFee: fixed.bankAccountFee,
     communityFees: fixed.communityFees,
     fixedCosts,
-    annualCashflowBeforeFinancing,
-    monthlyCashflowBeforeFinancing: annualCashflowBeforeFinancing / MONTHS_PER_YEAR,
+    mortgageAmount,
+    annualDebtService,
+    annualCashflow,
+    monthlyCashflow: annualCashflow / MONTHS_PER_YEAR,
     renovationStrategy: args.renovationStrategy,
     placeholdersUsed: collectPlaceholders(args.renovationStrategy, args.rentMarginDirection !== 0),
   };
@@ -388,9 +442,9 @@ export function computeFreeTierBand(input: FreeTierBandInput): FreeTierBand {
     referenceRentPerM2,
     unfavourable,
     favourable,
-    monthlyCashflowBeforeFinancing: {
-      low: unfavourable.monthlyCashflowBeforeFinancing,
-      high: favourable.monthlyCashflowBeforeFinancing,
+    monthlyCashflow: {
+      low: unfavourable.monthlyCashflow,
+      high: favourable.monthlyCashflow,
     },
     pointEstimate,
     placeholdersUsed: mergePlaceholders(

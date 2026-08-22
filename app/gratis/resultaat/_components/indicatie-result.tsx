@@ -106,13 +106,13 @@ export function IndicatieResult({ input, band, score }: IndicatieResultProps) {
           </h2>
           {band.pointEstimate ? (
             <p className="tabular text-2xl">
-              {formatEuro(band.monthlyCashflowBeforeFinancing.low)}
+              {formatEuro(band.monthlyCashflow.low)}
               <span className="text-text-muted ml-2 text-sm">per maand</span>
             </p>
           ) : (
             <p className="tabular text-2xl">
-              {formatEuro(band.monthlyCashflowBeforeFinancing.low)} –{" "}
-              {formatEuro(band.monthlyCashflowBeforeFinancing.high)}
+              {formatEuro(band.monthlyCashflow.low)} –{" "}
+              {formatEuro(band.monthlyCashflow.high)}
               <span className="text-text-muted ml-2 text-sm">per maand</span>
             </p>
           )}
