@@ -16,12 +16,16 @@
  *   use: a Server Action reads parameters.ts server-side
  *   (plusvalia-prefill.ts) and returns only the computed euro figure, an
  *   effect writes it once, and editing it afterwards is never
- *   overwritten. The coefficient table and rate behind this estimate are
- *   PLACEHOLDER-provenance and explicitly NOT confirmed against
- *   Valencia's current fiscal ordinance - see parameters.ts's own
- *   PLUSVALIA_VALENCIA_COEFFICIENTS docstring for exactly what could and
- *   could not be verified. That is why this stays a starting point rather
- *   than a locked figure: the risk of an imprecise coefficient is
+ *   overwritten. The coefficient table and rate behind this estimate no
+ *   longer share one status (Samuel, 22 August 2026). The rate is now an
+ *   ESTIMATE, cited to the Ayuntamiento de Valencia's own fiscal
+ *   ordinance, Article 16 ("el tipo de gravamen del 29,70 por 100"). The
+ *   coefficient table remains PLACEHOLDER-provenance, explicitly NOT
+ *   confirmed against Valencia's current fiscal ordinance - see
+ *   parameters.ts's own PLUSVALIA_VALENCIA_COEFFICIENTS and
+ *   PLUSVALIA_VALENCIA_RATE docstrings for exactly what could and could
+ *   not be verified for each. That is why this stays a starting point
+ *   rather than a locked figure: the risk of an imprecise coefficient is
  *   contained to what the field opens with, never to what the engine
  *   computes.
  *

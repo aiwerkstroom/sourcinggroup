@@ -5,19 +5,22 @@ import { computePlusvaliaPrefill } from "../plusvalia-prefill";
 /**
  * Golden test for the plusvalía pre-fill (datakwaliteitsfix stap 2).
  *
- * WHAT THIS DOES NOT PROVE. PLUSVALIA_VALENCIA_COEFFICIENTS and
- * PLUSVALIA_VALENCIA_RATE are PLACEHOLDER-provenance and explicitly
- * unverified against Valencia's current fiscal ordinance - see their own
- * docstrings in parameters.ts. This file tests that the arithmetic
- * built on top of those constants is correct, not that the constants
- * themselves are. That second claim cannot be tested from here; it needs
- * a source this sandbox could not reach.
+ * WHAT THIS DOES AND DOES NOT PROVE, per constant - they no longer share
+ * one status. PLUSVALIA_VALENCIA_RATE is now an ESTIMATE, corrected to
+ * 29,70% and cited to the Ayuntamiento de Valencia's own fiscal
+ * ordinance, Article 16 (Samuel, 22 August 2026) - see that constant's
+ * own block in parameters.ts. PLUSVALIA_VALENCIA_COEFFICIENTS remains
+ * PLACEHOLDER, explicitly unverified against Valencia's current fiscal
+ * ordinance; confirmed correct and left unchanged in that same
+ * correction. This file tests that the arithmetic built on top of both
+ * constants is correct, not that either constant's own value is - that
+ * second claim, for the coefficients, cannot be tested from here.
  *
- * WHY THAT IS AN ACCEPTABLE THING TO SHIP. The estimate only pre-fills a
- * wizard field the customer can and is told to override
- * (exit-form.tsx's hint text) - it never reaches buildEngineInput() or
- * the calculation layer. A wrong coefficient produces a wrong SUGGESTION,
- * not a wrong CALCULATION.
+ * WHY AN UNVERIFIED COEFFICIENT TABLE IS AN ACCEPTABLE THING TO SHIP. The
+ * estimate only pre-fills a wizard field the customer can and is told to
+ * override (exit-form.tsx's hint text) - it never reaches
+ * buildEngineInput() or the calculation layer. A wrong coefficient
+ * produces a wrong SUGGESTION, not a wrong CALCULATION.
  */
 
 describe("no estimate without both required inputs (MODEL_SPEC.md §16: cadastral value is optional)", () => {
@@ -119,9 +122,16 @@ describe("the coefficient table's own shape", () => {
     }
   });
 
-  it("is marked PLACEHOLDER, not SOURCED or ESTIMATE - it has not been confirmed against a primary source", () => {
+  it("the coefficient table is marked PLACEHOLDER - not confirmed against a primary source", () => {
     expect(PLUSVALIA_VALENCIA_COEFFICIENTS.provenance).toBe("PLACEHOLDER");
-    expect(PLUSVALIA_VALENCIA_RATE.provenance).toBe("PLACEHOLDER");
+  });
+
+  it("the rate is marked ESTIMATE - cited to Valencia's own ordinance but not independently fetched by this project", () => {
+    expect(PLUSVALIA_VALENCIA_RATE.provenance).toBe("ESTIMATE");
+  });
+
+  it("the rate is exactly Valencia's own cited 29,70% (Ayuntamiento de Valencia, ordenanza fiscal, art. 16)", () => {
+    expect(PLUSVALIA_VALENCIA_RATE.value).toBe(0.297);
   });
 
   it("the rate does not exceed the legal national maximum of 30% (art. 108.1 TRLRHL)", () => {

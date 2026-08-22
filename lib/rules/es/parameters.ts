@@ -177,41 +177,35 @@ export const DEFAULT_USABLE_TO_BUILT_AREA_RATIO: PlaceholderParameter<number> = 
 };
 
 /**
- * UNVERIFIED - flagged explicitly per this task's own instruction to be
- * careful with a tax figure. This is not sourced from Valencia's current
- * fiscal ordinance; it could not be, in this environment (see below).
- *
  * plusvalía municipal (IIVTNU) is computed, in every Spanish town, as:
  *   land cadastral value x coefficient(years held) x municipal tax rate
- * The two constants below are the coefficient table and the rate. Both
- * are reconstructed from general knowledge of the NATIONAL maximum
- * coefficients set by Real Decreto-ley 8/2023 (in force for accruals
- * from 2024 - a 2025/2026 update was proposed but not ratified by
- * Congress, so these remain current per web search as of August 2026)
- * and the Article 108.1 TRLRHL rate cap, cross-checked against several
- * web search results. It is NOT confirmed against Valencia's own current
- * ordinance (a municipality may set its own rate up to the cap, and may
- * apply the national coefficients or lower ones) - WebFetch to every
- * primary and secondary source attempted (sede.valencia.es, boe.es,
- * several tax-advisory sites) was blocked by this sandbox's egress
- * policy, so only fragmentary, sometimes mutually conflicting, search
- * snippets were available. One search result named 29%, another 29,70%,
- * a third "30% Valencia" for the rate; coefficient-table snippets
- * disagreed on the >=20-year figure (0,40 vs 0,45).
+ * The two constants below are the coefficient table and the rate - two
+ * separate provenance levels now, not one, so read each constant's own
+ * block rather than assuming they share a status.
  *
- * PROVENANCE therefore PLACEHOLDER, not ESTIMATE: this is exactly the
- * "no external source cited, best judgement" case the provenance system
- * exists to flag, same as DEFAULT_USABLE_TO_BUILT_AREA_RATIO above.
+ * PLUSVALIA_VALENCIA_COEFFICIENTS remains UNVERIFIED. It is reconstructed
+ * from general knowledge of the NATIONAL maximum coefficients set by Real
+ * Decreto-ley 8/2023 (in force for accruals from 2024 - a 2025/2026
+ * update was proposed but not ratified by Congress, so these remain
+ * current per web search as of August 2026), cross-checked against
+ * several web search results but not confirmed against Valencia's own
+ * current ordinance. WebFetch to every primary source attempted
+ * (sede.valencia.es, boe.es) was blocked by this sandbox's egress policy,
+ * so only fragmentary, partially conflicting search snippets were
+ * available - snippets disagreed on the >=20-year figure (0,40 vs 0,45).
+ * Confirmed correct and left unchanged when the rate below was corrected
+ * (Samuel, 22 August 2026).
  *
- * NOT wired into the calculation layer. This estimate feeds only
+ * PLUSVALIA_VALENCIA_RATE was corrected from an assumed legal-maximum
+ * PLACEHOLDER to a cited ESTIMATE - see that constant's own block.
+ *
+ * NOT wired into the calculation layer, either constant. Both feed only
  * app/rapport/nieuw/exit/exit-form.tsx's pre-fill for
  * municipalCapitalGainsTax - a starting point the customer can and
  * should override, the same architecture rent-prefill.ts already uses
  * for the rent fields. EngineInput never receives this table; whatever
  * number the customer confirms in the form is what the engine sees,
- * exactly as before this pre-fill existed. Confirmation against the live
- * Valencia ordinance (sede.valencia.es) is needed before this could
- * safely become the actual computed value rather than a suggestion.
+ * exactly as before this pre-fill existed.
  */
 export const PLUSVALIA_VALENCIA_COEFFICIENTS: PlaceholderParameter<Readonly<Record<number, number>>> =
   {
@@ -244,12 +238,25 @@ export const PLUSVALIA_VALENCIA_COEFFICIENTS: PlaceholderParameter<Readonly<Reco
       "Reconstructed from general knowledge of Real Decreto-ley 8/2023's national maximum IIVTNU coefficients (art. 107.4 TRLRHL), not confirmed against Valencia's current fiscal ordinance. This sandbox's egress policy blocked WebFetch to every primary source attempted (sede.valencia.es, boe.es); web search snippets partially corroborated the shape (a dip around years 9-14, reflecting the 2008-2014 property downturn baked into the national law) but disagreed on some individual values, particularly the >=20-year figure (0,40 vs 0,45 across sources). Not wired into the engine - see this constant's own module docstring above.",
   };
 
-export const PLUSVALIA_VALENCIA_RATE: PlaceholderParameter<number> = {
+/**
+ * Corrected from 0,30 (an assumed legal-maximum PLACEHOLDER) to Valencia's
+ * own cited rate (Samuel, 22 August 2026): "el tipo de gravamen del 29,70
+ * por 100" per the Ayuntamiento de Valencia's own tax ordinance, Article
+ * 16. ESTIMATE, not SOURCED: this project cannot itself fetch or archive
+ * the ordinance text (WebFetch to sede.valencia.es is blocked by this
+ * sandbox's egress policy, unchanged since the original PLACEHOLDER was
+ * written), so the citation is asserted rather than independently
+ * verified from here - which is exactly ESTIMATE's own distinction from
+ * SOURCED (see ParameterProvenance in types.ts). Below the 30% cap
+ * art. 108.1 TRLRHL sets, consistent with a municipality applying a rate
+ * up to that cap rather than the cap itself.
+ */
+export const PLUSVALIA_VALENCIA_RATE: EstimateParameter<number> = {
   name: "PLUSVALIA_VALENCIA_RATE",
-  value: 0.3,
-  provenance: "PLACEHOLDER",
+  value: 0.297,
+  provenance: "ESTIMATE",
   reasoning:
-    "Article 108.1 TRLRHL caps the municipal IIVTNU rate at 30% and this constant uses that legal maximum; search results suggest Valencia's own ordinance sets a rate close to this cap (29%, 29,70% and '30%' each appeared in different sources for different years) but did not confirm which applies now. Not wired into the engine - see PLUSVALIA_VALENCIA_COEFFICIENTS' module docstring.",
+    "Ayuntamiento de Valencia's own fiscal ordinance, Article 16: \"el tipo de gravamen del 29,70 por 100.\" ESTIMATE rather than SOURCED because this project has not itself fetched or archived the ordinance text - see this constant's own block above for why. Not wired into the engine - see PLUSVALIA_VALENCIA_COEFFICIENTS' module docstring.",
 };
 
 // ---------------------------------------------------------------------------
