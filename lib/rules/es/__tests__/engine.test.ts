@@ -147,13 +147,38 @@ describe("reference case Avenida Primado Reig 19 (Excel parity)", () => {
     expect(result.tax.taxDueBase).toBeCloseTo(584.901016, 6);
   });
 
-  it("non-EU rate is 24% (I51/I54)", () => {
+  /**
+   * A DELIBERATE DIVERGENCE FROM EXCEL PARITY, and the only one in this
+   * file - so it is worth being explicit about why.
+   *
+   * Reference Info I51/I54 applies the 24% non-EU rate to the same NET
+   * taxable base it uses for EU residents (3.078,43 -> 738,82). Under
+   * Spanish IRNR that is wrong: a non-EU resident may deduct nothing at
+   * all and is taxed on GROSS rent. The spreadsheet switched the rate but
+   * not the base, and the TypeScript port reproduced that faithfully - so
+   * the error was inherited, not introduced here.
+   *
+   * The corrected figure is 24% of the gross rent: 28.440,72 x 0,24 =
+   * 6.825,77, which is 11,7x what the old line claimed. Every other
+   * assertion in this file still matches the spreadsheet exactly; this one
+   * intentionally does not, because the spreadsheet is the thing that is
+   * wrong.
+   */
+  it("non-EU is 24% over GROSS rent - correcting Reference Info I51/I54", () => {
     const nonEu = runEngine({
       ...referenceCase,
-      selections: { ...referenceCase.selections, euResident: false },
+      selections: { ...referenceCase.selections, taxResidency: "nonEu" },
     });
     expect(nonEu.tax.taxRate).toBe(0.24);
-    expect(nonEu.tax.taxDueBase).toBeCloseTo(738.822336, 6);
+    expect(nonEu.tax.deductionsAllowed).toBe(false);
+    expect(nonEu.tax.taxableIncomeBase).toBeCloseTo(28440.72, 8);
+    expect(nonEu.tax.taxDueBase).toBeCloseTo(6825.7728, 6);
+
+    // The spreadsheet's own figure, kept as a named landmark so a future
+    // reader comparing against Excel finds the explanation rather than a
+    // discrepancy.
+    const excelWouldHaveSaid = 738.822336;
+    expect(nonEu.tax.taxDueBase).not.toBeCloseTo(excelWouldHaveSaid, 6);
   });
 });
 

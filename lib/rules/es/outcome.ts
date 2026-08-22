@@ -54,13 +54,14 @@ import type {
   IrrResult,
   Parameter,
   ProjectionYear,
-  RentalStrategy,
   RenovationStrategyId,
+  RentalStrategy,
   Residency,
   ReturnRequirementCheck,
   ScenarioId,
   ScenarioOutcome,
   ScenarioProjectionYear,
+  TaxResidency,
   TsgScore,
 } from "./types";
 
@@ -163,6 +164,8 @@ export function buildScenarioOutcome(args: {
   residency?: Residency;
   /** ModelSelections.euResident - which rental income tax rate applies in assumptionsUsed. Defaults to true (EU resident), matching engine.ts's own default. */
   euResident?: boolean;
+  /** ModelSelections.taxResidency - decides both the rate and the base; takes precedence over euResident. */
+  taxResidency?: TaxResidency;
   /** True when the caller passed an explicit buildingShareOfValue OR a cadastralValue to buildProjectionYears (projection.ts) instead of relying on DEFAULT_BUILDING_SHARE_OF_VALUE. */
   buildingShareOfValueProvided?: boolean;
   /** True when the caller passed an explicit renovationImprovementShare to computeExit (exit.ts) instead of relying on DEFAULT_RENOVATION_IMPROVEMENT_SHARE. */
@@ -250,6 +253,7 @@ export function buildScenarioOutcome(args: {
     financingStrategy: args.financingStrategy,
     residency: args.residency,
     euResident: args.euResident,
+    taxResidency: args.taxResidency,
     buildingShareOfValueProvided: args.buildingShareOfValueProvided ?? false,
     renovationImprovementShareProvided: args.renovationImprovementShareProvided ?? false,
     minRequiredReturnProvided: args.minRequiredReturn !== undefined,

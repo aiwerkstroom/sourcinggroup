@@ -76,6 +76,10 @@ async function fillWizard(page: Page): Promise<void> {
   await page.getByLabel("Minimale maandcashflow").fill("500");
   await page.getByLabel("Minimale ROI").fill("4");
   await page.getByLabel("Houdperiode").fill("10");
+  // Required since the tax-residency correction. "netherlands" is the
+  // treatment this chain always implicitly assumed, so the figures it
+  // asserts on downstream are unchanged.
+  await page.getByLabel("Waar bent u fiscaal inwoner?").selectOption("netherlands");
   await page.locator('input[type="radio"][value="hybrid"]').check();
   await page.getByLabel("Langetermijnhuur").fill("17");
   await page.getByLabel("Kortetermijnhuur").fill("36");

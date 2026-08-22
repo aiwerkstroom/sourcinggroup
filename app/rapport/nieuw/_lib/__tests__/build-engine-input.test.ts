@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { runEngine } from "@/lib/rules/es/engine";
 import { referenceCase } from "@/lib/rules/es/__tests__/referencecase";
-import { buildEngineInput, FIXED_EU_RESIDENT, FIXED_RESIDENCY } from "../build-engine-input";
+import { buildEngineInput, FIXED_RESIDENCY } from "../build-engine-input";
 import { WizardAssemblyError } from "../build-engine-input";
 import type { WizardData } from "../../_state/wizard-state";
 
@@ -65,6 +65,7 @@ const referenceWizardData: WizardData = {
     minMonthlyCashflow: "500",
     minRoiTargetPercent: "4",
     holdingYears: "10",
+    taxResidency: "netherlands",
     rentalStrategy: "hybrid",
     rentPerM2LongTerm: "17",
     rentPerM2ShortTerm: "36",
@@ -118,11 +119,16 @@ describe("buildEngineInput - the reference case, end to end through the wizard",
     );
   });
 
-  it("fixes residency rather than asking for it", () => {
+  it("still fixes Spanish residency, but now ASKS for tax residency", () => {
     expect(assembled.selections.residency).toBe(FIXED_RESIDENCY);
-    expect(assembled.selections.euResident).toBe(FIXED_EU_RESIDENT);
+    // No longer a fixed assumption: step 3 asks, and this fixture answers
+    // "netherlands" - the treatment that used to be hard-coded for everyone.
+    expect(assembled.selections.taxResidency).toBe("netherlands");
     expect(assembled.selections.residency).toBe(referenceCase.selections.residency);
-    expect(assembled.selections.euResident).toBe(referenceCase.selections.euResident);
+    // euResident is no longer emitted: taxResidency replaced it as the
+    // single answer, and it carries the deduction rule the flag never
+    // could. The engine still accepts the old flag from other callers.
+    expect(assembled.selections.euResident).toBeUndefined();
   });
 
   it("carries the exit assumptions the engine has no default for", () => {

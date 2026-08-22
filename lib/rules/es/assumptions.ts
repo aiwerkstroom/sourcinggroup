@@ -55,13 +55,15 @@ import {
   TOTAL_UTILITIES_PER_M2_ANNUAL,
   VALUE_GROWTH_ANNUAL,
 } from "./parameters";
+import { rentalIncomeTaxTreatment } from "./tax";
 import type {
   FinancingStrategyId,
   Parameter,
-  RentalStrategy,
   RenovationStrategyId,
+  RentalStrategy,
   Residency,
   ScenarioId,
+  TaxResidency,
 } from "./types";
 
 export function collectUsedParameters(args: {
@@ -74,6 +76,8 @@ export function collectUsedParameters(args: {
   residency?: Residency;
   /** Defaults to true (EU resident), matching engine.ts's own default. */
   euResident?: boolean;
+  /** Where the investor is tax-resident; takes precedence over euResident. */
+  taxResidency?: TaxResidency;
   buildingShareOfValueProvided: boolean;
   renovationImprovementShareProvided: boolean;
   minRequiredReturnProvided: boolean;
@@ -167,7 +171,13 @@ export function collectUsedParameters(args: {
   if (!args.cadastralValueProvided) {
     params.push(DEFAULT_CADASTRAL_TO_PURCHASE_PRICE_RATIO);
   }
-  params.push((args.euResident ?? true) ? RENTAL_INCOME_TAX_RATE_EU : RENTAL_INCOME_TAX_RATE_NON_EU);
+  // Derived through the same helper the calculation uses, so the rate the
+  // report names can never differ from the rate that was applied.
+  params.push(
+    rentalIncomeTaxTreatment(args).deductionsAllowed
+      ? RENTAL_INCOME_TAX_RATE_EU
+      : RENTAL_INCOME_TAX_RATE_NON_EU,
+  );
   if (!args.minRequiredReturnProvided) {
     params.push(DEFAULT_MIN_REQUIRED_RETURN);
   }

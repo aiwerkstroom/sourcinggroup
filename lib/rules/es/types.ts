@@ -19,6 +19,30 @@ export type ScenarioId = "conservative" | "base" | "optimistic";
 export type Residency = "resident" | "nonResident";
 
 /**
+ * Where the investor is tax-resident, which decides how Spain taxes their
+ * rental income under IRNR. Two things hang off it, not one:
+ *
+ *  - the RATE: 19% for EU/EEA residents, 24% for everyone else;
+ *  - the BASE: EU/EEA residents are taxed on net income (rent minus
+ *    interest, comunidad, IBI, insurance, maintenance, management and
+ *    depreciation); non-EU residents are taxed on GROSS rent with no
+ *    deductions at all.
+ *
+ * The second half is the one that bites. A 19%-to-24% rate step looks
+ * like a quarter more tax; combined with losing every deduction it is
+ * routinely two to three times as much. Modelling only the rate - which
+ * is what this code did until this change - understates a non-EU
+ * investor's tax badly enough to invert the conclusion of a report.
+ *
+ * "netherlands" and "otherEu" are treated identically by Spanish IRNR
+ * today. They are separate options because the customer is answering a
+ * question about themselves, not about Spanish tax law, and "ander
+ * EU-land" is a different fact about them than "Nederland" - one that
+ * matters for their own domestic treatment and may matter here later.
+ */
+export type TaxResidency = "netherlands" | "otherEu" | "nonEu";
+
+/**
  * Provenance audit (herkomstaudit) for every value in parameters.ts. Not
  * every number backing this model carries the same weight: some are
  * statutory rates or cited market data, some are TSG's own deliberate
@@ -230,8 +254,27 @@ export interface ModelSelections {
    * Residents skip the non-resident interest spread.
    */
   residency: Residency;
-  /** EU/EEA residents pay 19% rental income tax, non-EU 24%. */
+  /**
+   * EU/EEA residents pay 19% rental income tax, non-EU 24%.
+   *
+   * @deprecated Superseded by taxResidency, which also carries whether
+   * deductions are allowed - the half this flag could never express. Kept
+   * so existing callers keep compiling; taxResidency wins when both are
+   * given. A caller supplying only this still gets the old behaviour.
+   */
   euResident?: boolean;
+  /**
+   * Where the investor is tax-resident (wizard step 3). Decides both the
+   * rental income tax rate and whether costs are deductible at all - see
+   * TaxResidency.
+   *
+   * Optional so that callers predating this field keep their previous
+   * behaviour: absent, the engine falls back to euResident, and absent
+   * that too, to EU treatment. That fallback is what keeps the reference
+   * case's anchor where it was, since EU treatment is exactly the fixed
+   * assumption this replaces.
+   */
+  taxResidency?: TaxResidency;
   /**
    * Declares that one of the two rates above was taken from the rent this
    * property is actually being let at today, rather than from the
@@ -427,6 +470,13 @@ export interface TaxResult {
   taxableIncomeBase: number;
   taxRate: number;
   taxDueBase: number;
+  /**
+   * Whether the deductible costs above actually reduced the taxable base.
+   * False for a non-EU investor, who is taxed on gross rent - in that
+   * case deductibleCostsBase is still reported (the costs are real and
+   * the report shows them) but taxableIncomeBase equals the gross rent.
+   */
+  deductionsAllowed: boolean;
 }
 
 /**

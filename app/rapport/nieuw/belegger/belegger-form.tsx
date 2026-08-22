@@ -50,7 +50,7 @@ import type { FieldValidationKey } from "@/lib/rules/es/field-validation";
 import { rentalStrategyAvailability } from "@/lib/rules/es/licensing";
 import type { RentPrefillSource } from "@/lib/rules/es/rent-prefill";
 import type { RentalStrategy } from "@/lib/rules/es/types";
-import { FieldGroup, NumberField, RadioGroup } from "../_components/fields";
+import { FieldGroup, NumberField, RadioGroup, SelectField } from "../_components/fields";
 import { parseNumberInput } from "../_lib/parse-number";
 import { OTHER_NEIGHBORHOOD, useWizard } from "../_state/wizard-state";
 import type { BeleggerStepData } from "../_state/wizard-state";
@@ -87,6 +87,19 @@ const PREFILL_SOURCE_NOTE: Readonly<Record<RentPrefillSource, string | null>> = 
     "Voorgevuld met de referentiehuur van uw wijk (Idealista/Fotocasa, 2025). Weet u een betere waarde uit een vergelijkbare advertentie, pas hem dan aan — het rapport vermeldt dat u de waarde zelf heeft ingevuld.",
   none: "Voor deze wijk hebben we geen referentiehuur. Vul zelf een waarde in; het rapport vermeldt dat er geen marktreferentie beschikbaar was.",
 };
+
+/**
+ * Three options for two Spanish tax treatments: "Nederland" and "ander
+ * EU-land" are identical under IRNR today. They are asked separately
+ * because the customer is answering a question about themselves, not
+ * about Spanish tax law - and "ander EU-land" is a different fact about
+ * them, one that matters for their own domestic treatment.
+ */
+const TAX_RESIDENCY_OPTIONS = [
+  { value: "netherlands", label: "Nederland" },
+  { value: "otherEu", label: "Een ander EU-/EER-land" },
+  { value: "nonEu", label: "Buiten de EU (bijv. VK, Zwitserland, VS, VAE)" },
+];
 
 export function BeleggerForm() {
   const router = useRouter();
@@ -204,6 +217,9 @@ export function BeleggerForm() {
       }
     }
 
+    if (step.taxResidency === "") {
+      next.taxResidency = translateFieldValidation("required");
+    }
     if (step.rentalStrategy === "") {
       next.rentalStrategy = translateFieldValidation("required");
     }
@@ -315,6 +331,16 @@ export function BeleggerForm() {
           placeholder="10"
           hint="Hoe lang u het pand wilt aanhouden voordat u verkoopt."
           {...field("holdingYears")}
+        />
+      </FieldGroup>
+
+      <FieldGroup title="Uw fiscale woonplaats">
+        <SelectField
+          label="Waar bent u fiscaal inwoner?"
+          options={TAX_RESIDENCY_OPTIONS}
+          placeholder="Kies uw fiscale woonplaats"
+          hint="Spanje belast huurinkomsten van EU/EER-inwoners tegen 19% over de nettohuur - dus na aftrek van rente, comunidad, IBI en afschrijving. Inwoners van buiten de EU betalen 24% over de brutohuur, zonder enige aftrek. Dat verschil is in de praktijk een factor twee tot drie, dus het rapport kan hier niet van uitgaan."
+          {...field("taxResidency")}
         />
       </FieldGroup>
 

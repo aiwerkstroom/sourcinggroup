@@ -46,14 +46,33 @@ import type {
   ListingFieldProvenanceStatus,
   MaintenanceCondition,
   RentalStrategy,
+  TaxResidency,
 } from "@/lib/rules/es/types";
 import { parseNumberInput } from "./parse-number";
 import { OTHER_NEIGHBORHOOD } from "../_state/wizard-state";
 import type { ListingOrigin, PandStepData, WizardData } from "../_state/wizard-state";
 
-/** Fixed by the product's audience, not asked - see the module docstring. */
+/**
+ * Still fixed by the product's audience: every customer of this report is
+ * a non-resident of Spain, which is what the non-resident interest spread
+ * keys off.
+ */
 export const FIXED_RESIDENCY = "nonResident" as const;
-export const FIXED_EU_RESIDENT = true;
+
+/**
+ * NO LONGER FIXED. euResident used to be hard-coded true here, which
+ * silently assumed EU/EEA treatment for everyone - 19% on net income.
+ * For an investor resident outside the EU that is wrong twice over: the
+ * rate is 24%, and nothing is deductible, so the real tax is routinely
+ * two to three times what the report showed. The wizard now asks
+ * (step 3), and this value is derived from the answer.
+ *
+ * Kept only as the fallback for a WizardData that predates the field.
+ * That fallback is EU treatment, which is exactly what the old fixed
+ * assumption produced - so an old input still computes what it always
+ * computed rather than silently changing meaning.
+ */
+export const FALLBACK_TAX_RESIDENCY = "netherlands" as const;
 
 export class WizardAssemblyError extends Error {
   constructor(public readonly field: string) {
@@ -161,6 +180,16 @@ export function buildEngineInput(data: WizardData): EngineInput {
       ? undefined
       : pand.neighborhood;
 
+  // Required from step 3. Anything unrecognised - including "" from a
+  // WizardData that predates the field - falls back to EU treatment, the
+  // assumption this replaced, rather than guessing the more expensive one.
+  const taxResidency: TaxResidency =
+    belegger.taxResidency === "netherlands" ||
+    belegger.taxResidency === "otherEu" ||
+    belegger.taxResidency === "nonEu"
+      ? belegger.taxResidency
+      : FALLBACK_TAX_RESIDENCY;
+
   const rentalStrategy = belegger.rentalStrategy as RentalStrategy;
   const usesShortTerm = rentalStrategy === "shortTerm" || rentalStrategy === "hybrid";
 
@@ -220,7 +249,7 @@ export function buildEngineInput(data: WizardData): EngineInput {
       ),
       financingStrategy: deriveFinancingStrategy(preferredLtv),
       residency: FIXED_RESIDENCY,
-      euResident: FIXED_EU_RESIDENT,
+      taxResidency,
       rentPerM2FromActualCurrentRent:
         belegger.rentFromActualCurrentRent === "" ? undefined : belegger.rentFromActualCurrentRent,
     },

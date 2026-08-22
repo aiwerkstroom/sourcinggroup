@@ -29,13 +29,12 @@
 
 import { amortizationSchedule } from "./financing";
 import { buildIndexSeries } from "./indexation";
+import { rentalIncomeTaxTreatment } from "./tax";
 import {
   DEFAULT_BUILDING_SHARE_OF_VALUE,
   DEPRECIATION_RATE,
   DEPRECIATION_SCENARIO_FACTORS,
   PROPERTY_MANAGEMENT_FEE,
-  RENTAL_INCOME_TAX_RATE_EU,
-  RENTAL_INCOME_TAX_RATE_NON_EU,
 } from "./parameters";
 import type {
   CadastralValue,
@@ -45,6 +44,7 @@ import type {
   ScenarioId,
   ScenarioResult,
   SelectedFinancing,
+  TaxResidency,
 } from "./types";
 
 const MONTHS_PER_YEAR = 12;
@@ -62,7 +62,10 @@ export function buildProjectionYears(args: {
     FixedOperatingCosts,
     "propertyTaxIBI" | "insurance" | "bankAccountFee" | "communityFees"
   >;
-  euResident: boolean;
+  /** Legacy; taxResidency takes precedence when both are given. */
+  euResident?: boolean;
+  /** Where the investor is tax-resident - decides the rate AND whether costs are deductible. */
+  taxResidency?: TaxResidency;
   /** The selected renovation strategy; its timeToRentMonths prorates year 1's rent. */
   renovation: Pick<RenovationStrategyResult, "timeToRentMonths">;
   /**
@@ -103,9 +106,10 @@ export function buildProjectionYears(args: {
     depreciationBaseValue *
     DEPRECIATION_RATE.value *
     DEPRECIATION_SCENARIO_FACTORS[args.scenario].value;
-  const taxRate = args.euResident
-    ? RENTAL_INCOME_TAX_RATE_EU.value
-    : RENTAL_INCOME_TAX_RATE_NON_EU.value;
+  // Rate and base together, from the one helper tax.ts owns, so the
+  // ten-year series and the year-1 figure cannot disagree about how this
+  // investor is taxed.
+  const { rate: taxRate, deductionsAllowed } = rentalIncomeTaxTreatment(args);
 
   // Year 1 only: the property isn't let while it's being renovated, so its
   // rent (and the property management fee, a % of that rent) is prorated
@@ -153,7 +157,9 @@ export function buildProjectionYears(args: {
       depreciation +
       bankAccountFee +
       communityFees;
-    const taxableIncome = grossIncome - deductibleCosts;
+    // Gross for a non-EU investor: the costs are still computed and still
+    // reported per year, they just do not reduce the taxable base.
+    const taxableIncome = deductionsAllowed ? grossIncome - deductibleCosts : grossIncome;
     // Spanish non-resident rental tax (IRNR) is filed and withheld per
     // period; a negative result means no tax is due that year, not a
     // refund, so it is clamped at zero rather than reported as negative.

@@ -77,6 +77,7 @@ const validCase: WizardData = {
     minMonthlyCashflow: "500",
     minRoiTargetPercent: "4",
     holdingYears: "10",
+    taxResidency: "netherlands",
     rentalStrategy: "hybrid",
     rentPerM2LongTerm: "17",
     rentPerM2ShortTerm: "36",

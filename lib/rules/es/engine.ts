@@ -111,6 +111,7 @@ export function runEngine(input: EngineInput): EngineResult {
     scenarios,
     fixedCosts,
     euResident: selections.euResident ?? true,
+    taxResidency: selections.taxResidency,
   });
 
   // MODEL_SPEC_FASE1B §7 / SCORE_SPEC.md §1-§6: a full per-scenario outcome
@@ -131,6 +132,7 @@ export function runEngine(input: EngineInput): EngineResult {
           financing: selectedFinancing,
           fixedCosts,
           euResident: selections.euResident ?? true,
+          taxResidency: selections.taxResidency,
           renovation: selectedRenovation,
           cadastralValue: property.cadastralValue,
         });
@@ -161,6 +163,7 @@ export function runEngine(input: EngineInput): EngineResult {
           financingStrategy: selections.financingStrategy,
           residency: selections.residency,
           euResident: selections.euResident ?? true,
+          taxResidency: selections.taxResidency,
           usableAreaM2Provided: property.usableAreaM2 !== undefined,
           cadastralValueProvided: property.cadastralValue !== undefined,
           // cadastralValue, when given, also replaces the building-share

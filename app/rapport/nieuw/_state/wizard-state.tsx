@@ -80,6 +80,14 @@ export interface BeleggerStepData {
   minMonthlyCashflow: string;
   minRoiTargetPercent: string;
   holdingYears: string;
+  /**
+   * "" until chosen; otherwise a TaxResidency. Required: it decides both
+   * the Spanish rental income tax rate and whether costs are deductible
+   * at all, which is a 2-3x difference in tax for a non-EU investor. It
+   * was a fixed assumption until this was added, which produced a
+   * factually wrong report for that group.
+   */
+  taxResidency: string;
   /** "" until chosen; otherwise a RentalStrategy the permit gate allows. */
   rentalStrategy: string;
   rentPerM2LongTerm: string;
@@ -178,6 +186,7 @@ export const EMPTY_BELEGGER: BeleggerStepData = {
   minMonthlyCashflow: "",
   minRoiTargetPercent: "",
   holdingYears: "",
+  taxResidency: "",
   rentalStrategy: "",
   rentPerM2LongTerm: "",
   rentPerM2ShortTerm: "",
