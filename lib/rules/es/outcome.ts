@@ -73,7 +73,11 @@ import type {
  * - MAINTENANCE_RATE (scenarios.ts) and BANK_FEE (operating.ts,
  *   acquisition.ts) apply to every outcome unconditionally.
  * - BASE_OCCUPANCY_LONG_TERM/SHORT_TERM (income.ts) apply only for the
- *   strategy actually selected - both for hybrid, one for longTerm/shortTerm.
+ *   strategy actually selected - both for hybrid, one for longTerm/shortTerm -
+ *   and only when the caller did not override that rate with
+ *   ModelSelections.occupancyLongTerm/occupancyShortTerm (datakwaliteitsfix
+ *   stap 3), the same "only the fallback, not a customer figure" treatment
+ *   usableAreaM2Provided already gets below.
  * - The selected renovation strategy's five PLACEHOLDER fields
  *   (RENOVATION_STRATEGIES[id]) - the two strategies NOT selected never
  *   entered this outcome's numbers.
@@ -103,13 +107,21 @@ function collectPlaceholders(args: {
   minRequiredReturnProvided: boolean;
   cadastralValueProvided: boolean;
   usableAreaM2Provided: boolean;
+  occupancyLongTermProvided: boolean;
+  occupancyShortTermProvided: boolean;
 }): Parameter<unknown>[] {
   const placeholders: Parameter<unknown>[] = [MAINTENANCE_RATE, BANK_FEE];
 
-  if (args.rentalStrategy === "longTerm" || args.rentalStrategy === "hybrid") {
+  if (
+    (args.rentalStrategy === "longTerm" || args.rentalStrategy === "hybrid") &&
+    !args.occupancyLongTermProvided
+  ) {
     placeholders.push(BASE_OCCUPANCY_LONG_TERM);
   }
-  if (args.rentalStrategy === "shortTerm" || args.rentalStrategy === "hybrid") {
+  if (
+    (args.rentalStrategy === "shortTerm" || args.rentalStrategy === "hybrid") &&
+    !args.occupancyShortTermProvided
+  ) {
     placeholders.push(BASE_OCCUPANCY_SHORT_TERM);
   }
 
@@ -174,6 +186,10 @@ export function buildScenarioOutcome(args: {
   cadastralValueProvided?: boolean;
   /** True when the caller passed PropertyInput.usableAreaM2 directly to buildIncomeModel (income.ts, via engine.ts) instead of relying on DEFAULT_USABLE_TO_BUILT_AREA_RATIO to derive it from builtAreaM2. */
   usableAreaM2Provided?: boolean;
+  /** True when the caller passed ModelSelections.occupancyLongTerm instead of relying on BASE_OCCUPANCY_LONG_TERM (datakwaliteitsfix stap 3). */
+  occupancyLongTermProvided?: boolean;
+  /** True when the caller passed ModelSelections.occupancyShortTerm instead of relying on BASE_OCCUPANCY_SHORT_TERM. */
+  occupancyShortTermProvided?: boolean;
   /**
    * This scenario's own ScenarioResult.monthlyCashflow and .dscr, needed
    * by SCORE_SPEC.md §2.1/§2.2. Passed in rather than recomputed: they are
@@ -244,6 +260,8 @@ export function buildScenarioOutcome(args: {
     minRequiredReturnProvided: args.minRequiredReturn !== undefined,
     cadastralValueProvided: args.cadastralValueProvided ?? false,
     usableAreaM2Provided: args.usableAreaM2Provided ?? false,
+    occupancyLongTermProvided: args.occupancyLongTermProvided ?? false,
+    occupancyShortTermProvided: args.occupancyShortTermProvided ?? false,
   });
 
   const assumptionsUsed = collectUsedParameters({
@@ -259,6 +277,8 @@ export function buildScenarioOutcome(args: {
     minRequiredReturnProvided: args.minRequiredReturn !== undefined,
     cadastralValueProvided: args.cadastralValueProvided ?? false,
     usableAreaM2Provided: args.usableAreaM2Provided ?? false,
+    occupancyLongTermProvided: args.occupancyLongTermProvided ?? false,
+    occupancyShortTermProvided: args.occupancyShortTermProvided ?? false,
   });
 
   // SCORE_SPEC.md §1-§5. Null on an undefined IRR (§2.3 has nothing to

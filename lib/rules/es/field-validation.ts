@@ -48,7 +48,9 @@ export type FieldValidationKey =
   | "maxMonthlyDebtMustBeZeroOrPositive"
   | "holdingYearsMustBePositiveInteger"
   | "rentPerM2LongTermMustBePositive"
-  | "rentPerM2ShortTermMustBePositive";
+  | "rentPerM2ShortTermMustBePositive"
+  | "occupancyLongTermMustBeFraction"
+  | "occupancyShortTermMustBeFraction";
 
 export function isFiniteNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
@@ -195,4 +197,21 @@ export function checkRentPerM2LongTerm(value: unknown): FieldValidationKey | nul
 
 export function checkRentPerM2ShortTerm(value: unknown): FieldValidationKey | null {
   return !isFiniteNumber(value) || value <= 0 ? "rentPerM2ShortTermMustBePositive" : null;
+}
+
+/**
+ * Bezettingsgraad, as a fraction (0.9), not a percentage (90) - datakwaliteitsfix
+ * stap 3. Optional, same shape as checkPreferredLtv: the free indication already
+ * tells the customer this figure is unverified there and theirs to supply in the
+ * paid report (free-tier-disclosures.ts), so leaving it blank falls back to
+ * BASE_OCCUPANCY_LONG_TERM/SHORT_TERM rather than being rejected.
+ */
+export function checkOccupancyLongTerm(value: unknown): FieldValidationKey | null {
+  if (value === undefined) return null;
+  return isFraction(value) ? null : "occupancyLongTermMustBeFraction";
+}
+
+export function checkOccupancyShortTerm(value: unknown): FieldValidationKey | null {
+  if (value === undefined) return null;
+  return isFraction(value) ? null : "occupancyShortTermMustBeFraction";
 }

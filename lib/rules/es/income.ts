@@ -52,17 +52,21 @@ export function buildIncomeModel(args: {
   usableAreaM2: number;
   rentMultiplier: number;
   rentalStrategy: RentalStrategy;
+  /** Overrides BASE_OCCUPANCY_LONG_TERM.value (fraction, 0.9 = 90%) when given - datakwaliteitsfix stap 3. */
+  occupancyLongTerm?: number;
+  /** Overrides BASE_OCCUPANCY_SHORT_TERM.value when given - same fix. */
+  occupancyShortTerm?: number;
 }): IncomeModel {
   const longTerm = incomeLine(
     args.rentPerM2LongTerm,
     args.usableAreaM2,
-    BASE_OCCUPANCY_LONG_TERM.value,
+    args.occupancyLongTerm ?? BASE_OCCUPANCY_LONG_TERM.value,
     args.rentMultiplier,
   );
   const shortTerm = incomeLine(
     args.rentPerM2ShortTerm,
     args.usableAreaM2,
-    BASE_OCCUPANCY_SHORT_TERM.value,
+    args.occupancyShortTerm ?? BASE_OCCUPANCY_SHORT_TERM.value,
     args.rentMultiplier,
   );
   const hybrid = hybridGrossIncome(

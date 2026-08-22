@@ -83,6 +83,8 @@ const validCase: WizardData = {
     rentPerM2ShortTerm: "36",
     rentFromActualCurrentRent: "",
     rentPrefilled: true,
+    occupancyLongTermPercent: "",
+    occupancyShortTermPercent: "",
   },
   exit: {
     sellingCommissionPercent: "4",

@@ -110,6 +110,8 @@ const computable: WizardData = {
     rentPerM2ShortTerm: "36",
     rentFromActualCurrentRent: "",
     rentPrefilled: true,
+    occupancyLongTermPercent: "",
+    occupancyShortTermPercent: "",
   },
   exit: { sellingCommissionPercent: "4", municipalCapitalGainsTax: "3.500", plusvaliaPrefilled: true },
   listingOrigin: null,

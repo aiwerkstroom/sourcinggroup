@@ -71,6 +71,8 @@ const referenceWizardData: WizardData = {
     rentPerM2ShortTerm: "36",
     rentFromActualCurrentRent: "",
     rentPrefilled: true,
+    occupancyLongTermPercent: "",
+    occupancyShortTermPercent: "",
   },
   exit: {
     sellingCommissionPercent: "4",
@@ -202,6 +204,27 @@ describe("buildEngineInput - the derivations respond to what the customer answer
     const assembled = buildEngineInput(referenceWizardData);
     expect(assembled.constraints.preferredLtv).toBeCloseTo(0.75, 12);
     expect(assembled.constraints.minLtv).toBeCloseTo(0.6, 12);
+  });
+});
+
+describe("buildEngineInput - occupancy (datakwaliteitsfix stap 3)", () => {
+  it("leaves both occupancy rates undefined when the fields are blank - referenceWizardData's own default", () => {
+    const assembled = buildEngineInput(referenceWizardData);
+    expect(assembled.selections.occupancyLongTerm).toBeUndefined();
+    expect(assembled.selections.occupancyShortTerm).toBeUndefined();
+  });
+
+  it("converts a supplied occupancy percentage to the engine's fraction", () => {
+    const assembled = buildEngineInput({
+      ...referenceWizardData,
+      belegger: {
+        ...referenceWizardData.belegger,
+        occupancyLongTermPercent: "75",
+        occupancyShortTermPercent: "50",
+      },
+    });
+    expect(assembled.selections.occupancyLongTerm).toBeCloseTo(0.75, 12);
+    expect(assembled.selections.occupancyShortTerm).toBeCloseTo(0.5, 12);
   });
 });
 

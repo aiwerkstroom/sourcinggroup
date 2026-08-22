@@ -83,6 +83,8 @@ export function collectUsedParameters(args: {
   minRequiredReturnProvided: boolean;
   cadastralValueProvided: boolean;
   usableAreaM2Provided: boolean;
+  occupancyLongTermProvided: boolean;
+  occupancyShortTermProvided: boolean;
 }): Parameter<unknown>[] {
   const params: Parameter<unknown>[] = [
     // Exploitatiekosten - every outcome.
@@ -112,10 +114,16 @@ export function collectUsedParameters(args: {
   // each pair. buildIncomeModel() always computes both IncomeLines, but
   // only the selected strategy's figure travels on to the rest of the
   // chain (the same reasoning collectPlaceholders() already documents).
-  if (args.rentalStrategy === "longTerm" || args.rentalStrategy === "hybrid") {
+  if (
+    (args.rentalStrategy === "longTerm" || args.rentalStrategy === "hybrid") &&
+    !args.occupancyLongTermProvided
+  ) {
     params.push(BASE_OCCUPANCY_LONG_TERM);
   }
-  if (args.rentalStrategy === "shortTerm" || args.rentalStrategy === "hybrid") {
+  if (
+    (args.rentalStrategy === "shortTerm" || args.rentalStrategy === "hybrid") &&
+    !args.occupancyShortTermProvided
+  ) {
     params.push(BASE_OCCUPANCY_SHORT_TERM);
   }
   if (args.rentalStrategy === "hybrid") {

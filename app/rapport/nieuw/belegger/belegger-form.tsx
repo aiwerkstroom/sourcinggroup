@@ -40,6 +40,8 @@ import {
   checkMaxRenovationBudget,
   checkMinLtv,
   checkMinMonthlyCashflow,
+  checkOccupancyLongTerm,
+  checkOccupancyShortTerm,
   checkOwnMoney,
   checkPreferredLtv,
   checkRentPerM2LongTerm,
@@ -233,6 +235,24 @@ export function BeleggerForm() {
       );
     }
 
+    // Bezettingsgraad: optional (datakwaliteitsfix stap 3) - blank is valid
+    // and falls back to the engine's own PLACEHOLDER, so only a non-empty,
+    // out-of-range value is rejected here.
+    const occupancyLongTerm = parseNumberInput(step.occupancyLongTermPercent);
+    if (occupancyLongTerm.state === "invalid") {
+      next.occupancyLongTermPercent = translateFieldValidation("mustBeANumber");
+    } else if (occupancyLongTerm.state === "ok") {
+      const key = checkOccupancyLongTerm(percent(occupancyLongTerm.value));
+      if (key !== null) next.occupancyLongTermPercent = translateFieldValidation(key);
+    }
+    const occupancyShortTerm = parseNumberInput(step.occupancyShortTermPercent);
+    if (occupancyShortTerm.state === "invalid") {
+      next.occupancyShortTermPercent = translateFieldValidation("mustBeANumber");
+    } else if (occupancyShortTerm.state === "ok") {
+      const key = checkOccupancyShortTerm(percent(occupancyShortTerm.value));
+      if (key !== null) next.occupancyShortTermPercent = translateFieldValidation(key);
+    }
+
     for (const key of Object.keys(next) as (keyof BeleggerStepData)[]) {
       if (next[key] === undefined) delete next[key];
     }
@@ -383,6 +403,24 @@ export function BeleggerForm() {
             unit="€/m²"
             hint={PREFILL_SOURCE_NOTE[prefillSource?.shortTerm ?? "none"] ?? undefined}
             {...field("rentPerM2ShortTerm")}
+          />
+        ) : null}
+        {usesLongTerm ? (
+          <NumberField
+            label="Bezettingsgraad langetermijn"
+            unit="%"
+            placeholder="90"
+            hint="Hoeveel van het jaar het pand naar verwachting daadwerkelijk verhuurd is. Leeg laten mag: het rapport rekent dan met een geschatte marktaanname en vermeldt dat bij de aannames."
+            {...field("occupancyLongTermPercent")}
+          />
+        ) : null}
+        {usesShortTerm ? (
+          <NumberField
+            label="Bezettingsgraad kortetermijn"
+            unit="%"
+            placeholder="60"
+            hint="Hoeveel van het jaar het pand naar verwachting daadwerkelijk verhuurd is. Leeg laten mag: het rapport rekent dan met een geschatte marktaanname en vermeldt dat bij de aannames."
+            {...field("occupancyShortTermPercent")}
           />
         ) : null}
         {prefillSource?.usableAreaWasDerived && usesLongTerm ? (

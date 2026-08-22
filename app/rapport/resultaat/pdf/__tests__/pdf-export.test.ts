@@ -137,6 +137,8 @@ const secondCase: WizardData = {
     rentPerM2ShortTerm: "",
     rentFromActualCurrentRent: "",
     rentPrefilled: true,
+    occupancyLongTermPercent: "",
+    occupancyShortTermPercent: "",
   },
   exit: {
     sellingCommissionPercent: "4",

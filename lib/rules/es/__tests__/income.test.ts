@@ -51,3 +51,39 @@ describe("income model (Excel golden values)", () => {
     expect(line.adjustedAnnualIncome).toBeCloseTo(24418.8 * 1.1, 9);
   });
 });
+
+// Datakwaliteitsfix stap 3: occupancy is now overridable per ModelSelections,
+// rather than always BASE_OCCUPANCY_LONG_TERM/SHORT_TERM's own PLACEHOLDER.
+describe("buildIncomeModel occupancy override (datakwaliteitsfix stap 3)", () => {
+  const base = {
+    rentPerM2LongTerm: 17,
+    rentPerM2ShortTerm: 36,
+    usableAreaM2: 133,
+    rentMultiplier: 1,
+  };
+
+  it("falls back to BASE_OCCUPANCY_LONG_TERM/SHORT_TERM when no override is given, unchanged from before this fix", () => {
+    const model = buildIncomeModel({ ...base, rentalStrategy: "hybrid" });
+    expect(model.longTerm.occupancy).toBe(0.9);
+    expect(model.shortTerm.occupancy).toBe(0.6);
+  });
+
+  it("uses a customer-supplied occupancy instead of the PLACEHOLDER when given", () => {
+    const model = buildIncomeModel({
+      ...base,
+      rentalStrategy: "hybrid",
+      occupancyLongTerm: 0.75,
+      occupancyShortTerm: 0.5,
+    });
+    expect(model.longTerm.occupancy).toBe(0.75);
+    expect(model.shortTerm.occupancy).toBe(0.5);
+    expect(model.longTerm.annualIncomeAtOccupancy).toBeCloseTo(27132 * 0.75, 9);
+    expect(model.shortTerm.annualIncomeAtOccupancy).toBeCloseTo(57456 * 0.5, 9);
+  });
+
+  it("overriding only one rate leaves the other on its own PLACEHOLDER", () => {
+    const model = buildIncomeModel({ ...base, rentalStrategy: "hybrid", occupancyLongTerm: 0.75 });
+    expect(model.longTerm.occupancy).toBe(0.75);
+    expect(model.shortTerm.occupancy).toBe(0.6);
+  });
+});

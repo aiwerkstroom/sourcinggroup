@@ -65,6 +65,8 @@ export function runEngine(input: EngineInput): EngineResult {
     usableAreaM2,
     rentMultiplier: selectedRenovation.rentMultiplier,
     rentalStrategy: selections.rentalStrategy,
+    occupancyLongTerm: selections.occupancyLongTerm,
+    occupancyShortTerm: selections.occupancyShortTerm,
   });
 
   const financingStrategies = financingStrategyTable(property.purchasePrice, constraints);
@@ -165,6 +167,8 @@ export function runEngine(input: EngineInput): EngineResult {
           euResident: selections.euResident ?? true,
           taxResidency: selections.taxResidency,
           usableAreaM2Provided: property.usableAreaM2 !== undefined,
+          occupancyLongTermProvided: selections.occupancyLongTerm !== undefined,
+          occupancyShortTermProvided: selections.occupancyShortTerm !== undefined,
           cadastralValueProvided: property.cadastralValue !== undefined,
           // cadastralValue, when given, also replaces the building-share
           // default (projection.ts: "takes priority over

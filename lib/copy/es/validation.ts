@@ -42,6 +42,8 @@ export const FIELD_VALIDATION_COPY_NL: Readonly<Record<FieldValidationKey, strin
   holdingYearsMustBePositiveInteger: "Vul een heel aantal jaren in, minimaal 1.",
   rentPerM2LongTermMustBePositive: "Vul een langetermijnhuur groter dan € 0 in.",
   rentPerM2ShortTermMustBePositive: "Vul een kortetermijnhuur groter dan € 0 in.",
+  occupancyLongTermMustBeFraction: "De bezettingsgraad langetermijn moet tussen 0% en 100% liggen.",
+  occupancyShortTermMustBeFraction: "De bezettingsgraad kortetermijn moet tussen 0% en 100% liggen.",
 };
 
 /** Translates one validation key, with the same exhaustiveness guard the disclosure copy uses. */
@@ -89,6 +91,10 @@ export function translateFieldValidation(key: FieldValidationKey): string {
       return FIELD_VALIDATION_COPY_NL.rentPerM2LongTermMustBePositive;
     case "rentPerM2ShortTermMustBePositive":
       return FIELD_VALIDATION_COPY_NL.rentPerM2ShortTermMustBePositive;
+    case "occupancyLongTermMustBeFraction":
+      return FIELD_VALIDATION_COPY_NL.occupancyLongTermMustBeFraction;
+    case "occupancyShortTermMustBeFraction":
+      return FIELD_VALIDATION_COPY_NL.occupancyShortTermMustBeFraction;
     default: {
       const exhaustive: never = key;
       throw new Error(`Missing Dutch copy for field validation key: ${String(exhaustive)}`);

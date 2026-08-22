@@ -22,6 +22,8 @@ import {
   checkMaxRenovationBudget,
   checkMinLtv,
   checkMinMonthlyCashflow,
+  checkOccupancyLongTerm,
+  checkOccupancyShortTerm,
   checkPreferredLtv,
   checkPurchasePrice,
   checkRentPerM2LongTerm,
@@ -70,6 +72,8 @@ const FIELD_ISSUE_EN: Record<FieldValidationKey, string> = {
   holdingYearsMustBePositiveInteger: "holdingYears must be a positive whole number",
   rentPerM2LongTermMustBePositive: "rentPerM2LongTerm must be a positive number",
   rentPerM2ShortTermMustBePositive: "rentPerM2ShortTerm must be a positive number",
+  occupancyLongTermMustBeFraction: "occupancyLongTerm must be between 0 and 1",
+  occupancyShortTermMustBeFraction: "occupancyShortTerm must be between 0 and 1",
 };
 
 export function validateEngineInput(input: EngineInput): string[] {
@@ -108,6 +112,8 @@ export function validateEngineInput(input: EngineInput): string[] {
   pushField(checkMaxMonthlyDebt(constraints.maxMonthlyDebt));
   pushField(checkRentPerM2LongTerm(selections.rentPerM2LongTerm));
   pushField(checkRentPerM2ShortTerm(selections.rentPerM2ShortTerm));
+  pushField(checkOccupancyLongTerm(selections.occupancyLongTerm));
+  pushField(checkOccupancyShortTerm(selections.occupancyShortTerm));
   return issues;
 }
 

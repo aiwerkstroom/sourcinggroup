@@ -380,6 +380,50 @@ describe("scenario outcome (reference case, 10-year holding period)", () => {
       );
     });
 
+    it("BASE_OCCUPANCY_LONG_TERM/SHORT_TERM drop out of placeholdersUsed when the customer supplies their own occupancy (datakwaliteitsfix stap 3)", () => {
+      const scenarioResult = engineResult.scenarios.find((s) => s.id === "base")!;
+      const years = buildProjectionYears({
+        years: 1,
+        scenario: "base",
+        scenarioResult,
+        purchasePrice: referenceCase.property.purchasePrice,
+        financing: engineResult.selectedFinancing,
+        fixedCosts: engineResult.fixedOperatingCosts,
+        euResident: true,
+        renovation: engineResult.selectedRenovation,
+      });
+      const exit = computeExit({
+        scenario: "base",
+        years,
+        purchasePrice: referenceCase.property.purchasePrice,
+        acquisition: engineResult.acquisition,
+        renovation: engineResult.selectedRenovation,
+        assumptions: testAssumptions,
+      });
+      const irr = computeScenarioIrr({
+        equityInvested: engineResult.acquisition.equityRequired,
+        years,
+        exit,
+      });
+      const outcome = buildScenarioOutcome({
+        scenario: "base",
+        purchasePrice: referenceCase.property.purchasePrice,
+        years,
+        exit,
+        irr,
+        equityRequired: engineResult.acquisition.equityRequired,
+        equityAvailable: referenceCase.property.ownMoney,
+        minRequiredReturn: referenceCase.constraints.minRoiTarget,
+        rentalStrategy: referenceCase.selections.rentalStrategy,
+        renovationStrategy: referenceCase.selections.renovationStrategy,
+        occupancyLongTermProvided: true,
+        occupancyShortTermProvided: true,
+      });
+      const names = outcome.placeholdersUsed.map((p) => p.name);
+      expect(names).not.toContain("BASE_OCCUPANCY_LONG_TERM");
+      expect(names).not.toContain("BASE_OCCUPANCY_SHORT_TERM");
+    });
+
     it("every entry is genuinely PLACEHOLDER, never SOURCED or ESTIMATE", () => {
       const outcome = outcomeFor("optimistic");
       outcome.placeholdersUsed.forEach((p) => {

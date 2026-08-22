@@ -293,6 +293,18 @@ export interface ModelSelections {
    * job, and the paid wizard's step 3 is where that happens.
    */
   rentPerM2FromActualCurrentRent?: "longTerm" | "shortTerm";
+  /**
+   * Achievable occupancy, long-term, as a fraction (0.9 = 90%) - datakwaliteitsfix
+   * stap 3. Optional: the free indication already tells the customer this is
+   * unverified there and "u vult het zelf in het betaalde rapport" (see
+   * free-tier-disclosures.ts), so the paid wizard offers the field but does not
+   * require it. Absent, the engine falls back to BASE_OCCUPANCY_LONG_TERM's own
+   * PLACEHOLDER (parameters.ts) - a market claim with no external citation.
+   * Only applies when rentalStrategy uses the long-term rate (longTerm or hybrid).
+   */
+  occupancyLongTerm?: number;
+  /** Same as occupancyLongTerm, for the short-term rate (BASE_OCCUPANCY_SHORT_TERM). */
+  occupancyShortTerm?: number;
 }
 
 /**

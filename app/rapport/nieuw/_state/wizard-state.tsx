@@ -96,6 +96,15 @@ export interface BeleggerStepData {
   rentFromActualCurrentRent: "" | "longTerm" | "shortTerm";
   /** False until the server action has filled the rate fields once, so it does not overwrite edits. */
   rentPrefilled: boolean;
+  /**
+   * Bezettingsgraad, as a percentage the customer types ("90") - datakwaliteitsfix
+   * stap 3. "" (empty, the default) means "not supplied": the free indication
+   * already discloses this figure as unverified there and promises the customer
+   * fills it in here, but it stays optional - engine.ts falls back to
+   * BASE_OCCUPANCY_LONG_TERM/SHORT_TERM (parameters.ts) when left blank.
+   */
+  occupancyLongTermPercent: string;
+  occupancyShortTermPercent: string;
 }
 
 /**
@@ -194,6 +203,8 @@ export const EMPTY_BELEGGER: BeleggerStepData = {
   rentPerM2ShortTerm: "",
   rentFromActualCurrentRent: "",
   rentPrefilled: false,
+  occupancyLongTermPercent: "",
+  occupancyShortTermPercent: "",
 };
 
 /**

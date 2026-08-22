@@ -10,6 +10,8 @@ import {
   checkMaxLtv,
   checkMinLtv,
   checkMinMonthlyCashflow,
+  checkOccupancyLongTerm,
+  checkOccupancyShortTerm,
   checkOwnMoney,
   checkPreferredLtv,
   checkPurchasePrice,
@@ -160,6 +162,8 @@ describe("Dutch copy covers every field-validation key", () => {
     "holdingYearsMustBePositiveInteger",
     "rentPerM2LongTermMustBePositive",
     "rentPerM2ShortTermMustBePositive",
+    "occupancyLongTermMustBeFraction",
+    "occupancyShortTermMustBeFraction",
   ];
 
   it("has exactly one Record entry per key", () => {
@@ -207,6 +211,17 @@ describe("investor constraint rules (wizard step 3)", () => {
     expect(checkPreferredLtv(undefined)).toBeNull();
     expect(checkPreferredLtv(0.7)).toBeNull();
     expect(checkPreferredLtv(1.5)).toBe("preferredLtvMustBeFraction");
+  });
+
+  it("occupancy (long-term and short-term) is optional but bounded when present - datakwaliteitsfix stap 3", () => {
+    expect(checkOccupancyLongTerm(undefined)).toBeNull();
+    expect(checkOccupancyLongTerm(0.9)).toBeNull();
+    expect(checkOccupancyLongTerm(1.5)).toBe("occupancyLongTermMustBeFraction");
+    expect(checkOccupancyLongTerm(-0.1)).toBe("occupancyLongTermMustBeFraction");
+
+    expect(checkOccupancyShortTerm(undefined)).toBeNull();
+    expect(checkOccupancyShortTerm(0.6)).toBeNull();
+    expect(checkOccupancyShortTerm(1.5)).toBe("occupancyShortTermMustBeFraction");
   });
 
   it("the LTV range must not be inverted", () => {

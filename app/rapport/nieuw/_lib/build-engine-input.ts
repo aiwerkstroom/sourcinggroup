@@ -102,6 +102,12 @@ function percentAsFraction(raw: string, field: string): number {
   return number(raw, field) / 100;
 }
 
+/** Same conversion as percentAsFraction(), but for an optional field: "" stays undefined rather than throwing. */
+function optionalPercentAsFraction(raw: string): number | undefined {
+  const value = optionalNumber(raw);
+  return value === undefined ? undefined : value / 100;
+}
+
 /**
  * The cadastral value is all-or-nothing: IBI needs suelo and construcción
  * together (MODEL_SPEC.md §16), and step 2 enforces that pairing. Half a
@@ -252,6 +258,8 @@ export function buildEngineInput(data: WizardData): EngineInput {
       taxResidency,
       rentPerM2FromActualCurrentRent:
         belegger.rentFromActualCurrentRent === "" ? undefined : belegger.rentFromActualCurrentRent,
+      occupancyLongTerm: optionalPercentAsFraction(belegger.occupancyLongTermPercent),
+      occupancyShortTerm: optionalPercentAsFraction(belegger.occupancyShortTermPercent),
     },
     exitPlanning: {
       assumptions: {
