@@ -1586,27 +1586,40 @@ export const FREE_TIER_BAND_RENOVATION_TIER_FAVOURABLE: EstimateParameter<Renova
  *
  * SCORE_SPEC.md §8.5 says the indicative score needs no new parameters,
  * and it is right that the curves and anchors are all reused - but §8.2's
- * two cut-offs are themselves numbers that exist nowhere else, and
- * CLAUDE.md §6 does not allow those to sit inline in a calculation. So
- * they live here, which is the only difference from what §8.5 describes.
+ * cut-offs are themselves numbers that exist nowhere else, and CLAUDE.md
+ * §6 does not allow those to sit inline in a calculation. So they live
+ * here, which is the only difference from what §8.5 describes.
  *
  * ESTIMATE, and this is the label the reality-vs-model test in types.ts
  * actually calls for: "where TSG chooses to stop calling a cashflow
  * average and start calling it high" defines the product, and no external
- * source could confirm or refute it. §8.2 gives the reasoning for the
- * lower cut-off in particular - break-even scores 4.0 on the §2.1 curve,
- * so "Gemiddeld" starting at 4.0 makes the indication read break-even the
- * same way the full score does, rather than drawing an unrelated line.
+ * source could confirm or refute it.
+ *
+ * Split into two independently calibrated pairs since fase A stap 4 - it
+ * was one shared {medium, high} pair until then, read by both
+ * toIndicativeLabel() calls in indicative-score.ts (cashflow and data
+ * confidence). Fase A stap 3 added financing to the free-tier cashflow
+ * figure, which needed the cashflow pair recalibrated (see cashflow's own
+ * note below); a shared pair would have moved dataConfidence's grading
+ * right along with it, even though nothing about placeholder counts or
+ * §2.5's curve changed. Nested rather than two separate exports, the same
+ * shape FINANCING_STRATEGIES already uses for grouping related figures
+ * under one name.
  */
 export const FREE_TIER_INDICATIVE_LABEL_THRESHOLDS: EstimateParameter<{
-  medium: number;
-  high: number;
+  cashflow: { medium: number; high: number };
+  dataConfidence: { medium: number; high: number };
 }> = {
   name: "FREE_TIER_INDICATIVE_LABEL_THRESHOLDS",
-  value: { medium: 4.0, high: 7.0 },
+  value: {
+    cashflow: { medium: 1.0, high: 7.0 },
+    dataConfidence: { medium: 4.0, high: 7.0 },
+  },
   provenance: "ESTIMATE",
   reasoning:
-    "SCORE_SPEC.md §8.2's Laag/Gemiddeld/Hoog cut-offs on the underlying 0-10 score. A product definition (where TSG draws the line between grades), not a claim about the world: the 4.0 boundary is chosen to coincide with what break-even scores on the §2.1 cashflow curve, so the indication reads break-even the same way the full five-dimension score does.",
+    "SCORE_SPEC.md §8.2's Laag/Gemiddeld/Hoog cut-offs on the underlying 0-10 score. A product definition (where TSG draws the line between grades), not a claim about the world.\n\n" +
+    "dataConfidence: unchanged at 4.0/7.0 since this parameter's introduction. The 4.0 boundary coincides with what break-even scored on the pre-financing §2.1 curve at the time it was chosen, which is a coincidence of that curve's own anchors, not a claim about data confidence - §2.5's placeholder-count curve, which this pair actually grades, was never touched by fase A stap 3 and needed no change.\n\n" +
+    "cashflow: recalibrated in fase A stap 4, from the same 4.0/7.0 the pair started at. Fase A stap 3 put the free-tier cashflow midpoint through the same after-financing §2.1 curve the paid engine uses, and at this product's fixed financing assumption (70% LTV, 20 years, 3.85%) a majority of realistic inputs clamp at that curve's own floor (score 0.0, i.e. midpoint <= -EUR 500/month): a representative grid of the free indication's own three-field input space (13 neighbourhoods x purchase prices EUR 80,000-EUR 600,000 in EUR 20,000 steps x built areas 30-200 sqm in 10 sqm steps, 6,318 cases, the same price/area ranges SCORE_SPEC.md §5's reference distribution uses, narrowed to the axes the free form actually asks) put 62.4% of cases at that clamped floor. No threshold choice can discriminate within that clamped majority - that is a property of the shared curve, out of scope here - but the old medium=4.0 sat at the 80.8th percentile of that grid, meaning even cases clearly above the floor were still being called 'Laag'. The grid's distinct scores above the floor start at 0.939 - there are no cases anywhere in the gap between 0.0 and 0.939 - so any medium threshold in that gap yields the identical, floor-exact split; 1.0 is the round number just past it. That moves medium to the grid's 67.0th percentile (Laag 67.0% / Gemiddeld 23.9% / Hoog 9.1% on the same grid, versus 80.8/10.1/9.1 before). high stays at 7.0: it already selects a small, genuinely strong 9.1% of the grid, which is what 'Hoog' is meant to mean, and needed no change.",
 };
 
 // ---------------------------------------------------------------------------

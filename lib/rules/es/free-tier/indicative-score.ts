@@ -37,26 +37,28 @@ import type { FreeTierBand, IndicativeLabel, IndicativeScore } from "../types";
 export const INDICATIVE_SCORE_DISCLOSURE_KEYS = ["indicativeScoreScope"] as const;
 
 /**
- * Grades one 0-10 score (SCORE_SPEC.md §8.2). Takes the score already
- * rounded to the single decimal §1 defines it to carry, because that is
- * the number the spec's own table is written over: its bands read
- * "0,0-3,9 / 4,0-6,9 / 7,0-10,0", i.e. boundaries between one-decimal
- * values, not between raw interpolations. cashflowScore() and
- * dataCertaintyScore() both round before returning, so callers below get
- * this for free.
+ * Grades one 0-10 score against one of the two cut-off pairs
+ * (SCORE_SPEC.md §8.2). Takes the score already rounded to the single
+ * decimal §1 defines it to carry, because that is the number the spec's
+ * own table is written over: its bands read "0,0-3,9 / 4,0-6,9 /
+ * 7,0-10,0", i.e. boundaries between one-decimal values, not between raw
+ * interpolations. cashflowScore() and dataCertaintyScore() both round
+ * before returning, so callers below get this for free.
  *
- * Worth knowing where that puts a boundary in euros: §8.2 describes
- * "Gemiddeld" as starting at break-even, and it does, but grading a
- * rounded score means it also holds a few euro below. On §2.1's segment
- * from -€ 250 (2.0) to € 0 (4.0), a raw score first rounds down to 3.9 at
- * -€ 6,25, so that is where Laag actually begins. The alternative -
- * grading the raw interpolation - would put the boundary exactly at € 0
- * but would no longer match the one-decimal bands §8.2 tabulates, and
- * would make the indication disagree with the rounded dimension score the
- * paid report publishes for the same property.
+ * Two pairs, not one, since fase A stap 4 split
+ * FREE_TIER_INDICATIVE_LABEL_THRESHOLDS into a cashflow pair and a
+ * dataConfidence pair - see that parameter's own docstring for why
+ * sharing one pair between the two curves stopped being safe once fase A
+ * stap 3 added financing to the cashflow figure, and for the full
+ * derivation of each pair's current values (dataConfidence: unchanged,
+ * still the break-even-aligned 4.0/7.0 this parameter started with;
+ * cashflow: recalibrated against a representative grid of free-tier
+ * inputs, since financing pushed most of that grid onto §2.1's own floor).
  */
-export function toIndicativeLabel(score: number): IndicativeLabel {
-  const thresholds = FREE_TIER_INDICATIVE_LABEL_THRESHOLDS.value;
+export function toIndicativeLabel(
+  score: number,
+  thresholds: { medium: number; high: number },
+): IndicativeLabel {
   if (score >= thresholds.high) return "high";
   if (score >= thresholds.medium) return "medium";
   return "low";
@@ -75,10 +77,14 @@ export function toIndicativeLabel(score: number): IndicativeLabel {
 export function computeIndicativeScore(band: FreeTierBand): IndicativeScore {
   const { low, high } = band.monthlyCashflow;
   const midpoint = (low + high) / 2;
+  const thresholds = FREE_TIER_INDICATIVE_LABEL_THRESHOLDS.value;
 
   return {
-    cashflowLabel: toIndicativeLabel(cashflowScore(midpoint)),
-    dataConfidenceLabel: toIndicativeLabel(dataCertaintyScore(band.placeholdersUsed.length)),
+    cashflowLabel: toIndicativeLabel(cashflowScore(midpoint), thresholds.cashflow),
+    dataConfidenceLabel: toIndicativeLabel(
+      dataCertaintyScore(band.placeholdersUsed.length),
+      thresholds.dataConfidence,
+    ),
     disclosures: INDICATIVE_SCORE_DISCLOSURE_KEYS,
   };
 }
