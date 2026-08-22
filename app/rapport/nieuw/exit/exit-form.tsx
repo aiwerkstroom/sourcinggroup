@@ -4,16 +4,26 @@
  * Step 4 of the paid wizard: the exit, and the calculation.
  *
  * Two fields, both exit assumptions the engine deliberately gives no
- * default (MODEL_SPEC_FASE1B §5). They differ in how they are presented,
- * and the difference is the point:
+ * default (MODEL_SPEC_FASE1B §5). Both are now pre-filled, and both stay
+ * editable - whatever is in the field is what the engine receives.
  *
  * - The selling commission is pre-filled at 4%. A Spanish estate agent's
  *   commission has a conventional range, and confirming a figure is
- *   easier than producing one. It stays editable, and whatever is in the
- *   field is what the engine receives.
- * - The plusvalía municipal is not pre-filled. It varies per town and per
- *   holding period, so any generic figure would be a guess dressed as a
- *   starting point - exactly what MODEL_SPEC_FASE1B §5 refuses to do.
+ *   easier than producing one.
+ * - The plusvalía municipal (datakwaliteitsfix stap 2) is pre-filled from
+ *   the cadastral land value (step 2, when given) and the holding period
+ *   (step 3), through the same architecture step 3's own rent fields
+ *   use: a Server Action reads parameters.ts server-side
+ *   (plusvalia-prefill.ts) and returns only the computed euro figure, an
+ *   effect writes it once, and editing it afterwards is never
+ *   overwritten. The coefficient table and rate behind this estimate are
+ *   PLACEHOLDER-provenance and explicitly NOT confirmed against
+ *   Valencia's current fiscal ordinance - see parameters.ts's own
+ *   PLUSVALIA_VALENCIA_COEFFICIENTS docstring for exactly what could and
+ *   could not be verified. That is why this stays a starting point rather
+ *   than a locked figure: the risk of an imprecise coefficient is
+ *   contained to what the field opens with, never to what the engine
+ *   computes.
  *
  * Submitting no longer runs the engine (fase 4 stap 2). The report is
  * paid for now, so this step opens a payment instead: the input goes to
@@ -36,6 +46,7 @@ import { Spinner } from "../_components/spinner";
 import { parseNumberInput } from "../_lib/parse-number";
 import { useWizard } from "../_state/wizard-state";
 import type { ExitStepData } from "../_state/wizard-state";
+import { fetchPlusvaliaPrefill } from "./actions";
 
 type FieldErrors = Partial<Record<keyof ExitStepData, string>>;
 
@@ -46,6 +57,7 @@ export function ExitForm() {
   const [errors, setErrors] = useState<FieldErrors>({});
   const [engineIssues, setEngineIssues] = useState<string[]>([]);
   const [running, setRunning] = useState(false);
+  const [plusvaliaWasEstimated, setPlusvaliaWasEstimated] = useState(false);
 
   const coldEntry =
     !completedSteps.has("pand") ||
@@ -54,6 +66,41 @@ export function ExitForm() {
   useEffect(() => {
     if (coldEntry) router.replace("/rapport/nieuw/pand");
   }, [coldEntry, router]);
+
+  // Runs once, same guard as step 3's rentPrefilled: re-running on every
+  // render would overwrite an edit the customer just made, which is the
+  // opposite of "overschrijven mag". No estimate is possible without a
+  // cadastral land value (step 2 leaves it optional) - the field then
+  // stays exactly as empty as it always has, for manual entry.
+  const cadastralSuelo = data.staatEnLasten.cadastralSuelo;
+  const holdingYears = data.belegger.holdingYears;
+  useEffect(() => {
+    if (coldEntry || step.plusvaliaPrefilled) return;
+
+    const suelo = parseNumberInput(cadastralSuelo);
+    const years = parseNumberInput(holdingYears);
+
+    let cancelled = false;
+    void (async () => {
+      const prefill = await fetchPlusvaliaPrefill({
+        cadastralSuelo: suelo.state === "ok" ? suelo.value : undefined,
+        holdingYears: years.state === "ok" ? years.value : undefined,
+      });
+      if (cancelled) return;
+
+      setPlusvaliaWasEstimated(prefill.source === "cadastralEstimate");
+      setExit({
+        municipalCapitalGainsTax:
+          prefill.estimatedTax === null ? "" : String(prefill.estimatedTax),
+        plusvaliaPrefilled: true,
+      });
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [coldEntry, step.plusvaliaPrefilled, cadastralSuelo, holdingYears, setExit]);
+
   if (coldEntry) return null;
 
   function validate(): FieldErrors {
@@ -111,7 +158,7 @@ export function ExitForm() {
     }
   }
 
-  const field = (key: keyof ExitStepData) => ({
+  const field = (key: "sellingCommissionPercent" | "municipalCapitalGainsTax") => ({
     value: step[key],
     onChange: (value: string) => {
       setExit({ [key]: value });
@@ -141,7 +188,11 @@ export function ExitForm() {
           label="Plusvalía municipal"
           unit="€"
           placeholder="3.500"
-          hint="De gemeentelijke belasting op de waardestijging van de grond. Deze verschilt per gemeente en loopt op met de houdperiode; uw gestor of het gemeentehuis kan het bedrag berekenen. We vullen hier bewust niets voor in."
+          hint={
+            plusvaliaWasEstimated
+              ? "Voorgevuld als grove schatting op basis van de kadastrale grondwaarde (stap 2) en uw houdperiode (stap 3), met een niet-geverifieerde gemeentelijke coëfficiënt. Controleer dit bedrag bij uw gestor of het gemeentehuis en pas het zo nodig aan."
+              : "De gemeentelijke belasting op de waardestijging van de grond. Vul in stap 2 de kadastrale grondwaarde in voor een eerste schatting hier, of laat uw gestor of het gemeentehuis het exacte bedrag berekenen."
+          }
           {...field("municipalCapitalGainsTax")}
         />
       </FieldGroup>

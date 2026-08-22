@@ -176,6 +176,82 @@ export const DEFAULT_USABLE_TO_BUILT_AREA_RATIO: PlaceholderParameter<number> = 
     "Common rule-of-thumb for the usable/built area ratio in Spanish residential property (built area includes shared walls and common circulation space); no external source cited for this specific figure, and it varies per building. Must be replaced by the property's own usableAreaM2 (floor plan or cadastral record) before production use.",
 };
 
+/**
+ * UNVERIFIED - flagged explicitly per this task's own instruction to be
+ * careful with a tax figure. This is not sourced from Valencia's current
+ * fiscal ordinance; it could not be, in this environment (see below).
+ *
+ * plusvalía municipal (IIVTNU) is computed, in every Spanish town, as:
+ *   land cadastral value x coefficient(years held) x municipal tax rate
+ * The two constants below are the coefficient table and the rate. Both
+ * are reconstructed from general knowledge of the NATIONAL maximum
+ * coefficients set by Real Decreto-ley 8/2023 (in force for accruals
+ * from 2024 - a 2025/2026 update was proposed but not ratified by
+ * Congress, so these remain current per web search as of August 2026)
+ * and the Article 108.1 TRLRHL rate cap, cross-checked against several
+ * web search results. It is NOT confirmed against Valencia's own current
+ * ordinance (a municipality may set its own rate up to the cap, and may
+ * apply the national coefficients or lower ones) - WebFetch to every
+ * primary and secondary source attempted (sede.valencia.es, boe.es,
+ * several tax-advisory sites) was blocked by this sandbox's egress
+ * policy, so only fragmentary, sometimes mutually conflicting, search
+ * snippets were available. One search result named 29%, another 29,70%,
+ * a third "30% Valencia" for the rate; coefficient-table snippets
+ * disagreed on the >=20-year figure (0,40 vs 0,45).
+ *
+ * PROVENANCE therefore PLACEHOLDER, not ESTIMATE: this is exactly the
+ * "no external source cited, best judgement" case the provenance system
+ * exists to flag, same as DEFAULT_USABLE_TO_BUILT_AREA_RATIO above.
+ *
+ * NOT wired into the calculation layer. This estimate feeds only
+ * app/rapport/nieuw/exit/exit-form.tsx's pre-fill for
+ * municipalCapitalGainsTax - a starting point the customer can and
+ * should override, the same architecture rent-prefill.ts already uses
+ * for the rent fields. EngineInput never receives this table; whatever
+ * number the customer confirms in the form is what the engine sees,
+ * exactly as before this pre-fill existed. Confirmation against the live
+ * Valencia ordinance (sede.valencia.es) is needed before this could
+ * safely become the actual computed value rather than a suggestion.
+ */
+export const PLUSVALIA_VALENCIA_COEFFICIENTS: PlaceholderParameter<Readonly<Record<number, number>>> =
+  {
+    name: "PLUSVALIA_VALENCIA_COEFFICIENTS",
+    value: {
+      0: 0.15, // < 1 year
+      1: 0.15,
+      2: 0.14,
+      3: 0.14,
+      4: 0.16,
+      5: 0.18,
+      6: 0.19,
+      7: 0.2,
+      8: 0.19,
+      9: 0.15,
+      10: 0.12,
+      11: 0.1,
+      12: 0.09,
+      13: 0.09,
+      14: 0.09,
+      15: 0.1,
+      16: 0.13,
+      17: 0.17,
+      18: 0.23,
+      19: 0.29,
+      20: 0.45, // >= 20 years
+    },
+    provenance: "PLACEHOLDER",
+    reasoning:
+      "Reconstructed from general knowledge of Real Decreto-ley 8/2023's national maximum IIVTNU coefficients (art. 107.4 TRLRHL), not confirmed against Valencia's current fiscal ordinance. This sandbox's egress policy blocked WebFetch to every primary source attempted (sede.valencia.es, boe.es); web search snippets partially corroborated the shape (a dip around years 9-14, reflecting the 2008-2014 property downturn baked into the national law) but disagreed on some individual values, particularly the >=20-year figure (0,40 vs 0,45 across sources). Not wired into the engine - see this constant's own module docstring above.",
+  };
+
+export const PLUSVALIA_VALENCIA_RATE: PlaceholderParameter<number> = {
+  name: "PLUSVALIA_VALENCIA_RATE",
+  value: 0.3,
+  provenance: "PLACEHOLDER",
+  reasoning:
+    "Article 108.1 TRLRHL caps the municipal IIVTNU rate at 30% and this constant uses that legal maximum; search results suggest Valencia's own ordinance sets a rate close to this cap (29%, 29,70% and '30%' each appeared in different sources for different years) but did not confirm which applies now. Not wired into the engine - see PLUSVALIA_VALENCIA_COEFFICIENTS' module docstring.",
+};
+
 // ---------------------------------------------------------------------------
 // Fixed operating costs
 // ---------------------------------------------------------------------------

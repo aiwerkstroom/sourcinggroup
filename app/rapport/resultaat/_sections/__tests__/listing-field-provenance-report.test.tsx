@@ -70,6 +70,7 @@ const referenceWizardData: WizardData = {
   exit: {
     sellingCommissionPercent: "4",
     municipalCapitalGainsTax: "3.500",
+    plusvaliaPrefilled: true,
   },
   listingOrigin: null,
 };

@@ -141,6 +141,7 @@ const secondCase: WizardData = {
   exit: {
     sellingCommissionPercent: "4",
     municipalCapitalGainsTax: "2000",
+    plusvaliaPrefilled: true,
   },
   listingOrigin: null,
 };

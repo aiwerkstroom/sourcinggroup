@@ -111,6 +111,8 @@ export interface BeleggerStepData {
 export interface ExitStepData {
   sellingCommissionPercent: string;
   municipalCapitalGainsTax: string;
+  /** False until the plusvalía pre-fill has run once, so a later mount does not overwrite an edit - same guard rentPrefilled uses. */
+  plusvaliaPrefilled: boolean;
 }
 
 /**
@@ -205,6 +207,7 @@ export const DEFAULT_SELLING_COMMISSION_PERCENT = "4";
 export const EMPTY_EXIT: ExitStepData = {
   sellingCommissionPercent: DEFAULT_SELLING_COMMISSION_PERCENT,
   municipalCapitalGainsTax: "",
+  plusvaliaPrefilled: false,
 };
 
 interface WizardContextValue {

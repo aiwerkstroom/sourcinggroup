@@ -111,7 +111,7 @@ const computable: WizardData = {
     rentFromActualCurrentRent: "",
     rentPrefilled: true,
   },
-  exit: { sellingCommissionPercent: "4", municipalCapitalGainsTax: "3.500" },
+  exit: { sellingCommissionPercent: "4", municipalCapitalGainsTax: "3.500", plusvaliaPrefilled: true },
   listingOrigin: null,
 };
 
