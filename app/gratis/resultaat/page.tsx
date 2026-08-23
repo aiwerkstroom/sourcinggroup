@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { acquisitionCostRates } from "@/lib/rules/es/acquisition";
 import { computeFreeTierBand } from "@/lib/rules/es/free-tier/band";
 import { computeIndicativeScore } from "@/lib/rules/es/free-tier/indicative-score";
 import { parseFreeIndicationQuery } from "../_lib/query-params";
@@ -85,7 +86,12 @@ export default async function GratisIndicatieResultaatPage({
 
   return (
     <div className="mx-auto min-h-screen max-w-5xl px-4 py-10 md:px-8">
-      <IndicatieResult input={parsed.value} band={band} score={score} />
+      <IndicatieResult
+        input={parsed.value}
+        band={band}
+        score={score}
+        acquisitionCostRates={acquisitionCostRates()}
+      />
     </div>
   );
 }

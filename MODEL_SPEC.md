@@ -931,3 +931,29 @@ Anders dan bij de renovatieduur beweegt de **datazekerheid niet**: de tier-rente
 **LTV-copy.** Alle drie de LTV-velden hebben een toelichting. Bij "Maximale LTV" staat wat Spaanse banken een niet-ingezetene doorgaans financieren; dat getal komt uit `NON_RESIDENT_TYPICAL_LTV_RANGE` (SOURCED, 60–70%, geraadpleegd augustus 2026), niet uit een tweede hardgecodeerd paar in de copy. De parameter voedt geen enkele berekening — hij informeert alleen het antwoord dat de klant zelf geeft — en dat is precedent dat al bestaat (`RENT_MATRIX_LONG_TERM_PER_M2` heeft dezelfde rol). De zeven geraadpleegde bronnen staan bij de parameter zelf; twee ervan vallen buiten de opgeslagen band (Expatica begint bij 50%, MySpainVisa haalt 75% voor sterke profielen), en het woord "doorgaans" in de copy is precies wat een centrale tendens met uitschieters aan beide kanten draagt.
 
 **Client-bundel.** De afleiding moet live meelopen met wat de klant typt, dus ze kan niet één keer server-side worden opgelost zoals bij stap 1 en 2. Het formulier krijgt in plaats daarvan een platte tabel van de drie tiers als prop (`_lib/financing-bands.ts`, dat zelf niets importeert) en doet daar een pure lookup op. `financing-bands.test.ts` pint die lookup tegen `deriveFinancingStrategy()` over het hele 0–1-bereik, zodat de regel niet op twee plekken uit elkaar kan lopen.
+
+## 21. Aankoopkosten als kopregel op de gratis indicatie — en een openstaande vraag over AJD
+
+**Wat er is toegevoegd.** De gratis indicatiepagina noemde de Spaanse aankoopkosten nergens. Wie alleen de maandcashflow zag, kon denken dat het benodigde kapitaal de koopsom is. Er staat nu een regel bovenaan het resultaat — boven de score, niet tussen de voorbehouden — die zegt wat er bovenop komt.
+
+Het getal is niet nieuw bedacht: `acquisitionCostRates()` telt precies de tarieven op die `acquisitionCosts()` al in rekening brengt, zodat de gratis pagina en het betaalde rapport per constructie hetzelfde percentage noemen. Een golden test rekent dat na op een echte koopsom.
+
+Gesplitst in twee delen, omdat het twee soorten kosten zijn:
+
+| | Tarief |
+|---|---|
+| Verplicht (ITP 10%, AJD 1,5%, notaris 0,5%, registratie 0,3%, juridisch 1,0%) | **13,3%** |
+| Bemiddeling aankoopmakelaar | **5,0%** |
+| Totaal zoals het model het berekent | **18,3%** |
+
+`BANK_FEE` (€ 100) valt erbuiten: dat is een vast bedrag, geen tarief, en zou de functie prijsafhankelijk maken voor een verwaarloosbaar getal.
+
+**De openstaande vraag: ITP én AJD tegelijk.** De feedback noemde "typisch 11-12%". Dat is precies ITP + notaris + registratie + juridisch = **11,8%**. Het verschil met de 13,3% hierboven is de 1,5% AJD, die dit model óók toepast.
+
+In Spanje sluiten die twee elkaar normaal gesproken uit: ITP op bestaande bouw, AJD (naast btw) op nieuwbouw. De module zelf zegt "Spain, existing build", wat ITP impliceert en AJD dus niet — behalve op de hypotheekakte, met een andere en veel kleinere grondslag. Dat beide op de volle koopsom worden geheven ziet er daarom uit als een dubbeltelling van 1,5%.
+
+Dit is **niet** in deze wijziging gecorrigeerd, om twee redenen. Het is een rekenlaagwijziging (deze taak was expliciet copy/presentatie), en hij raakt de referentiecasus, de TSG-score en de referentieverdeling — dus hij hoort als eigen stap met eigen review, niet als bijvangst. Tot dat besluit valt, quoteert de gratis pagina wat het model werkelijk rekent: consistentie tussen gratis en betaald weegt hier zwaarder dan de vraag welk van beide getallen juist is, want een verkeerd getal is in beide rapporten hetzelfde verkeerde getal en wordt in één keer gerepareerd.
+
+**De voorbehouden.** Dezelfde pagina toonde vijf losse voorbehouden onder elkaar, wat als vijf redenen tot wantrouwen leest in plaats van vijf verschillende dingen die de lezer moet weten. Ze staan nu in drie gerubriceerde blokken: wat er wel en niet in het bedrag zit, waar de cijfers op rusten, en wat de indicatie niet beoordeelt.
+
+Puur presentatie. `FreeTierDisclosureKey`, de Nederlandse teksten en welke sleutels een resultaat draagt zijn alle drie ongewijzigd; de groepering is een `Record` over de volledige union, dus een nieuwe sleutel zonder groep compileert niet en kan niet stilzwijgend nergens terechtkomen. Lege groepen renderen geen kop — `narrowedByCustomerInput` is voorwaardelijk.

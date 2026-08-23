@@ -36,8 +36,12 @@
  * they do in the paid report.
  */
 
+import {
+  FREE_TIER_DISCLOSURE_GROUP_HEADING_NL,
+  groupFreeTierDisclosures,
+} from "@/lib/copy/es/free-tier-disclosure-groups";
 import { translateFreeTierDisclosure, translateIndicativeLabel } from "@/lib/copy/es/free-tier-disclosures";
-import type { FreeTierBand, IndicativeScore } from "@/lib/rules/es/types";
+import type { AcquisitionCostRates, FreeTierBand, IndicativeScore } from "@/lib/rules/es/types";
 import { Card } from "../../_components/card";
 import type { FreeIndicationQuery } from "../../_lib/query-params";
 import { formatEuro } from "../_lib/format";
@@ -47,6 +51,12 @@ export interface IndicatieResultProps {
   input: FreeIndicationQuery;
   band: FreeTierBand;
   score: IndicativeScore;
+  /**
+   * acquisitionCostRates(), resolved by the result page. Passed in rather
+   * than imported so this component keeps taking only what it renders -
+   * the same shape band and score already arrive in.
+   */
+  acquisitionCostRates: AcquisitionCostRates;
 }
 
 function LabelStat({ label, value }: { label: string; value: string }) {
@@ -69,13 +79,23 @@ const FULL_REPORT_ADDITIONS: readonly string[] = [
   "Herkomst per aanname (bron en datum), en een expliciete lijst van wat niet geverifieerd is.",
 ];
 
-export function IndicatieResult({ input, band, score }: IndicatieResultProps) {
-  const remainingDisclosures = [
+/** "13,3%" - Dutch decimal comma, trailing zero dropped ("5%", not "5,0%"). */
+function formatRate(fraction: number): string {
+  return `${(fraction * 100).toLocaleString("nl-NL", { maximumFractionDigits: 1 })}%`;
+}
+
+export function IndicatieResult({
+  input,
+  band,
+  score,
+  acquisitionCostRates,
+}: IndicatieResultProps) {
+  const disclosureGroups = groupFreeTierDisclosures([
     ...band.disclosures.filter(
       (key) => key !== "band" && key !== "pointEstimateFromCustomerInput",
     ),
     ...score.disclosures,
-  ];
+  ]);
 
   return (
     <div className="flex flex-col gap-8">
@@ -86,6 +106,24 @@ export function IndicatieResult({ input, band, score }: IndicatieResultProps) {
           {formatEuro(input.purchasePrice)} · {input.builtAreaM2} m²
         </p>
       </header>
+
+      {/*
+        Above the score, not among the disclosures: this is not a caveat
+        about the figure below, it is a cost the figure never included and
+        that decides whether the purchase is affordable at all. Buried in
+        the fine print it would be a surprise; here it is a planning
+        number.
+      */}
+      <p className="border-border text-text-muted max-w-prose rounded-md border px-4 py-3 text-sm leading-relaxed">
+        Reken naast de koopsom op ongeveer{" "}
+        <span className="text-text font-semibold">
+          {formatRate(acquisitionCostRates.mandatory)}
+        </span>{" "}
+        aan aankoopkosten: overdrachtsbelasting, zegelrecht, notaris, registratie en juridisch
+        advies. Schakelt u een aankoopmakelaar in, dan komt daar ongeveer{" "}
+        {formatRate(acquisitionCostRates.agency)} bij. Deze kosten zitten niet in de
+        maandcashflow hieronder - u betaalt ze eenmalig bij aankoop.
+      </p>
 
       <Card size="large">
         <section aria-labelledby="sectie-indicatieve-score" className="flex flex-col gap-6">
@@ -129,13 +167,24 @@ export function IndicatieResult({ input, band, score }: IndicatieResultProps) {
           <h2 id="sectie-toelichting" className="text-text-faint text-xs tracking-widest uppercase">
             Toelichting
           </h2>
-          <ul className="flex flex-col gap-3">
-            {remainingDisclosures.map((key) => (
-              <li key={key} className="text-text-muted max-w-prose text-sm leading-relaxed">
-                {translateFreeTierDisclosure(key)}
-              </li>
+          {/*
+            Three headed blocks rather than five stacked sentences. Every
+            key still renders, in full and unedited - what changed is that
+            a reader can see which of three questions each block answers
+            instead of meeting an undifferentiated list of caveats.
+          */}
+          <div className="flex flex-col gap-5">
+            {disclosureGroups.map(({ group, keys }) => (
+              <div key={group} className="flex flex-col gap-1.5">
+                <h3 className="text-text text-sm font-medium">
+                  {FREE_TIER_DISCLOSURE_GROUP_HEADING_NL[group]}
+                </h3>
+                <p className="text-text-muted max-w-prose text-sm leading-relaxed">
+                  {keys.map((key) => translateFreeTierDisclosure(key)).join(" ")}
+                </p>
+              </div>
             ))}
-          </ul>
+          </div>
         </section>
       </Card>
 

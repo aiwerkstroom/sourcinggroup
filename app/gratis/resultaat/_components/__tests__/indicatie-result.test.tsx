@@ -1,6 +1,11 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import {
+  FREE_TIER_DISCLOSURE_GROUP_HEADING_NL,
+  groupFreeTierDisclosures,
+} from "@/lib/copy/es/free-tier-disclosure-groups";
 import { translateFreeTierDisclosure } from "@/lib/copy/es/free-tier-disclosures";
+import { acquisitionCostRates } from "@/lib/rules/es/acquisition";
 import { computeFreeTierBand } from "@/lib/rules/es/free-tier/band";
 import { computeIndicativeScore } from "@/lib/rules/es/free-tier/indicative-score";
 import type { ALL_FREE_TIER_DISCLOSURE_KEYS } from "@/lib/rules/es/types";
@@ -56,7 +61,7 @@ const CASHFLOW_LABEL_NL = { low: "Laag", medium: "Gemiddeld", high: "Hoog" } as 
 function buildProps(input: { neighborhood: string; purchasePrice: number; builtAreaM2: number }) {
   const band = computeFreeTierBand(input);
   const score = computeIndicativeScore(band);
-  return { input, band, score };
+  return { input, band, score, acquisitionCostRates: acquisitionCostRates() };
 }
 
 describe("Free-tier band/score - golden data across the three cashflow grades", () => {
@@ -170,7 +175,7 @@ describe("IndicatieResult - point estimate (fase A stap 2, alle drie velden inge
     };
     const band = computeFreeTierBand(input);
     const score = computeIndicativeScore(band);
-    return { input, band, score };
+    return { input, band, score, acquisitionCostRates: acquisitionCostRates() };
   }
 
   it("band.pointEstimate is true and low equals high - the precondition this whole test rests on", () => {
@@ -218,5 +223,134 @@ describe("IndicatieResult - point estimate (fase A stap 2, alle drie velden inge
     for (const key of ["shortTermLicence", "financing", "unverified", "indicativeScoreScope"] as const) {
       expect(html).toContain(translateFreeTierDisclosure(key));
     }
+  });
+});
+
+/**
+ * Kosten koper, as a headline rather than a footnote. The figure must be
+ * the model's own - a page quoting one percentage while the paid report
+ * charges another is the same bait-and-switch fase A spent four steps
+ * closing, only on a different line.
+ */
+describe("IndicatieResult - de aankoopkosten-kopregel", () => {
+  const props = buildProps({ neighborhood: "Ruzafa", purchasePrice: 350_000, builtAreaM2: 90 });
+  const html = renderToStaticMarkup(<IndicatieResult {...props} />);
+
+  it("quotes the rate the calculation layer actually charges, not a hand-written one", () => {
+    const rates = acquisitionCostRates();
+    const pct = (f: number) => `${(f * 100).toLocaleString("nl-NL", { maximumFractionDigits: 1 })}%`;
+    expect(html).toContain(pct(rates.mandatory));
+    expect(html).toContain(pct(rates.agency));
+  });
+
+  it("names what those costs consist of, so the number is checkable", () => {
+    expect(html).toContain("overdrachtsbelasting");
+    expect(html).toContain("zegelrecht");
+    expect(html).toContain("notaris");
+    expect(html).toContain("registratie");
+    expect(html).toContain("juridisch advies");
+  });
+
+  it("says outright that these sit outside the monthly cashflow", () => {
+    // The misreading this exists to prevent: treating the band below as
+    // if it already absorbed the purchase costs.
+    expect(html).toContain("niet in de maandcashflow");
+    expect(html).toContain("eenmalig bij aankoop");
+  });
+
+  it("separates the unavoidable costs from the purchase-agent fee", () => {
+    expect(html).toContain("aankoopmakelaar");
+  });
+
+  it("sits above the score, not among the disclosures", () => {
+    // Prominence is the requirement, so position is part of the contract:
+    // the line has to precede the indicative-score card in the markup.
+    const costsAt = html.indexOf("aan aankoopkosten");
+    const scoreAt = html.indexOf("sectie-indicatieve-score");
+    expect(costsAt).toBeGreaterThan(-1);
+    expect(scoreAt).toBeGreaterThan(-1);
+    expect(costsAt).toBeLessThan(scoreAt);
+  });
+});
+
+/**
+ * The consolidated voorbehouden. This is a presentation change only, so
+ * what these pin is that nothing was lost in the regrouping: every key a
+ * result carries still renders its full text, under one of three
+ * headings, and the key set is unchanged.
+ */
+describe("IndicatieResult - voorbehouden, gegroepeerd in plaats van gestapeld", () => {
+  it("still renders every disclosure key's full text, unedited", () => {
+    for (const testCase of CASES) {
+      const props = buildProps(testCase.input);
+      const html = renderToStaticMarkup(<IndicatieResult {...props} />);
+      for (const key of [...props.band.disclosures, ...props.score.disclosures]) {
+        expect(html).toContain(translateFreeTierDisclosure(key));
+      }
+    }
+  });
+
+  it("shows three headed groups rather than five loose sentences", () => {
+    const props = buildProps({ neighborhood: "Ruzafa", purchasePrice: 350_000, builtAreaM2: 90 });
+    const html = renderToStaticMarkup(<IndicatieResult {...props} />);
+    for (const heading of Object.values(FREE_TIER_DISCLOSURE_GROUP_HEADING_NL)) {
+      expect(html).toContain(heading);
+    }
+  });
+
+  it("puts each key under the group it belongs to, for every key a result can carry", () => {
+    const props = buildProps({ neighborhood: "Ruzafa", purchasePrice: 350_000, builtAreaM2: 90 });
+    const grouped = groupFreeTierDisclosures([
+      ...props.band.disclosures.filter(
+        (k) => k !== "band" && k !== "pointEstimateFromCustomerInput",
+      ),
+      ...props.score.disclosures,
+    ]);
+    // Nothing dropped and nothing duplicated by the regrouping.
+    const regrouped = grouped.flatMap((g) => g.keys);
+    expect(regrouped).toHaveLength(
+      props.band.disclosures.filter((k) => k !== "band" && k !== "pointEstimateFromCustomerInput")
+        .length + props.score.disclosures.length,
+    );
+    expect(new Set(regrouped).size).toBe(regrouped.length);
+  });
+
+  it("renders no empty heading when a conditional key is absent", () => {
+    // narrowedByCustomerInput is conditional, so "data" can hold one key
+    // or two - but a group with no keys at all must not print a heading.
+    const props = buildProps({ neighborhood: "Ruzafa", purchasePrice: 350_000, builtAreaM2: 90 });
+    expect(props.band.disclosures).not.toContain("narrowedByCustomerInput");
+    const html = renderToStaticMarkup(<IndicatieResult {...props} />);
+    // The data group still appears - "unverified" is unconditional.
+    expect(html).toContain(FREE_TIER_DISCLOSURE_GROUP_HEADING_NL.data);
+    expect(html).toContain(translateFreeTierDisclosure("unverified"));
+  });
+
+  it("carries the narrowing key into its group when the customer supplied fields", () => {
+    const band = computeFreeTierBand({
+      neighborhood: "Ruzafa",
+      purchasePrice: 350_000,
+      builtAreaM2: 90,
+      communityFeesAnnual: 1_200,
+    });
+    const score = computeIndicativeScore(band);
+    expect(band.disclosures).toContain("narrowedByCustomerInput");
+    const html = renderToStaticMarkup(
+      <IndicatieResult
+        input={{ neighborhood: "Ruzafa", purchasePrice: 350_000, builtAreaM2: 90 }}
+        band={band}
+        score={score}
+        acquisitionCostRates={acquisitionCostRates()}
+      />,
+    );
+    expect(html).toContain(translateFreeTierDisclosure("narrowedByCustomerInput"));
+    expect(html).toContain(FREE_TIER_DISCLOSURE_GROUP_HEADING_NL.data);
+  });
+
+  it("still shows nothing behind a collapsed element", () => {
+    const props = buildProps({ neighborhood: "Ruzafa", purchasePrice: 350_000, builtAreaM2: 90 });
+    const html = renderToStaticMarkup(<IndicatieResult {...props} />);
+    expect(html).not.toContain("<details");
+    expect(html).not.toContain("aria-expanded");
   });
 });

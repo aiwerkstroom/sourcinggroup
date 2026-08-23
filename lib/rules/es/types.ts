@@ -510,6 +510,21 @@ export interface AmortizationYear {
   closingBalance: number;
 }
 
+/**
+ * Acquisition cost rates as shares of the purchase price
+ * (acquisition.ts's acquisitionCostRates()). Rates, not euro amounts -
+ * what a buyer budgets on top of the asking price before a specific
+ * property is priced.
+ */
+export interface AcquisitionCostRates {
+  /** Taxes and professional fees any buyer pays: ITP, AJD, notary, registration, legal advice. */
+  mandatory: number;
+  /** A purchase agent's fee, which not every buyer incurs. */
+  agency: number;
+  /** mandatory + agency - what acquisitionCosts() actually charges, as a rate. */
+  total: number;
+}
+
 export interface AcquisitionCosts {
   purchasePrice: number;
   renovationCosts: number;
