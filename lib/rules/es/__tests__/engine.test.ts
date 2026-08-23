@@ -284,18 +284,18 @@ describe("EngineResult.scenarioOutcomes: runEngine() wired end to end to score a
 
     const golden: Record<string, { dimensions: Record<string, number>; total: number; percentile: number }> = {
       conservative: {
-        dimensions: { cashflow: 0.0, debtResilience: 0.8, returnVsRequirement: 2.3, feasibility: 3.0, dataCertainty: 2.8 },
-        total: 1.8,
+        dimensions: { cashflow: 0.0, debtResilience: 0.8, returnVsRequirement: 2.0, feasibility: 3.0, dataCertainty: 2.4 },
+        total: 1.7,
         percentile: 22,
       },
       base: {
-        dimensions: { cashflow: 1.5, debtResilience: 3.3, returnVsRequirement: 6.5, feasibility: 3.0, dataCertainty: 2.8 },
-        total: 3.8,
-        percentile: 70,
+        dimensions: { cashflow: 1.5, debtResilience: 3.3, returnVsRequirement: 6.2, feasibility: 3.0, dataCertainty: 2.4 },
+        total: 3.6,
+        percentile: 68,
       },
       optimistic: {
-        dimensions: { cashflow: 5.4, debtResilience: 5.9, returnVsRequirement: 8.7, feasibility: 3.0, dataCertainty: 2.8 },
-        total: 5.6,
+        dimensions: { cashflow: 5.4, debtResilience: 5.9, returnVsRequirement: 8.6, feasibility: 3.0, dataCertainty: 2.4 },
+        total: 5.5,
         percentile: 94,
       },
     };
@@ -316,11 +316,11 @@ describe("EngineResult.scenarioOutcomes: runEngine() wired end to end to score a
     // agree on the summary figures.
     const result = runEngine(referenceCase);
     const engineOutcome = result.scenarioOutcomes!.find((o) => o.scenario === "base")!;
-    expect(engineOutcome.totalReturn).toBeCloseTo(0.769539, 4);
+    expect(engineOutcome.totalReturn).toBeCloseTo(0.7365, 4);
     expect(engineOutcome.paybackYear).toBeNull();
     expect(engineOutcome.equityFit.equityRequired).toBeCloseTo(197990, 6);
     expect(engineOutcome.equityFit.fitsWithinAvailableEquity).toBe(false);
-    expect(engineOutcome.placeholdersUsed).toHaveLength(13);
+    expect(engineOutcome.placeholdersUsed).toHaveLength(14);
   });
 
   it("is null when EngineInput.exitPlanning is not supplied - never a guessed selling commission or plusvalía", () => {

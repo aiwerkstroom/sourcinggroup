@@ -25,6 +25,9 @@ function buildProps() {
     // 1's own rendering is covered in its dedicated describe block below.
     renovationTierProvenance: result.renovationTierProvenance,
     renovationStrategy: result.selectedRenovation.id,
+    renovationDurationProvenance: result.renovationDurationProvenance,
+    renovationDurationMonths: result.selectedRenovation.durationMonths,
+    renovationLeaseUpMonths: result.selectedRenovation.timeToRentMonths,
   };
 }
 
@@ -227,5 +230,95 @@ describe("AssumptionsSection - the renovation tier's provenance (fase C stap 1)"
     );
     expect(html).not.toContain("renovatiescenario");
     expect(html).not.toContain("staat van onderhoud");
+  });
+});
+
+/**
+ * Fase C stap 2: the renovation duration's own provenance line, and the
+ * separate notice for a renovation that outruns the year the projection
+ * prorates.
+ */
+describe("AssumptionsSection - the renovation duration (fase C stap 2)", () => {
+  it("calls the derived duration a schatting, and says what it costs", () => {
+    const props = buildProps();
+    const html = renderToStaticMarkup(
+      <AssumptionsSection
+        {...props}
+        renovationDurationProvenance={{ status: "derived", derivedValue: 3 }}
+        renovationDurationMonths={3}
+        renovationLeaseUpMonths={2}
+      />,
+    );
+    expect(html).toContain("3 maanden");
+    expect(html).toContain("schatting");
+    expect(html).toContain("geen huurinkomen");
+  });
+
+  it("contrasts a customer's figure against the model's when they differ", () => {
+    const props = buildProps();
+    const html = renderToStaticMarkup(
+      <AssumptionsSection
+        {...props}
+        renovationDurationProvenance={{ status: "customerChosen", derivedValue: 3 }}
+        renovationDurationMonths={6}
+        renovationLeaseUpMonths={2}
+      />,
+    );
+    expect(html).toContain("U gaf zelf 6 maanden verbouwtijd op");
+    expect(html).toContain("schat het model 3 maanden");
+    expect(html).toContain("Er is met uw opgave gerekend.");
+  });
+
+  it("does not contrast a figure with itself when they coincide", () => {
+    const props = buildProps();
+    const html = renderToStaticMarkup(
+      <AssumptionsSection
+        {...props}
+        renovationDurationProvenance={{ status: "customerChosen", derivedValue: 3 }}
+        renovationDurationMonths={3}
+        renovationLeaseUpMonths={2}
+      />,
+    );
+    expect(html).toContain("gelijk aan de schatting");
+    expect(html).not.toContain("schat het model 3 maanden");
+  });
+
+  it("says nothing about a year-2 spill when the vacancy fits inside year 1", () => {
+    const props = buildProps();
+    const html = renderToStaticMarkup(
+      <AssumptionsSection
+        {...props}
+        renovationDurationProvenance={{ status: "derived", derivedValue: 3 }}
+        renovationDurationMonths={3}
+        renovationLeaseUpMonths={2}
+      />,
+    );
+    expect(html).not.toContain("vallen in jaar 2");
+  });
+
+  it("discloses the spill, and that year 2 is overstated, once the vacancy outruns the year", () => {
+    // The limitation the calculation cannot express: only year 1 is
+    // prorated, so months past twelve fall outside the model entirely.
+    const props = buildProps();
+    const html = renderToStaticMarkup(
+      <AssumptionsSection
+        {...props}
+        renovationDurationProvenance={{ status: "customerChosen", derivedValue: 3 }}
+        renovationDurationMonths={12}
+        renovationLeaseUpMonths={2}
+      />,
+    );
+    expect(html).toContain("samen 14 maanden");
+    expect(html).toContain("2 maanden vallen in jaar 2");
+    expect(html).toContain("ligt dus lager dan hier staat");
+  });
+
+  it("shows no duration line at all when nobody was asked", () => {
+    const props = buildProps();
+    const html = renderToStaticMarkup(
+      <AssumptionsSection {...props} renovationDurationProvenance={null} />,
+    );
+    expect(html).not.toContain("verbouwtijd");
+    expect(html).not.toContain("doorlooptijd");
   });
 });

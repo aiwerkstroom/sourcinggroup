@@ -46,6 +46,7 @@ import {
   NON_RESIDENT_WITHHOLDING_RATE,
   PROPERTY_MANAGEMENT_FEE,
   PROPERTY_TAX_IBI_RATE,
+  RENOVATION_DURATION_MONTHS_BY_TIER,
   RENOVATION_STRATEGIES,
   RENT_GROWTH_BY_YEAR,
   RENTAL_INCOME_TAX_RATE_EU,
@@ -80,6 +81,13 @@ export function collectUsedParameters(args: {
   taxResidency?: TaxResidency;
   buildingShareOfValueProvided: boolean;
   renovationImprovementShareProvided: boolean;
+  /**
+   * Whether the customer supplied the renovation's duration themselves
+   * (fase C stap 2). False means RENOVATION_DURATION_MONTHS_BY_TIER's own
+   * figure drove year 1's proration, which makes it an unverified
+   * assumption this outcome rests on.
+   */
+  renovationDurationProvided: boolean;
   minRequiredReturnProvided: boolean;
   cadastralValueProvided: boolean;
   usableAreaM2Provided: boolean;
@@ -144,6 +152,9 @@ export function collectUsedParameters(args: {
     renovation.utilitiesEfficiency,
     renovation.timeToRentMonths,
   );
+  if (!args.renovationDurationProvided) {
+    params.push(RENOVATION_DURATION_MONTHS_BY_TIER);
+  }
   if (!args.renovationImprovementShareProvided) {
     params.push(DEFAULT_RENOVATION_IMPROVEMENT_SHARE);
   }

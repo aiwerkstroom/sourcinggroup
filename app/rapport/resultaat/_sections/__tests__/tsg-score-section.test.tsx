@@ -7,7 +7,7 @@ import { TsgScoreSection } from "../tsg-score-section";
 /**
  * Golden-render check: the reference case's base-scenario score
  * (SCORE_SPEC.md §4 / outcome.test.ts's own golden values - total 3,8,
- * percentile 70, dimensions 1,5 / 3,3 / 6,5 / 3,0 / 2,8) must appear in
+ * percentile 68, dimensions 1,5 / 3,3 / 6,2 / 3,0 / 2,4) must appear in
  * the rendered HTML. Rendered with react-dom/server rather than a DOM
  * testing library - no new dependency, and it is exactly what a
  * server-rendered report page (and later, its PDF) actually produces.
@@ -29,10 +29,10 @@ function renderBaseScore() {
 describe("TsgScoreSection - golden render against the reference case", () => {
   it("renders the total score and percentile", () => {
     const { html, base } = renderBaseScore();
-    expect(base.score!.total).toBe(3.8);
-    expect(base.percentile).toBe(70);
-    expect(html).toContain("3,8");
-    expect(html).toContain("percentiel 70 van ons modelbereik");
+    expect(base.score!.total).toBe(3.6);
+    expect(base.percentile).toBe(68);
+    expect(html).toContain("3,6");
+    expect(html).toContain("percentiel 68 van ons modelbereik");
   });
 
   it("renders all five dimension scores at their golden values", () => {
@@ -40,15 +40,15 @@ describe("TsgScoreSection - golden render against the reference case", () => {
     expect(base.score!.dimensions).toEqual({
       cashflow: 1.5,
       debtResilience: 3.3,
-      returnVsRequirement: 6.5,
+      returnVsRequirement: 6.2,
       feasibility: 3.0,
-      dataCertainty: 2.8,
+      dataCertainty: 2.4,
     });
     expect(html).toContain("1,5");
     expect(html).toContain("3,3");
-    expect(html).toContain("6,5");
+    expect(html).toContain("6,2");
     expect(html).toContain("3,0");
-    expect(html).toContain("2,8");
+    expect(html).toContain("2,4");
   });
 
   it("renders the five Dutch labels and their UI_SPEC.md §5 descriptions", () => {

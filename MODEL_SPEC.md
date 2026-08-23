@@ -883,3 +883,27 @@ bevestigt `EngineResult.rentalStrategies` op zowel de referentiecasus (alle
 drie beschikbaar) als een synthetisch geval zonder vergunning (alleen
 langetermijn beschikbaar, de andere twee met reden in `unavailable`, en de
 engine draait gewoon door voor de wél geldige `"longTerm"`-selectie).
+
+## 19. Renovatieduur — de verbouwing kost tijd, en die tijd kost huur
+
+**Het probleem.** Het model rekende een verbouwing als instantaan. De werkbladen kennen per renovatiescenario wel een CapEx-bedrag en een aanlooptijd om een huurder te vinden (`timeToRentMonths`, 1/2/3 maanden), maar geen doorlooptijd van het werk zelf. `projection.ts` prorateerde jaar 1 dus alleen op die aanlooptijd, en telde volle huur over de maanden waarin het pand een bouwplaats was. Voor elk pand overschatte dat jaar 1.
+
+Dat de klantcopy van `timeToRentMonths` altijd al zei "het pand staat X maanden leeg *voordat het verhuurd wordt*" — dus ná de verbouwing — maakte het eenduidig: er ontbrak een periode, er was er niet één verkeerd gelabeld.
+
+**De correctie.** `RENOVATION_DURATION_MONTHS_BY_TIER` (PLACEHOLDER: minimaal 1, licht 3, grondig 5 maanden) staat naast de bestaande aanlooptijd, en de twee zijn **additief**:
+
+```
+leegstand jaar 1 = renovatieduur + aanloopleegstand
+maanden verhuurd  = max(0, 12 − leegstand jaar 1)
+```
+
+PLACEHOLDER, en dat is de juiste markering: het is een claim over hoe lang echt bouwwerk duurt, zonder externe bron — dezelfde status als `timeToRentMonths` zelf. De klant kan de duur overschrijven (`ModelSelections.renovationDurationMonths`); doet hij dat, dan valt de parameter uit `placeholdersUsed` en stijgt de datazekerheid, net als bij een ingevulde kadastrale waarde of bruikbaar oppervlak.
+
+**Wat wél en niet prorateert** is ongewijzigd: alleen de huur en de beheervergoeding (een percentage van die huur) schalen mee. Onderhoud, energie, IBI, verzekering, bankkosten, gastos de comunidad, derramas en de volledige annuïteit lopen het hele jaar door, of er nu verhuurd wordt of niet.
+
+**Twee randgevallen.**
+
+1. `max(0, …)` is geen cosmetica. Zonder de klem levert een leegstand boven twaalf maanden een *negatieve* huur op — de projectie zou het pand geld laten opbrengen door langer leeg te staan.
+2. Alleen jaar 1 wordt geprorateerd. Loopt de leegstand door in jaar 2, dan valt dat buiten het model: jaar 2 telt een vol jaar. Het formulier accepteert daarom maximaal 12 maanden verbouwtijd, en het rapport meldt expliciet dat jaar 2 te hoog staat wanneer verbouwing plus aanloop samen de twaalf maanden passeren. Stil afkappen zou de uitkomst mooier maken dan hij is.
+
+**Gevolg voor de referentiecasus** (Avenida Primado Reig 19, licht scenario: 3 + 2 = 5 maanden leeg): bruto huur jaar 1 van € 23.700,60 naar € 16.590,42, cashflow vóór belasting van −€ 8.094,57 naar −€ 14.635,93, IRR van 5,54% naar 5,24%, TSG-score van 3,8 naar 3,6 op percentiel 68. De referentieverdeling uit SCORE_SPEC.md §5 is opnieuw gegenereerd, zoals de "Verversing"-regel daar voorschrijft. Jaar 2 en verder zijn ongewijzigd — wat zelf de controle is dat de proratie tot het eerste jaar beperkt is gebleven.

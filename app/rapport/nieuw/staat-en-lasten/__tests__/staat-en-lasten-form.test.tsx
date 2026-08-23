@@ -11,9 +11,10 @@
  */
 
 import { readFile } from "node:fs/promises";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { deriveRenovationStrategy } from "@/lib/rules/es/derive-selections";
+import { RENOVATION_DURATION_MONTHS_BY_TIER } from "@/lib/rules/es/parameters";
 import { WizardProvider } from "../../_state/wizard-state";
 import { StaatEnLastenForm } from "../staat-en-lasten-form";
 
@@ -34,7 +35,10 @@ const DERIVED_TIER_BY_CONDITION = {
 function renderForm() {
   return render(
     <WizardProvider>
-      <StaatEnLastenForm derivedTierByCondition={DERIVED_TIER_BY_CONDITION} />
+      <StaatEnLastenForm
+        derivedTierByCondition={DERIVED_TIER_BY_CONDITION}
+        defaultDurationByTier={RENOVATION_DURATION_MONTHS_BY_TIER.value}
+      />
     </WizardProvider>,
   );
 }
@@ -143,5 +147,49 @@ describe("StaatEnLastenForm - the client bundle stays free of parameters.ts (fas
     const select = screen.getByLabelText(/Renovatiescenario/) as HTMLSelectElement;
     expect(select).toBeInTheDocument();
     expect(DERIVED_TIER_BY_CONDITION.average).toBe("light");
+  });
+});
+
+/**
+ * Fase C stap 2: the renovation-duration field. The prefill discipline is
+ * the point - the field shows the tier's default as a placeholder and
+ * carries "" until the customer types something, which is what makes it
+ * follow a tier change while untouched and stop following once set.
+ */
+describe("StaatEnLastenForm - renovatieduur (fase C stap 2)", () => {
+  it("is optional and empty by default, with no default shown before the condition is answered", () => {
+    renderForm();
+    const field = screen.getByLabelText(/Doorlooptijd van de verbouwing/) as HTMLInputElement;
+    expect(field.value).toBe("");
+    // Nothing to derive from yet, so no number is placed in front of the
+    // customer as if the model had already concluded one.
+    expect(field.placeholder).toBe("");
+  });
+
+  it("explains that the vacancy is additive to the lease-up period", () => {
+    renderForm();
+    expect(
+      screen.getByText(/bovenop de aanloopperiode om een huurder te vinden/),
+    ).toBeInTheDocument();
+  });
+
+  it("names the tier's own default in the hint once a condition is chosen", () => {
+    renderForm();
+    fireEvent.click(screen.getByLabelText("Redelijke staat", { exact: false }));
+    // "average" derives light, whose default is 3 months.
+    const field = screen.getByLabelText(/Doorlooptijd van de verbouwing/) as HTMLInputElement;
+    expect(field.placeholder).toBe(String(RENOVATION_DURATION_MONTHS_BY_TIER.value.light));
+    expect(screen.getByText(/Laat leeg om te rekenen met 3 maanden/)).toBeInTheDocument();
+  });
+
+  it("the shown default follows an overridden tier, not the derived one", () => {
+    renderForm();
+    fireEvent.click(screen.getByLabelText("Redelijke staat", { exact: false }));
+    fireEvent.change(screen.getByLabelText(/Renovatiescenario/), { target: { value: "heavy" } });
+    const field = screen.getByLabelText(/Doorlooptijd van de verbouwing/) as HTMLInputElement;
+    expect(field.placeholder).toBe(String(RENOVATION_DURATION_MONTHS_BY_TIER.value.heavy));
+    // And the field itself is still empty - overriding the tier does not
+    // silently write a number into a field the customer never touched.
+    expect(field.value).toBe("");
   });
 });

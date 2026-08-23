@@ -15,16 +15,28 @@
  * construcción split), not a universal constant, so this module takes it
  * as an explicit, overridable parameter (DEFAULT_BUILDING_SHARE_OF_VALUE).
  *
- * Year 1 also carries the renovation's lease-up vacancy: `timeToRentMonths`
- * (1/2/3 months per renovation strategy) sits unused on
- * RenovationStrategyResult in phase 1 - the Excel doesn't model it either,
- * so phase-1 parity is unaffected - but a multi-year projection cannot
- * show a full 12 months of rent in the year the property is being
- * renovated and isn't let yet. Only year 1's rent (and the property
- * management fee, which is a percentage of that rent) is prorated; every
- * cost that runs regardless of occupancy - maintenance, utilities, IBI,
- * insurance, the bank fee, and the full annuity - is unaffected. From year
- * 2 the lease-up is over and the full year counts.
+ * Year 1 also carries the renovation's vacancy, which since fase C stap 2
+ * is the sum of two distinct periods, both on RenovationStrategyResult:
+ * `durationMonths` (the work itself) and `timeToRentMonths` (finding a
+ * tenant afterwards). Neither sits in the Excel's year-1 figures, so
+ * phase-1 parity is unaffected - but a multi-year projection cannot show a
+ * full 12 months of rent in the year the property is a building site and
+ * then empty. Before fase C stap 2 only the lease-up counted, which
+ * modelled the renovation as instantaneous and overstated year 1 for every
+ * property.
+ *
+ * Only year 1's rent (and the property management fee, which is a
+ * percentage of that rent) is prorated; every cost that runs regardless of
+ * occupancy - maintenance, utilities, IBI, insurance, the bank fee, and
+ * the full annuity - is unaffected. From year 2 both periods are over and
+ * the full year counts.
+ *
+ * The months rented are clamped at zero. A renovation long enough to fill
+ * the year leaves year 1 with no rent at all, which is modelled correctly;
+ * what is *not* modelled is the remainder spilling into year 2, since only
+ * year 1 is prorated. The wizard caps the duration it will accept and the
+ * report discloses the spill rather than letting it pass silently
+ * (renovation-duration-provenance-disclosures.ts).
  */
 
 import { amortizationSchedule } from "./financing";
@@ -66,8 +78,8 @@ export function buildProjectionYears(args: {
   euResident?: boolean;
   /** Where the investor is tax-resident - decides the rate AND whether costs are deductible. */
   taxResidency?: TaxResidency;
-  /** The selected renovation strategy; its timeToRentMonths prorates year 1's rent. */
-  renovation: Pick<RenovationStrategyResult, "timeToRentMonths">;
+  /** The selected renovation strategy; durationMonths + timeToRentMonths prorate year 1's rent (fase C stap 2). */
+  renovation: Pick<RenovationStrategyResult, "timeToRentMonths" | "durationMonths">;
   /**
    * Building share of the purchase value used for depreciation (3% per
    * year applies to this share, not the full price). Defaults to
@@ -111,11 +123,17 @@ export function buildProjectionYears(args: {
   // investor is taxed.
   const { rate: taxRate, deductionsAllowed } = rentalIncomeTaxTreatment(args);
 
-  // Year 1 only: the property isn't let while it's being renovated, so its
-  // rent (and the property management fee, a % of that rent) is prorated
-  // to the months actually rented. Every other cost line and the full
-  // annuity run for the complete year regardless.
-  const monthsRentedYear1 = MONTHS_PER_YEAR - args.renovation.timeToRentMonths;
+  // Year 1 only: the property isn't let while it's being renovated, nor
+  // while a tenant is being found afterwards, so its rent (and the
+  // property management fee, a % of that rent) is prorated to the months
+  // actually rented. Every other cost line and the full annuity run for
+  // the complete year regardless.
+  //
+  // Clamped at zero: a renovation that fills the year leaves no rent at
+  // all, and without the clamp the arithmetic would run negative and
+  // credit the projection with rent it never earned.
+  const vacantMonthsYear1 = args.renovation.durationMonths + args.renovation.timeToRentMonths;
+  const monthsRentedYear1 = Math.max(0, MONTHS_PER_YEAR - vacantMonthsYear1);
   const year1RentProration = monthsRentedYear1 / MONTHS_PER_YEAR;
 
   return indexSeries.map((idx, i): ProjectionYear => {

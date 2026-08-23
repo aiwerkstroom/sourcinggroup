@@ -562,25 +562,25 @@ describe("reference case Avenida Primado Reig 19, scored on live engine output",
     // moves, the failure names which input moved, not just "score wrong".
     expect(scenarioResult.monthlyCashflow).toBeCloseTo(-311.138231, 5);
     expect(scenarioResult.dscr).toBeCloseTo(0.832327630175, 10);
-    expect(irr.defined && irr.irr).toBeCloseTo(0.055436784474, 10);
+    expect(irr.defined && irr.irr).toBeCloseTo(0.052394671951, 10);
     expect(outcome.returnRequirement.minRequiredReturn).toBe(0.04);
-    expect(outcome.placeholdersUsed).toHaveLength(13);
+    expect(outcome.placeholdersUsed).toHaveLength(14);
     expect(engineResult.acquisition.equityRequired).toBeCloseTo(197_990, 6);
     expect(referenceCase.property.ownMoney).toBe(115_000);
     expect(engineResult.selectedRenovation.capex).toBe(55_000);
     expect(referenceCase.constraints.maxRenovationBudget).toBe(60_000);
   });
 
-  it("scores 1.5 / 3.3 / 6.5 / 3.0 / 2.8 with a 3.8 total", () => {
+  it("scores 1.5 / 3.3 / 6.2 / 3.0 / 2.4 with a 3.6 total", () => {
     expect(score.dimensions).toEqual({
       cashflow: 1.5, // -311.14/month, between the -500 and -250 anchors
       debtResilience: 3.3, // DSCR 0.832, between 0.75 and 1.00
-      returnVsRequirement: 6.5, // IRR 5.544% - 4% = +1.544pp, between 0 and +2
+      returnVsRequirement: 6.2, // IRR 5.239% - 4% = +1.239pp, between 0 and +2
       feasibility: 3.0, // equity short (197.990 vs 115.000), budget fine
-      dataCertainty: 2.8, // 13 placeholders, between the 10 and 15 anchors
+      dataCertainty: 2.4, // 14 placeholders, between the 10 and 15 anchors
     });
-    // 0.20x1.5 + 0.15x3.3 + 0.30x6.5 + 0.20x3.0 + 0.15x2.8 = 3.765 -> 3.8.
-    expect(score.total).toBe(3.8);
+    // 0.20x1.5 + 0.15x3.3 + 0.30x6.2 + 0.20x3.0 + 0.15x2.4 = 3.615 -> 3.6.
+    expect(score.total).toBe(3.6);
   });
 
   it("is lower than the 4.4 SCORE_SPEC.md §4 states, and the reason is traceable", () => {
@@ -612,7 +612,7 @@ describe("reference case Avenida Primado Reig 19, scored on live engine output",
       // usableAreaM2Provided omitted: the area is now derived from the
       // built area via a PLACEHOLDER ratio (MODEL_SPEC.md §17).
     });
-    expect(withDerivedArea.placeholdersUsed).toHaveLength(14);
+    expect(withDerivedArea.placeholdersUsed).toHaveLength(15);
     expect(dataCertaintyScore(withDerivedArea.placeholdersUsed.length)).toBeLessThan(
       score.dimensions.dataCertainty,
     );
@@ -623,7 +623,7 @@ describe("computeTsgScore() determinism (SCORE_SPEC.md §6)", () => {
   const input = {
     monthlyCashflow: -311.1382314080802,
     dscr: 0.8323276301747033,
-    irr: 0.055436784474295564,
+    irr: 0.05239467195060571,
     minRequiredReturn: 0.04,
     placeholderCount: 13,
     feasibility: {

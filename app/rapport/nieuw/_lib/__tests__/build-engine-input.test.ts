@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { runEngine } from "@/lib/rules/es/engine";
-import { RENOVATION_STRATEGIES } from "@/lib/rules/es/parameters";
+import { RENOVATION_DURATION_MONTHS_BY_TIER, RENOVATION_STRATEGIES } from "@/lib/rules/es/parameters";
 import { referenceCase } from "@/lib/rules/es/__tests__/referencecase";
 import { buildEngineInput, FIXED_RESIDENCY } from "../build-engine-input";
 import { WizardAssemblyError } from "../build-engine-input";
@@ -11,7 +11,7 @@ import type { WizardData } from "../../_state/wizard-state";
  * (Avenida Primado Reig 19) through the four steps exactly as a customer
  * would fill them, assemble it, and check the engine produces the figures
  * already locked down in outcome.test.ts - base scenario score 3,8 and
- * percentile 70.
+ * percentile 68.
  *
  * Two places where the wizard cannot express the reference case literally,
  * both harmless and checked below:
@@ -47,6 +47,7 @@ const referenceWizardData: WizardData = {
     // reference case's own renovation strategy.
     maintenanceCondition: "average",
     renovationStrategyOverride: "",
+    renovationDurationMonths: "",
     communityFeesAnnual: "900",
     cadastralSuelo: "",
     cadastralConstruccion: "",
@@ -148,8 +149,8 @@ describe("buildEngineInput - the reference case, end to end through the wizard",
     // independently locked down in outcome.test.ts.
     const result = runEngine(assembled);
     const base = result.scenarioOutcomes!.find((o) => o.scenario === "base")!;
-    expect(base.score!.total).toBe(3.8);
-    expect(base.percentile).toBe(70);
+    expect(base.score!.total).toBe(3.6);
+    expect(base.percentile).toBe(68);
   });
 
   it("matches the hand-written reference case scenario for scenario", () => {
@@ -397,5 +398,84 @@ describe("buildEngineInput - the renovation-tier override (fase C stap 1)", () =
       referenceCase.constraints.maxRenovationBudget,
     );
     expect(result.selectedRenovation.withinMaxRenovationBudget).toBe(false);
+  });
+});
+
+/**
+ * Fase C stap 2: the renovation-duration override through the wizard's own
+ * assembly. The resolver is tested in the calculation layer; what matters
+ * here is the "" sentinel, that the duration follows an overridden tier,
+ * and - the subtle one - that leaving it blank still counts the
+ * PLACEHOLDER it rests on.
+ */
+describe("buildEngineInput - the renovation-duration override (fase C stap 2)", () => {
+  function withDuration(duration: string, tierOverride = "") {
+    return buildEngineInput({
+      ...referenceWizardData,
+      staatEnLasten: {
+        ...referenceWizardData.staatEnLasten,
+        maintenanceCondition: "average",
+        renovationStrategyOverride: tierOverride,
+        renovationDurationMonths: duration,
+      },
+    });
+  }
+
+  it("leaves selections.renovationDurationMonths unset when the customer supplied nothing", () => {
+    // Not "sets it to the tier default": the engine applies that itself,
+    // and passing it explicitly would tell the engine a customer supplied
+    // it - which is what decides whether the PLACEHOLDER is counted.
+    const assembled = withDuration("");
+    expect(assembled.selections.renovationDurationMonths).toBeUndefined();
+    expect(assembled.renovationDurationProvenance).toEqual({
+      status: "derived",
+      derivedValue: RENOVATION_DURATION_MONTHS_BY_TIER.value.light,
+    });
+  });
+
+  it("still counts RENOVATION_DURATION_MONTHS_BY_TIER as an unverified assumption when derived", () => {
+    const result = runEngine(withDuration(""));
+    const base = result.scenarioOutcomes!.find((o) => o.scenario === "base")!;
+    expect(base.placeholdersUsed.map((p) => p.name)).toContain("RENOVATION_DURATION_MONTHS_BY_TIER");
+    expect(result.selectedRenovation.durationMonths).toBe(
+      RENOVATION_DURATION_MONTHS_BY_TIER.value.light,
+    );
+  });
+
+  it("drops it from the unverified list once the customer supplies a real figure", () => {
+    // Better data must be rewarded, the same way an explicit usable area
+    // or cadastral value already is.
+    const result = runEngine(withDuration("6"));
+    const base = result.scenarioOutcomes!.find((o) => o.scenario === "base")!;
+    expect(result.selectedRenovation.durationMonths).toBe(6);
+    expect(base.placeholdersUsed.map((p) => p.name)).not.toContain(
+      "RENOVATION_DURATION_MONTHS_BY_TIER",
+    );
+    expect(result.renovationDurationProvenance).toEqual({
+      status: "customerChosen",
+      derivedValue: RENOVATION_DURATION_MONTHS_BY_TIER.value.light,
+    });
+  });
+
+  it("the duration follows an overridden tier, not the derived one", () => {
+    const result = runEngine(withDuration("", "heavy"));
+    expect(result.selectedRenovation.id).toBe("heavy");
+    expect(result.selectedRenovation.durationMonths).toBe(
+      RENOVATION_DURATION_MONTHS_BY_TIER.value.heavy,
+    );
+    // And the provenance reports heavy's figure as the derived one, so the
+    // report contrasts against what actually applies.
+    expect(result.renovationDurationProvenance).toEqual({
+      status: "derived",
+      derivedValue: RENOVATION_DURATION_MONTHS_BY_TIER.value.heavy,
+    });
+  });
+
+  it("a longer renovation really does lower year 1, end to end", () => {
+    const short = runEngine(withDuration("0"));
+    const long = runEngine(withDuration("6"));
+    const y1 = (r: ReturnType<typeof runEngine>) =>
+      r.scenarioOutcomes!.find((o) => o.scenario === "base")!.years[0]!.grossIncome;
+    expect(y1(long)).toBeLessThan(y1(short));
   });
 });

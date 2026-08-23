@@ -10,7 +10,7 @@ import { PlaceholdersSection } from "../placeholders-section";
  * §14 traces which PLACEHOLDER parameters a hybrid/light-renovation
  * outcome rests on; the reference case (hybrid, light, no cadastral value,
  * usableAreaM2 supplied, minRoiTarget supplied) currently produces
- * thirteen - confirmed by calling runEngine() directly rather than
+ * fourteen - confirmed by calling runEngine() directly rather than
  * hand-copying MODEL_SPEC.md's own (older, pre-cadastral-value-feature)
  * count, so this test tracks the engine's actual behaviour.
  */
@@ -30,6 +30,7 @@ const EXPECTED_NAMES = [
   "RENOVATION_STRATEGIES.light.maintenanceFactor",
   "RENOVATION_STRATEGIES.light.utilitiesEfficiency",
   "RENOVATION_STRATEGIES.light.timeToRentMonths",
+  "RENOVATION_DURATION_MONTHS_BY_TIER",
   "DEPRECIATION_SCENARIO_FACTORS.base",
   "DEFAULT_BUILDING_SHARE_OF_VALUE",
   "DEFAULT_RENOVATION_IMPROVEMENT_SHARE",
@@ -37,7 +38,7 @@ const EXPECTED_NAMES = [
 ];
 
 describe("PlaceholdersSection - golden data against the reference case", () => {
-  it("the reference case's base scenario rests on exactly these thirteen PLACEHOLDER parameters", () => {
+  it("the reference case's base scenario rests on exactly these fourteen PLACEHOLDER parameters", () => {
     const { placeholdersUsed } = buildProps();
     expect(placeholdersUsed).toHaveLength(EXPECTED_NAMES.length);
     expect(placeholdersUsed.map((p) => p.name).sort()).toEqual([...EXPECTED_NAMES].sort());
@@ -60,11 +61,11 @@ describe("PlaceholdersSection - golden data against the reference case", () => {
 });
 
 describe("PlaceholdersSection - rendered against the reference case", () => {
-  it("renders one list item per placeholder, all thirteen present", () => {
+  it("renders one list item per placeholder, all fourteen present", () => {
     const props = buildProps();
     const html = renderToStaticMarkup(<PlaceholdersSection {...props} />);
 
-    expect((html.match(/<li/g) ?? []).length).toBe(13);
+    expect((html.match(/<li/g) ?? []).length).toBe(14);
     for (const param of props.placeholdersUsed) {
       expect(html).toContain(describePlaceholderParameter(param));
     }

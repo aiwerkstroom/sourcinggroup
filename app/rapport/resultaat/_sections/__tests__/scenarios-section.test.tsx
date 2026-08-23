@@ -43,23 +43,23 @@ describe("ScenariosSection - golden render against the reference case", () => {
     expect(byId.conservative.monthlyCashflow).toBeCloseTo(-799.459411956443, 8);
     expect(byId.conservative.dscr).toBeCloseTo(0.5833445954702777, 10);
     expect(byId.conservative.irr.defined && byId.conservative.irr.irr).toBeCloseTo(
-      0.02175059635133949,
+      0.019522793298820035,
       6,
     );
-    expect(byId.conservative.scoreTotal).toBe(1.8);
+    expect(byId.conservative.scoreTotal).toBe(1.7);
 
     expect(byId.base.monthlyCashflow).toBeCloseTo(-311.138231408102, 8);
     expect(byId.base.dscr).toBeCloseTo(0.8323276301747033, 10);
-    expect(byId.base.irr.defined && byId.base.irr.irr).toBeCloseTo(0.055436784474295564, 6);
-    expect(byId.base.scoreTotal).toBe(3.8);
+    expect(byId.base.irr.defined && byId.base.irr.irr).toBeCloseTo(0.05239467195060571, 6);
+    expect(byId.base.scoreTotal).toBe(3.6);
 
     expect(byId.optimistic.monthlyCashflow).toBeCloseTo(172.05543916912, 8);
     expect(byId.optimistic.dscr).toBeCloseTo(1.0943011144996524, 10);
     expect(byId.optimistic.irr.defined && byId.optimistic.irr.irr).toBeCloseTo(
-      0.08640301656996599,
+      0.08283859450893945,
       6,
     );
-    expect(byId.optimistic.scoreTotal).toBe(5.6);
+    expect(byId.optimistic.scoreTotal).toBe(5.5);
   });
 
   it("renders all nine values as Dutch-formatted text", () => {
@@ -75,13 +75,13 @@ describe("ScenariosSection - golden render against the reference case", () => {
     expect(html).toContain("0,83");
     expect(html).toContain("1,09");
 
-    expect(html).toContain("2,18%");
-    expect(html).toContain("5,54%");
-    expect(html).toContain("8,64%");
+    expect(html).toContain("1,95%");
+    expect(html).toContain("5,24%");
+    expect(html).toContain("8,28%");
 
-    expect(html).toContain("1,8");
-    expect(html).toContain("3,8");
-    expect(html).toContain("5,6");
+    expect(html).toContain("1,7");
+    expect(html).toContain("3,6");
+    expect(html).toContain("5,5");
   });
 
   it("renders the three Dutch scenario labels, in order", () => {

@@ -16,6 +16,7 @@ import {
   checkOwnMoney,
   checkPreferredLtv,
   checkPurchasePrice,
+  checkRenovationDurationMonths,
   checkTotalBudget,
   checkUpcomingDerramasAmount,
   checkUsableAreaM2,
@@ -168,6 +169,8 @@ describe("Dutch copy covers every field-validation key", () => {
     "occupancyShortTermMustBeFraction",
     "upcomingDerramasAmountMustBeZeroOrPositive",
     "freeTierCommunityFeesMustBeZeroOrPositive",
+    "renovationDurationMonthsOutOfRange",
+    "renovationDurationMonthsMustBeWholeMonths",
   ];
 
   it("has exactly one Record entry per key", () => {
@@ -270,5 +273,49 @@ describe("investor constraint rules (wizard step 3)", () => {
     expect(checkHoldingYears(-5)).toBe("holdingYearsMustBePositiveInteger");
     // The projection is built year by year, so half a year has nowhere to go.
     expect(checkHoldingYears(3.5)).toBe("holdingYearsMustBePositiveInteger");
+  });
+});
+
+/**
+ * Fase C stap 2. The cap at 12 is the interesting rule: it is not a
+ * plausibility limit but a modelling boundary - only year 1 is prorated
+ * (projection.ts), so a longer renovation is something the projection
+ * cannot represent rather than something a customer cannot have.
+ */
+describe("checkRenovationDurationMonths - fase C stap 2", () => {
+  it("accepts a blank field: the tier's own default applies", () => {
+    expect(checkRenovationDurationMonths(undefined)).toBeNull();
+  });
+
+  it("accepts whole months from 0 to 12 inclusive", () => {
+    for (const months of [0, 1, 3, 5, 11, 12]) {
+      expect(checkRenovationDurationMonths(months)).toBeNull();
+    }
+  });
+
+  it("rejects a negative duration", () => {
+    expect(checkRenovationDurationMonths(-1)).toBe("renovationDurationMonthsOutOfRange");
+  });
+
+  it("rejects more than twelve months - beyond what the projection can prorate", () => {
+    expect(checkRenovationDurationMonths(13)).toBe("renovationDurationMonthsOutOfRange");
+    expect(checkRenovationDurationMonths(24)).toBe("renovationDurationMonthsOutOfRange");
+  });
+
+  it("rejects a fractional month, since the proration counts whole months", () => {
+    expect(checkRenovationDurationMonths(2.5)).toBe("renovationDurationMonthsMustBeWholeMonths");
+  });
+
+  it("rejects a non-number", () => {
+    expect(checkRenovationDurationMonths("drie")).toBe("renovationDurationMonthsOutOfRange");
+    expect(checkRenovationDurationMonths(Number.NaN)).toBe("renovationDurationMonthsOutOfRange");
+  });
+
+  it("both keys have Dutch copy, and the range message explains why the cap exists", () => {
+    const range = translateFieldValidation("renovationDurationMonthsOutOfRange");
+    expect(range).toContain("0 en 12");
+    expect(range).toContain("jaar 2");
+    expect(translateFieldValidation("renovationDurationMonthsMustBeWholeMonths").length)
+      .toBeGreaterThan(0);
   });
 });

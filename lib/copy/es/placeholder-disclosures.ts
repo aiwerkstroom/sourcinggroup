@@ -65,6 +65,17 @@ export function describePlaceholderParameter(param: Parameter<unknown>): string 
   const value = param.value as number;
 
   switch (param.name) {
+    case "RENOVATION_DURATION_MONTHS_BY_TIER":
+      // Fase C stap 2. Deliberately says what it costs the customer -
+      // months without rent - rather than only stating a duration, since
+      // this list is what tells them which unverified assumptions moved
+      // their figures. The per-tier figure is not spelled out here: the
+      // report already names the tier in force alongside it.
+      return (
+        "De doorlooptijd van de verbouwing is geschat op basis van het gekozen " +
+        "renovatiescenario. Zolang er verbouwd wordt, is er geen huurinkomen; " +
+        "die maanden drukken het eerste jaar."
+      );
     case "MAINTENANCE_RATE":
       return `Onderhoudskosten zijn geschat op ${percent(value)} van de huurinkomsten.`;
     case "BANK_FEE":

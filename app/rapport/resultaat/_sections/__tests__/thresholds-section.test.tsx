@@ -44,7 +44,7 @@ describe("ThresholdsSection - golden data against the reference case", () => {
     expect(props.cashflow.meetsMinMonthlyCashflow).toBe(false);
 
     expect(props.returnRequirement.minRequiredReturn).toBe(0.04);
-    expect(props.irr.defined && props.irr.irr).toBeCloseTo(0.055436784474295564, 6);
+    expect(props.irr.defined && props.irr.irr).toBeCloseTo(0.05239467195060571, 6);
     expect(props.returnRequirement.meetsMinRequiredReturn).toBe(true);
   });
 });

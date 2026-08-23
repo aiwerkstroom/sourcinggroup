@@ -112,6 +112,7 @@ const secondCase: WizardData = {
   staatEnLasten: {
     maintenanceCondition: "average",
     renovationStrategyOverride: "",
+    renovationDurationMonths: "",
     communityFeesAnnual: "700",
     cadastralSuelo: "",
     cadastralConstruccion: "",
@@ -205,9 +206,9 @@ describe("PDF export - reference case, extracted text against the established go
   });
 
   it("carries the TSG-score and its five dimension scores (tsg-score-section.test.tsx's own golden values)", () => {
-    expect(referenceCasePdfText).toContain("3,8");
-    expect(referenceCasePdfText).toContain("percentiel 70");
-    for (const dimension of ["1,5", "3,3", "6,5", "3,0", "2,8"]) {
+    expect(referenceCasePdfText).toContain("3,6");
+    expect(referenceCasePdfText).toContain("percentiel 68");
+    for (const dimension of ["1,5", "3,3", "6,2", "3,0", "2,4"]) {
       expect(referenceCasePdfText).toContain(dimension);
     }
   });
@@ -222,7 +223,7 @@ describe("PDF export - reference case, extracted text against the established go
     for (const value of ["€ -799", "€ -311", "€ 172"]) {
       expect(referenceCasePdfText).toContain(normalize(value));
     }
-    for (const value of ["0,58", "0,83", "1,09", "2,18%", "5,54%", "8,64%", "1,8", "3,8", "5,6"]) {
+    for (const value of ["0,58", "0,83", "1,09", "1,95%", "5,24%", "8,28%", "1,7", "3,6", "5,5"]) {
       expect(referenceCasePdfText).toContain(value);
     }
   });
@@ -266,11 +267,11 @@ describe("PDF export - a second, non-reference case through POST /rapport/result
   const baseScenario = engineResult.scenarios.find((s) => s.id === "base")!;
 
   it("computed the expected, unfavourable outcome for this fixture (sanity check on the fixture itself)", () => {
-    expect(base.score!.total).toBeCloseTo(0.5, 6);
-    expect(base.percentile).toBe(1);
+    expect(base.score!.total).toBeCloseTo(0.4, 6);
+    expect(base.percentile).toBe(0);
     expect(baseScenario.monthlyCashflow).toBeCloseTo(-548.8209814572721, 6);
     expect(baseScenario.dscr).toBeCloseTo(0.3583224968394108, 6);
-    expect(base.irr.defined && base.irr.irr).toBeCloseTo(-0.018243086264701558, 6);
+    expect(base.irr.defined && base.irr.irr).toBeCloseTo(-0.019567118379054588, 6);
     expect(base.exit.netSaleProceeds).toBeCloseTo(192962.31366249273, 3);
   });
 
@@ -280,8 +281,8 @@ describe("PDF export - a second, non-reference case through POST /rapport/result
   });
 
   it("carries this case's own score, percentile, and base-scenario cashflow/DSCR/IRR - none of them reference-case values", () => {
-    expect(secondCasePdfText).toContain("0,5");
-    expect(secondCasePdfText).toContain("percentiel 1 ");
+    expect(secondCasePdfText).toContain("0,4");
+    expect(secondCasePdfText).toContain("percentiel 0 ");
     expect(secondCasePdfText).toContain(normalize(formatEuro(Math.round(baseScenario.monthlyCashflow))));
     expect(secondCasePdfText).toContain(baseScenario.dscr.toFixed(2).replace(".", ","));
     expect(base.irr.defined).toBe(true);

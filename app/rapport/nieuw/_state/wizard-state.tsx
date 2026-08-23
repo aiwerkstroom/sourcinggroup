@@ -66,6 +66,15 @@ export interface StaatEnLastenStepData {
    * question - hence no validation, unlike maintenanceCondition itself.
    */
   renovationStrategyOverride: string;
+  /**
+   * Fase C stap 2: "" means "use RENOVATION_DURATION_MONTHS_BY_TIER's
+   * figure for whichever tier is in force", which is the default and shown
+   * as the field's placeholder; otherwise the customer's own whole number
+   * of months. Empty is a real answer, like renovationStrategyOverride
+   * above - and the sentinel is what makes the field follow a tier change
+   * while untouched and stop following once deliberately set.
+   */
+  renovationDurationMonths: string;
   communityFeesAnnual: string;
   /** Both cadastral halves are optional, but supplying one without the other is not (MODEL_SPEC.md §16). */
   cadastralSuelo: string;
@@ -194,6 +203,7 @@ export const EMPTY_PAND: PandStepData = {
 export const EMPTY_STAAT_EN_LASTEN: StaatEnLastenStepData = {
   maintenanceCondition: "",
   renovationStrategyOverride: "",
+  renovationDurationMonths: "",
   communityFeesAnnual: "",
   cadastralSuelo: "",
   cadastralConstruccion: "",

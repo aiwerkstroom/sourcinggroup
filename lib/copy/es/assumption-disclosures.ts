@@ -91,6 +91,11 @@ export function describeAssumption(param: Parameter<unknown>): AssumptionEntry {
         label: "Waardeverhogend aandeel van de renovatiekosten",
         note: PLACEHOLDER_NOTE,
       };
+    case "RENOVATION_DURATION_MONTHS_BY_TIER":
+      // Fase C stap 2. Named as a duration, not as a vacancy: the vacancy
+      // it causes is the consequence, and RENOVATION_STRATEGIES'
+      // timeToRentMonths already occupies "leegstand" in this list.
+      return { category: "Renovatie", label: "Doorlooptijd van de verbouwing", note: PLACEHOLDER_NOTE };
     case "MAINTENANCE_RATE":
       return { category: "Exploitatiekosten", label: "Onderhoudskosten (% van de huur)", note: PLACEHOLDER_NOTE };
     case "PROPERTY_MANAGEMENT_FEE":

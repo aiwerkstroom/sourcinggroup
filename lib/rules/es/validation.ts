@@ -78,6 +78,9 @@ const FIELD_ISSUE_EN: Record<FieldValidationKey, string> = {
   upcomingDerramasAmountMustBeZeroOrPositive: "upcomingDerramasEstimate must be zero or positive",
   freeTierCommunityFeesMustBeZeroOrPositive:
     "communityFeesAnnual must be zero or positive (free indication)",
+  renovationDurationMonthsOutOfRange:
+    "renovationDurationMonths must be between 0 and 12 (only year 1 is prorated)",
+  renovationDurationMonthsMustBeWholeMonths: "renovationDurationMonths must be a whole number of months",
 };
 
 export function validateEngineInput(input: EngineInput): string[] {

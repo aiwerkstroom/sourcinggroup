@@ -52,15 +52,17 @@ describe("multi-year cashflow after tax (reference case)", () => {
     expect(y1.communityFees).toBeCloseTo(900, 6);
   });
 
-  it("year 1's rent is prorated for the renovation's lease-up vacancy (light: 2 months)", () => {
-    // 28440.72 (phase-1, full 12 months) x 10/12 = 23700.60.
+  it("year 1's rent is prorated for the renovation itself plus the lease-up (light: 3 + 2 months)", () => {
+    // Fase C stap 2: 5 vacant months, not 2 - the work takes three
+    // (RENOVATION_DURATION_MONTHS_BY_TIER.light) and finding a tenant two
+    // (timeToRentMonths). 28440.72 (phase-1, full 12 months) x 7/12 =
+    // 16590.42; it was 23700.60 when only the lease-up counted.
     const y1 = projectionFor("base")[0]!;
-    expect(y1.grossIncome).toBeCloseTo(23700.6, 6);
+    expect(y1.grossIncome).toBeCloseTo(16590.42, 6);
     // Property management is 8% of that already-prorated rent, so it
-    // scales down with it automatically: 23700.6 x 0.08 = 1896.048.
-    expect(y1.propertyManagement).toBeCloseTo(1896.048, 6);
-    // 15073.016 (before gastos de comunidad) - 900 = 14173.016.
-    expect(y1.noi).toBeCloseTo(14173.016, 4);
+    // scales down with it automatically: 16590.42 x 0.08 = 1327.2336.
+    expect(y1.propertyManagement).toBeCloseTo(1327.2336, 6);
+    expect(y1.noi).toBeCloseTo(7631.6504, 4);
   });
 
   it("does not prorate any other year: full rent from year 2 onwards", () => {
@@ -80,8 +82,17 @@ describe("multi-year cashflow after tax (reference case)", () => {
       fixedCosts: engineResult.fixedOperatingCosts,
       euResident: true,
     };
-    const minimal = buildProjectionYears({ ...common, renovation: { timeToRentMonths: 1 } });
-    const heavy = buildProjectionYears({ ...common, renovation: { timeToRentMonths: 3 } });
+    // durationMonths 0 isolates the lease-up half, which is what this test
+    // is about; the two are additive since fase C stap 2 and the sum is
+    // covered in its own describe block below.
+    const minimal = buildProjectionYears({
+      ...common,
+      renovation: { timeToRentMonths: 1, durationMonths: 0 },
+    });
+    const heavy = buildProjectionYears({
+      ...common,
+      renovation: { timeToRentMonths: 3, durationMonths: 0 },
+    });
     expect(minimal[0]!.grossIncome).toBeCloseTo(28440.72 * (11 / 12), 6);
     expect(heavy[0]!.grossIncome).toBeCloseTo(28440.72 * (9 / 12), 6);
   });
@@ -96,6 +107,13 @@ describe("multi-year cashflow after tax (reference case)", () => {
     expect(y1.interestPaid).toBeLessThan(10395);
   });
 
+  // Year 1 recomputed again for fase C stap 2, which added the
+  // renovation's own duration to the vacancy that prorates it (light:
+  // 3 months of work on top of 2 months' lease-up, so 7/12 of a year's
+  // rent instead of 10/12). Only year 1 moves - years 2, 5 and 10 are
+  // untouched, which is itself the check that the proration stayed
+  // confined to the first year.
+  //
   // Recomputed for MODEL_SPEC.md §15's gastos de comunidad (€ 900/yr
   // fixture, CPI-indexed like the other fixed cost lines): grossIncome,
   // interestPaid, principalPaid and mortgageBalance are unaffected (no
@@ -108,14 +126,14 @@ describe("multi-year cashflow after tax (reference case)", () => {
   > = {
     conservative: {
       1: {
-        grossIncome: 19197.486,
-        noi: 9899.203044,
+        grossIncome: 13438.2402,
+        noi: 4600.696908,
         interestPaid: 11383.852975,
         principalPaid: 11641.200437,
         mortgageBalance: 235858.799563,
-        preTaxCashflow: -13125.850367,
+        preTaxCashflow: -18424.356503,
         taxDue: 0,
-        cashflowAfterTax: -13125.850367,
+        cashflowAfterTax: -18424.356503,
       },
       2: {
         grossIncome: 24188.8324,
@@ -150,14 +168,14 @@ describe("multi-year cashflow after tax (reference case)", () => {
     },
     base: {
       1: {
-        grossIncome: 23700.6,
-        noi: 14173.016,
+        grossIncome: 16590.42,
+        noi: 7631.6504,
         interestPaid: 10163.765235,
         principalPaid: 12103.819942,
         mortgageBalance: 235396.180058,
-        preTaxCashflow: -8094.569177,
+        preTaxCashflow: -14635.934777,
         taxDue: 0,
-        cashflowAfterTax: -8094.569177,
+        cashflowAfterTax: -14635.934777,
       },
       2: {
         grossIncome: 29862.756,
@@ -192,14 +210,14 @@ describe("multi-year cashflow after tax (reference case)", () => {
     },
     optimistic: {
       1: {
-        grossIncome: 28677.726,
-        noi: 18682.352538,
+        grossIncome: 20074.4082,
+        noi: 10767.300162,
         interestPaid: 9554.436089,
         principalPaid: 12339.952763,
         mortgageBalance: 235160.047237,
-        preTaxCashflow: -3212.036314,
-        taxDue: 881.075875,
-        cashflowAfterTax: -4093.112189,
+        preTaxCashflow: -11127.08869,
+        taxDue: 0,
+        cashflowAfterTax: -11127.08869,
       },
       2: {
         grossIncome: 36133.9348,
@@ -351,5 +369,81 @@ describe("multi-year cashflow after tax (reference case)", () => {
       expect(years[i]!.mortgageBalance).toBeLessThan(years[i - 1]!.mortgageBalance);
     }
     expect(years[9]!.mortgageBalance).toBeGreaterThan(0);
+  });
+});
+
+/**
+ * Fase C stap 2: the renovation's own duration, added to the lease-up that
+ * already prorated year 1. Two things worth pinning beyond the golden
+ * values above - that the two periods really are additive, and that a
+ * renovation long enough to fill the year cannot drive the rent negative.
+ */
+describe("year-1 vacancy: renovation duration plus lease-up (fase C stap 2)", () => {
+  const engineResult = runEngine(referenceCase);
+  const scenarioResult = engineResult.scenarios.find((s) => s.id === "base")!;
+  const FULL_YEAR_RENT = 28440.72;
+
+  function year1For(durationMonths: number, timeToRentMonths: number) {
+    return buildProjectionYears({
+      years: 1,
+      scenario: "base",
+      scenarioResult,
+      purchasePrice: referenceCase.property.purchasePrice,
+      financing: engineResult.selectedFinancing,
+      fixedCosts: engineResult.fixedOperatingCosts,
+      euResident: true,
+      renovation: { durationMonths, timeToRentMonths },
+    })[0]!;
+  }
+
+  it("adds the two periods rather than taking the larger", () => {
+    // 3 + 2 = 5 vacant, 7 rented. Taking the larger (3) would give 9/12,
+    // which is what a max() implementation would produce.
+    expect(year1For(3, 2).grossIncome).toBeCloseTo(FULL_YEAR_RENT * (7 / 12), 6);
+    expect(year1For(3, 2).grossIncome).not.toBeCloseTo(FULL_YEAR_RENT * (9 / 12), 6);
+  });
+
+  it("is symmetric in the two periods - only their sum matters", () => {
+    expect(year1For(4, 1).grossIncome).toBeCloseTo(year1For(1, 4).grossIncome, 10);
+  });
+
+  it("a zero-duration renovation reproduces the pre-fase-C behaviour exactly", () => {
+    expect(year1For(0, 2).grossIncome).toBeCloseTo(FULL_YEAR_RENT * (10 / 12), 6);
+  });
+
+  it("clamps at zero rather than going negative when the vacancy fills the year", () => {
+    // 12 + 2 = 14 months of vacancy in a 12-month year. Without the clamp
+    // this would be -2/12 of a year's rent - the projection crediting a
+    // negative rent, which is worse than merely wrong.
+    const y1 = year1For(12, 2);
+    expect(y1.grossIncome).toBe(0);
+    expect(y1.propertyManagement).toBe(0);
+    // Every cost that runs regardless of occupancy still runs.
+    expect(y1.maintenance).toBeGreaterThan(0);
+    expect(y1.debtService).toBeGreaterThan(0);
+  });
+
+  it("exactly 12 months of vacancy is the boundary: zero rent, still not negative", () => {
+    expect(year1For(12, 0).grossIncome).toBe(0);
+    expect(year1For(11, 1).grossIncome).toBe(0);
+    expect(year1For(11, 0).grossIncome).toBeCloseTo(FULL_YEAR_RENT * (1 / 12), 6);
+  });
+
+  it("never touches year 2, however long the renovation runs", () => {
+    const years = buildProjectionYears({
+      years: 2,
+      scenario: "base",
+      scenarioResult,
+      purchasePrice: referenceCase.property.purchasePrice,
+      financing: engineResult.selectedFinancing,
+      fixedCosts: engineResult.fixedOperatingCosts,
+      euResident: true,
+      renovation: { durationMonths: 12, timeToRentMonths: 2 },
+    });
+    expect(years[0]!.grossIncome).toBe(0);
+    // The spill past month 12 is precisely what the projection does not
+    // model - year 2 is a full year regardless. The report discloses this
+    // rather than the calculation absorbing it silently.
+    expect(years[1]!.grossIncome).toBeCloseTo(FULL_YEAR_RENT * 1.05, 6);
   });
 });

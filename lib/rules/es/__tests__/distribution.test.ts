@@ -326,7 +326,7 @@ describe("the default (1.000-case, default-seed) reference distribution", () => 
     expect(Date.now() - t0).toBeLessThan(5000);
   });
 
-  it("places the reference case's own base-scenario total (3.8, from score.test.ts) at a specific, reproducible percentile", () => {
+  it("places the reference case's own base-scenario total (3.6, from score.test.ts) at a specific, reproducible percentile", () => {
     // Golden value for the default seed/size - reproducible because
     // generation is deterministic (SCORE_SPEC.md §6). If the scoring
     // curves, weights, or generation ranges in parameters.ts ever change,
@@ -343,13 +343,13 @@ describe("the default (1.000-case, default-seed) reference distribution", () => 
     // regime where positive year-1 cashflow is actually possible - which
     // is what moved the OTHER three dimensions (cashflow, debtResilience,
     // returnVsRequirement), not just feasibility.
-    expect(computePercentile(distribution, 3.8)).toBe(70);
+    expect(computePercentile(distribution, 3.6)).toBe(68);
   });
 
   it("presentation sentence renders as SCORE_SPEC.md §5 specifies", () => {
-    const percentile = computePercentile(distribution, 3.8);
+    const percentile = computePercentile(distribution, 3.6);
     const sentence = `Deze investering scoort in het ${percentile}ste percentiel van ons modelbereik.`;
-    expect(sentence).toBe("Deze investering scoort in het 70ste percentiel van ons modelbereik.");
+    expect(sentence).toBe("Deze investering scoort in het 68ste percentiel van ons modelbereik.");
   });
 
   it("the feasibility check still passes for a realistic share of cases - roughly half, not almost none", () => {
@@ -369,9 +369,25 @@ describe("the default (1.000-case, default-seed) reference distribution", () => 
     expect(passRate).toBeLessThan(0.6);
   });
 
-  it("a realistic share of cases now have positive after-tax cashflow in year 1, not almost none", () => {
+  it("a realistic share of cases have positive after-tax cashflow in a full-rent year, not almost none", () => {
+    // Measured on year 2, the first full-rent year, since fase C stap 2.
+    //
+    // This guard was written to catch one specific defect: leverage not
+    // varying across cases, which made positive cashflow structurally
+    // near-impossible (every case carried a 60-75% amortising mortgage
+    // regardless of strategy). It measured year 1 because that was then
+    // a full-rent year in all but the lease-up months.
+    //
+    // Fase C stap 2 made year 1 carry the renovation's own duration on
+    // top of the lease-up, so year 1 is now structurally depressed for
+    // every case by design - which would mask exactly the defect this
+    // guard exists to detect. Moving it to year 2 keeps it measuring
+    // leverage variation rather than renovation vacancy; year 1's own,
+    // deliberately lower share is pinned separately below.
     const rng = createRng(20260811);
+    let positiveYear2 = 0;
     let positiveYear1 = 0;
+    let counted = 0;
     const n = 500;
     for (let i = 0; i < n; i++) {
       const { input, derived } = buildSyntheticEngineInput(rng);
@@ -389,13 +405,27 @@ describe("the default (1.000-case, default-seed) reference distribution", () => 
         renovation: engineResult.selectedRenovation,
       });
       if (years[0]!.cashflowAfterTax > 0) positiveYear1++;
+      if (years[1] !== undefined) {
+        counted++;
+        if (years[1]!.cashflowAfterTax > 0) positiveYear2++;
+      }
     }
-    // Golden value: 108/500 = 21.6% with the default seed - was
-    // structurally close to 0% before leverage varied, since every case
-    // carried a 60-75% amortising mortgage regardless of strategy.
-    const share = positiveYear1 / n;
-    expect(share).toBeGreaterThan(0.15);
-    expect(share).toBeLessThan(0.3);
+    // Golden value: 36% with the default seed. Higher than the 21.6% this
+    // guard recorded for year 1 before fase C stap 2, and expected to be:
+    // year 2 is a full-rent year *and* carries a year of rent indexation,
+    // neither of which year 1 ever had. The band stays as wide as the
+    // original (a factor two), so it still fails loudly on the ~0% the
+    // defect it guards against produced.
+    const shareYear2 = positiveYear2 / counted;
+    expect(shareYear2).toBeGreaterThan(0.25);
+    expect(shareYear2).toBeLessThan(0.5);
+
+    // Year 1 sits materially below that, and must: it is the year the
+    // renovation happens. Bounded on both sides so neither a regression
+    // that drops the vacancy nor one that runs it away goes unnoticed.
+    const shareYear1 = positiveYear1 / n;
+    expect(shareYear1).toBeLessThan(shareYear2);
+    expect(shareYear1).toBeGreaterThan(0.02);
   });
 });
 
@@ -414,9 +444,14 @@ describe("shape of the corrected distribution (left-skew: further reduced by var
   const distribution = generateReferenceDistribution();
   const s = distribution.scores;
 
-  it("min/median/max: 0.4 / 2.7 / 6.8 (equity-coverage-only correction gave 0.4 / 1.8 / 4.6; the original generator gave 0.4 / 1.9 / 8.3)", () => {
-    expect(s[0]).toBe(0.4);
-    expect(s[500]).toBe(2.7);
+  it("min/median/max: 0.3 / 2.6 / 6.8 (was 0.4 / 2.7 / 6.8 before fase C stap 2 added renovation duration)", () => {
+    // Every case lost part of year 1's rent to the renovation, and every
+    // case picked up one more PLACEHOLDER (RENOVATION_DURATION_MONTHS_BY_TIER),
+    // so the whole distribution shifts down slightly. The max is unmoved
+    // because the top of the range is driven by cases with little or no
+    // leverage, where a weaker year 1 barely registers.
+    expect(s[0]).toBe(0.3);
+    expect(s[500]).toBe(2.6);
     expect(s[999]).toBe(6.8);
   });
 

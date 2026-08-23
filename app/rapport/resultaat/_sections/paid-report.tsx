@@ -142,6 +142,9 @@ export function PaidReport({ result }: PaidReportProps) {
             listingFieldProvenance={result.listingFieldProvenance}
             renovationTierProvenance={result.renovationTierProvenance}
             renovationStrategy={result.selectedRenovation.id}
+            renovationDurationProvenance={result.renovationDurationProvenance}
+            renovationDurationMonths={result.selectedRenovation.durationMonths}
+            renovationLeaseUpMonths={result.selectedRenovation.timeToRentMonths}
           />
         ) : (
           <NoExitPlanningNotice sectionNumber={8} title="Aannames en bronnen" />

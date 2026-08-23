@@ -43,6 +43,7 @@ import {
   DEFAULT_USABLE_TO_BUILT_AREA_RATIO,
   DEPRECIATION_SCENARIO_FACTORS,
   MAINTENANCE_RATE,
+  RENOVATION_DURATION_MONTHS_BY_TIER,
   RENOVATION_STRATEGIES,
 } from "./parameters";
 import { computePercentile } from "./percentile";
@@ -104,6 +105,7 @@ function collectPlaceholders(args: {
   renovationStrategy: RenovationStrategyId;
   buildingShareOfValueProvided: boolean;
   renovationImprovementShareProvided: boolean;
+  renovationDurationProvided: boolean;
   minRequiredReturnProvided: boolean;
   cadastralValueProvided: boolean;
   usableAreaM2Provided: boolean;
@@ -141,6 +143,9 @@ function collectPlaceholders(args: {
   }
   if (!args.renovationImprovementShareProvided) {
     placeholders.push(DEFAULT_RENOVATION_IMPROVEMENT_SHARE);
+  }
+  if (!args.renovationDurationProvided) {
+    placeholders.push(RENOVATION_DURATION_MONTHS_BY_TIER);
   }
   if (!args.cadastralValueProvided) {
     placeholders.push(DEFAULT_CADASTRAL_TO_PURCHASE_PRICE_RATIO);
@@ -182,6 +187,8 @@ export function buildScenarioOutcome(args: {
   buildingShareOfValueProvided?: boolean;
   /** True when the caller passed an explicit renovationImprovementShare to computeExit (exit.ts) instead of relying on DEFAULT_RENOVATION_IMPROVEMENT_SHARE. */
   renovationImprovementShareProvided?: boolean;
+  /** True when the caller supplied ModelSelections.renovationDurationMonths instead of relying on RENOVATION_DURATION_MONTHS_BY_TIER (fase C stap 2). */
+  renovationDurationProvided?: boolean;
   /** True when the caller passed PropertyInput.cadastralValue through to fixedOperatingCosts (operating.ts) instead of relying on DEFAULT_CADASTRAL_TO_PURCHASE_PRICE_RATIO for the IBI base. */
   cadastralValueProvided?: boolean;
   /** True when the caller passed PropertyInput.usableAreaM2 directly to buildIncomeModel (income.ts, via engine.ts) instead of relying on DEFAULT_USABLE_TO_BUILT_AREA_RATIO to derive it from builtAreaM2. */
@@ -257,6 +264,7 @@ export function buildScenarioOutcome(args: {
     renovationStrategy: args.renovationStrategy,
     buildingShareOfValueProvided: args.buildingShareOfValueProvided ?? false,
     renovationImprovementShareProvided: args.renovationImprovementShareProvided ?? false,
+    renovationDurationProvided: args.renovationDurationProvided ?? false,
     minRequiredReturnProvided: args.minRequiredReturn !== undefined,
     cadastralValueProvided: args.cadastralValueProvided ?? false,
     usableAreaM2Provided: args.usableAreaM2Provided ?? false,
@@ -274,6 +282,7 @@ export function buildScenarioOutcome(args: {
     taxResidency: args.taxResidency,
     buildingShareOfValueProvided: args.buildingShareOfValueProvided ?? false,
     renovationImprovementShareProvided: args.renovationImprovementShareProvided ?? false,
+    renovationDurationProvided: args.renovationDurationProvided ?? false,
     minRequiredReturnProvided: args.minRequiredReturn !== undefined,
     cadastralValueProvided: args.cadastralValueProvided ?? false,
     usableAreaM2Provided: args.usableAreaM2Provided ?? false,

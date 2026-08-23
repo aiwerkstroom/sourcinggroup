@@ -31,6 +31,7 @@ import {
   checkCadastralConstruccion,
   checkCadastralSuelo,
   checkCommunityFeesAnnual,
+  checkRenovationDurationMonths,
   checkUpcomingDerramasAmount,
 } from "@/lib/rules/es/field-validation";
 import type { MaintenanceCondition, RenovationStrategyId } from "@/lib/rules/es/types";
@@ -74,9 +75,17 @@ export interface StaatEnLastenFormProps {
    * - see page.tsx's own note.
    */
   derivedTierByCondition: Readonly<Record<MaintenanceCondition, RenovationStrategyId>>;
+  /**
+   * RENOVATION_DURATION_MONTHS_BY_TIER, likewise already resolved by the
+   * Server Component (fase C stap 2) - see page.tsx.
+   */
+  defaultDurationByTier: Readonly<Record<RenovationStrategyId, number>>;
 }
 
-export function StaatEnLastenForm({ derivedTierByCondition }: StaatEnLastenFormProps) {
+export function StaatEnLastenForm({
+  derivedTierByCondition,
+  defaultDurationByTier,
+}: StaatEnLastenFormProps) {
   const router = useRouter();
   const { data, setStaatEnLasten, markCompleted } = useWizard();
   const step = data.staatEnLasten;
@@ -94,11 +103,33 @@ export function StaatEnLastenForm({ derivedTierByCondition }: StaatEnLastenFormP
       ? null
       : (derivedTierByCondition[step.maintenanceCondition as MaintenanceCondition] ?? null);
 
+  // The tier actually in force - the override when given, the derivation
+  // otherwise. This, not the derived tier, is what the duration default
+  // follows: a customer who overrode the tier to "grondig" and left the
+  // duration alone should see grondig's default, not the one their state
+  // of repair implied (fase C stap 2).
+  const tierInForce: RenovationStrategyId | null =
+    step.renovationStrategyOverride !== ""
+      ? (step.renovationStrategyOverride as RenovationStrategyId)
+      : derivedRenovationTier;
+  const defaultDurationMonths = tierInForce === null ? null : defaultDurationByTier[tierInForce];
+
   function validate(): FieldErrors {
     const next: FieldErrors = {};
 
     if (step.maintenanceCondition === "") {
       next.maintenanceCondition = translateFieldValidation("required");
+    }
+
+    // Optional: blank means "use the tier's own default" (fase C stap 2),
+    // so only a value that is present and wrong is an error.
+    if (step.renovationDurationMonths !== "") {
+      const parsed = parseNumberInput(step.renovationDurationMonths);
+      const issue =
+        parsed === undefined
+          ? "mustBeANumber"
+          : checkRenovationDurationMonths(parsed);
+      if (issue !== null) next.renovationDurationMonths = translateFieldValidation(issue);
     }
 
     // MODEL_SPEC.md §15: mandatory, no default anywhere in the engine.
@@ -224,6 +255,18 @@ export function StaatEnLastenForm({ derivedTierByCondition }: StaatEnLastenFormP
           }))}
           placeholder={renovationStrategyDerivedOptionLabel(derivedRenovationTier)}
           {...field("renovationStrategyOverride")}
+        />
+        <NumberField
+          label="Doorlooptijd van de verbouwing"
+          unit="maanden"
+          optional
+          placeholder={defaultDurationMonths === null ? "" : String(defaultDurationMonths)}
+          hint={
+            defaultDurationMonths === null
+              ? "Hoe lang duurt de verbouwing? Zolang er verbouwd wordt is er geen huurinkomen; die maanden tellen mee in het eerste jaar, bovenop de aanloopperiode om een huurder te vinden."
+              : `Laat leeg om te rekenen met ${defaultDurationMonths} ${defaultDurationMonths === 1 ? "maand" : "maanden"}, de schatting bij dit renovatiescenario. Weet u het beter — bijvoorbeeld uit een offerte — vul het dan zelf in. Zolang er verbouwd wordt is er geen huurinkomen; die maanden tellen mee in het eerste jaar, bovenop de aanloopperiode om een huurder te vinden.`
+          }
+          {...field("renovationDurationMonths")}
         />
       </FieldGroup>
 

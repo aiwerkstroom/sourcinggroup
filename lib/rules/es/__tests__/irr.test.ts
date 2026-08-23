@@ -173,9 +173,9 @@ describe("scenario IRR (reference case, 10-year holding period)", () => {
   }
 
   const golden: Record<ScenarioId, number> = {
-    conservative: 0.02175059635133949,
-    base: 0.055436784474295564,
-    optimistic: 0.08640301656996599,
+    conservative: 0.019522793298820035,
+    base: 0.05239467195060571,
+    optimistic: 0.08283859450893945,
   };
 
   (Object.keys(golden) as ScenarioId[]).forEach((scenario) => {

@@ -157,10 +157,10 @@ describe("the reference case through all three options", () => {
 describe("existing behaviour is untouched - NL/EU was the implicit assumption", () => {
   const before = runEngine(referenceCase);
 
-  it("the reference case's anchor still lands exactly where it did: 3,8 at percentile 70", () => {
+  it("the reference case's anchor still lands exactly where it did: 3,6 at percentile 68", () => {
     const base = before.scenarioOutcomes!.find((o) => o.scenario === "base")!;
-    expect(base.score!.total).toBe(3.8);
-    expect(base.percentile).toBe(70);
+    expect(base.score!.total).toBe(3.6);
+    expect(base.percentile).toBe(68);
   });
 
   it("an input with no taxResidency computes identically to one saying Nederland", () => {

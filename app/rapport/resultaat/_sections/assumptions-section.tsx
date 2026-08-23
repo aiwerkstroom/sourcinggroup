@@ -38,11 +38,16 @@
 import type { AssumptionCategory } from "@/lib/copy/es/assumption-disclosures";
 import { ASSUMPTION_CATEGORY_ORDER, describeAssumption } from "@/lib/copy/es/assumption-disclosures";
 import { translateListingFieldsFromListingNote } from "@/lib/copy/es/listing-field-provenance-disclosures";
-import { translateRenovationTierProvenanceNote } from "@/lib/copy/es/renovation-tier-provenance-disclosures";
+import {
+  translateRenovationDurationProvenanceNote,
+  translateRenovationTierProvenanceNote,
+  translateRenovationVacancyOverflowNote,
+} from "@/lib/copy/es/renovation-tier-provenance-disclosures";
 import type {
   ListingFieldProvenanceReport,
   Parameter,
   ParameterProvenance,
+  RenovationDurationProvenance,
   RenovationStrategyId,
   RenovationTierProvenance,
 } from "@/lib/rules/es/types";
@@ -55,6 +60,11 @@ export interface AssumptionsSectionProps {
   renovationTierProvenance: RenovationTierProvenance | null;
   /** The tier actually used, needed to contrast against the derived one. */
   renovationStrategy: RenovationStrategyId;
+  /** Fase C stap 2. Null when nobody was asked for a duration - see EngineResult. */
+  renovationDurationProvenance: RenovationDurationProvenance | null;
+  /** The renovation's two vacancy periods actually used, in months. */
+  renovationDurationMonths: number;
+  renovationLeaseUpMonths: number;
 }
 
 const PROVENANCE_LABEL_NL: Readonly<Record<ParameterProvenance, string>> = {
@@ -112,6 +122,9 @@ export function AssumptionsSection({
   listingFieldProvenance,
   renovationTierProvenance,
   renovationStrategy,
+  renovationDurationProvenance,
+  renovationDurationMonths,
+  renovationLeaseUpMonths,
 }: AssumptionsSectionProps) {
   const byCategory = new Map<AssumptionCategory, Parameter<unknown>[]>();
   for (const param of assumptionsUsed) {
@@ -125,6 +138,14 @@ export function AssumptionsSection({
   const renovationTierNote = translateRenovationTierProvenanceNote(
     renovationTierProvenance,
     renovationStrategy,
+  );
+  const renovationDurationNote = translateRenovationDurationProvenanceNote(
+    renovationDurationProvenance,
+    renovationDurationMonths,
+  );
+  const vacancyOverflowNote = translateRenovationVacancyOverflowNote(
+    renovationDurationMonths,
+    renovationLeaseUpMonths,
   );
 
   return (
@@ -149,6 +170,18 @@ export function AssumptionsSection({
 
       {renovationTierNote !== null ? (
         <p className="text-text-faint max-w-prose text-xs leading-relaxed">{renovationTierNote}</p>
+      ) : null}
+
+      {renovationDurationNote !== null ? (
+        <p className="text-text-faint max-w-prose text-xs leading-relaxed">
+          {renovationDurationNote}
+        </p>
+      ) : null}
+
+      {vacancyOverflowNote !== null ? (
+        <p className="border-border text-text-muted max-w-prose rounded-md border border-dashed px-4 py-3 text-sm leading-relaxed">
+          {vacancyOverflowNote}
+        </p>
       ) : null}
 
       {listingFieldsNote !== null ? (

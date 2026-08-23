@@ -258,6 +258,13 @@ export interface ModelSelections {
   rentalStrategy: RentalStrategy;
   /** Excel "Prefered deal type" (D18) -> renovation strategy. */
   renovationStrategy: RenovationStrategyId;
+  /**
+   * How long the renovation takes, in months (fase C stap 2). Omitted
+   * means "use RENOVATION_DURATION_MONTHS_BY_TIER's figure for
+   * renovationStrategy" - the tier's own default - not zero. Supply it
+   * only to override that default with a customer's own figure.
+   */
+  renovationDurationMonths?: number;
   /** Excel "Selected Strategy" (D117). */
   financingStrategy: FinancingStrategyId;
   /**
@@ -363,6 +370,14 @@ export interface EngineInput {
    * where there is no derivation to report on.
    */
   renovationTierProvenance?: RenovationTierProvenance;
+  /**
+   * Optional, same passthrough treatment as renovationTierProvenance
+   * (fase C stap 2): set by buildEngineInput() to record whether
+   * selections.renovationDurationMonths came from the customer or from
+   * RENOVATION_DURATION_MONTHS_BY_TIER. Omitted by callers that supply no
+   * duration and take the tier default silently.
+   */
+  renovationDurationProvenance?: RenovationDurationProvenance;
 }
 
 /** One row of the income model (long-term or short-term). */
@@ -393,7 +408,19 @@ export interface RenovationStrategyResult {
   rentMultiplier: number;
   maintenanceFactor: number;
   utilitiesEfficiency: number;
+  /**
+   * Lease-up vacancy *after* the work is done - finding a tenant. Not the
+   * renovation itself: that is durationMonths below, and the two are
+   * additive (fase C stap 2).
+   */
   timeToRentMonths: number;
+  /**
+   * How long the work itself takes, in months (fase C stap 2).
+   * RENOVATION_DURATION_MONTHS_BY_TIER's figure for this tier, unless the
+   * customer supplied their own. Zero was the model's implicit assumption
+   * until this existed.
+   */
+  durationMonths: number;
   withinMaxRenovationBudget: boolean;
 }
 
@@ -906,6 +933,13 @@ export interface EngineResult {
    * independently-absent fields.
    */
   renovationTierProvenance: RenovationTierProvenance | null;
+  /**
+   * How selectedRenovation.durationMonths was arrived at (fase C stap 2),
+   * or null when EngineInput.renovationDurationProvenance was omitted -
+   * the tier default was used and nobody was asked. Same null-rather-than-
+   * empty-constant treatment as renovationTierProvenance.
+   */
+  renovationDurationProvenance: RenovationDurationProvenance | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -1323,6 +1357,26 @@ export interface RenovationTierProvenance {
   status: DerivedFieldStatus;
   /** What deriveRenovationStrategy() says for the supplied maintenanceCondition, whether or not it was used. */
   derivedValue: RenovationStrategyId;
+}
+
+/**
+ * Provenance of the renovation's own duration (fase C stap 2), the months
+ * of vacancy that run *before* RenovationStrategyResult.timeToRentMonths'
+ * lease-up period. Same shape and the same reasoning as
+ * RenovationTierProvenance above: derivedValue is
+ * RENOVATION_DURATION_MONTHS_BY_TIER's figure for whichever tier applies,
+ * carried under both statuses so the report can contrast a customer's
+ * figure against the model's.
+ *
+ * The derived figure follows the tier, including a tier the customer
+ * overrode - the two overrides are independent, and a customer who picks
+ * "grondig" and leaves the duration alone should get grondig's duration,
+ * not the one their maintenanceCondition would have implied.
+ */
+export interface RenovationDurationProvenance {
+  status: DerivedFieldStatus;
+  /** RENOVATION_DURATION_MONTHS_BY_TIER's months for the tier in force, whether or not it was used. */
+  derivedValue: number;
 }
 
 /**

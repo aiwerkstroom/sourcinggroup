@@ -18,15 +18,15 @@ import { ScoreRuler } from "../score-ruler";
  * have - which is what makes this checkable at all without a browser.
  *
  * The reference case's own dimension scores (cashflow 1.5, debtResilience
- * 3.3, returnVsRequirement 6.5, feasibility 3.0, dataCertainty 2.8) are the
+ * 3.3, returnVsRequirement 6.2, feasibility 3.0, dataCertainty 2.4) are the
  * same figures tsg-score-section.test.tsx and engine.test.ts already pin.
  */
 const REFERENCE_DIMENSIONS: Record<TsgScoreDimension, number> = {
   cashflow: 1.5,
   debtResilience: 3.3,
-  returnVsRequirement: 6.5,
+  returnVsRequirement: 6.2,
   feasibility: 3,
-  dataCertainty: 2.8,
+  dataCertainty: 2.4,
 };
 
 /** Pulls every `data-tick="N" ... x1="M"` pair out of the rendered SVG. */

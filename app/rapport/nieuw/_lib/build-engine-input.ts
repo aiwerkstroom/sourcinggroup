@@ -36,6 +36,7 @@
 
 import {
   deriveFinancingStrategy,
+  resolveRenovationDuration,
   resolveRenovationTier,
 } from "@/lib/rules/es/derive-selections";
 import { EMPTY_LISTING_FIELD_PROVENANCE } from "@/lib/rules/es/types";
@@ -211,6 +212,17 @@ export function buildEngineInput(data: WizardData): EngineInput {
         : (staatEnLasten.renovationStrategyOverride as RenovationStrategyId),
   });
 
+  // Fase C stap 2: the duration follows the tier actually in force (which
+  // may be the customer's override), and "" is the step's own "use the
+  // tier's default" sentinel - the same shape as the tier override above.
+  const renovationDuration = resolveRenovationDuration({
+    tier: renovationTier.strategy,
+    override:
+      staatEnLasten.renovationDurationMonths === ""
+        ? undefined
+        : number(staatEnLasten.renovationDurationMonths, "renovationDurationMonths"),
+  });
+
   return {
     property: {
       // PropertyInput.name is required by the type but is a label, not an
@@ -265,6 +277,16 @@ export function buildEngineInput(data: WizardData): EngineInput {
         : 1,
       rentalStrategy,
       renovationStrategy: renovationTier.strategy,
+      // Only when the customer actually supplied one. Passing the
+      // resolved figure unconditionally would make the engine's
+      // renovationDurationProvided flag always true, which would drop
+      // RENOVATION_DURATION_MONTHS_BY_TIER out of placeholdersUsed even
+      // when it is exactly what drove the number - the opposite of what
+      // the provenance is for.
+      renovationDurationMonths:
+        renovationDuration.provenance.status === "customerChosen"
+          ? renovationDuration.months
+          : undefined,
       financingStrategy: deriveFinancingStrategy(preferredLtv),
       residency: FIXED_RESIDENCY,
       taxResidency,
@@ -288,5 +310,6 @@ export function buildEngineInput(data: WizardData): EngineInput {
     },
     listingFieldProvenance: computeListingFieldProvenance(pand, data.listingOrigin),
     renovationTierProvenance: renovationTier.provenance,
+    renovationDurationProvenance: renovationDuration.provenance,
   };
 }

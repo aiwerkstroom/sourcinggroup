@@ -2,11 +2,13 @@ import { describe, expect, it } from "vitest";
 import {
   deriveFinancingStrategy,
   deriveRenovationStrategy,
+  resolveRenovationDuration,
   resolveRenovationTier,
 } from "../derive-selections";
 import {
   FINANCING_STRATEGIES,
   FINANCING_TIER_SELECTION_TIE_BREAK,
+  RENOVATION_DURATION_MONTHS_BY_TIER,
   RENOVATION_TIER_BY_MAINTENANCE_CONDITION,
 } from "../parameters";
 import { RENOVATION_STRATEGIES } from "../parameters";
@@ -153,5 +155,55 @@ describe("resolveRenovationTier - the tier plus how it was arrived at (fase C st
     for (const field of ["capex", "rentMultiplier", "maintenanceFactor", "utilitiesEfficiency"] as const) {
       expect(RENOVATION_STRATEGIES[strategy][field].provenance).toBe("PLACEHOLDER");
     }
+  });
+});
+
+/**
+ * Fase C stap 2. The interesting part is not the lookup but which tier it
+ * follows: the duration must track the tier actually in force, including
+ * one the customer overrode, or a "grondig" override would silently keep
+ * the duration their state-of-repair answer implied.
+ */
+describe("resolveRenovationDuration - months plus how they were arrived at (fase C stap 2)", () => {
+  it("falls back to the tier's own default, and says so, when no override is given", () => {
+    for (const tier of ["minimal", "light", "heavy"] as const) {
+      const { months, provenance } = resolveRenovationDuration({ tier });
+      expect(months).toBe(RENOVATION_DURATION_MONTHS_BY_TIER.value[tier]);
+      expect(provenance.status).toBe("derived");
+      expect(provenance.derivedValue).toBe(RENOVATION_DURATION_MONTHS_BY_TIER.value[tier]);
+    }
+  });
+
+  it("uses the customer's figure, and marks it as theirs, when one is given", () => {
+    const { months, provenance } = resolveRenovationDuration({ tier: "light", override: 6 });
+    expect(months).toBe(6);
+    expect(provenance.status).toBe("customerChosen");
+    expect(provenance.derivedValue).toBe(RENOVATION_DURATION_MONTHS_BY_TIER.value.light);
+  });
+
+  it("follows the tier in force, not the one a maintenanceCondition would have implied", () => {
+    // The scenario this guards: "redelijke staat" derives light (3 months),
+    // the customer overrides the tier to heavy and leaves the duration
+    // alone. They must get heavy's default, not light's.
+    const tier = resolveRenovationTier({ maintenanceCondition: "average", override: "heavy" });
+    expect(tier.provenance.derivedValue).toBe("light");
+    const duration = resolveRenovationDuration({ tier: tier.strategy });
+    expect(duration.months).toBe(RENOVATION_DURATION_MONTHS_BY_TIER.value.heavy);
+    expect(duration.months).not.toBe(RENOVATION_DURATION_MONTHS_BY_TIER.value.light);
+  });
+
+  it("accepts zero as a real answer - a property needing no work at all", () => {
+    const { months, provenance } = resolveRenovationDuration({ tier: "minimal", override: 0 });
+    expect(months).toBe(0);
+    expect(provenance.status).toBe("customerChosen");
+  });
+
+  it("the per-tier defaults rise with the scope of work, and are PLACEHOLDER", () => {
+    const v = RENOVATION_DURATION_MONTHS_BY_TIER.value;
+    expect(v.minimal).toBeLessThan(v.light);
+    expect(v.light).toBeLessThan(v.heavy);
+    // A claim about how long real building work takes, with no source -
+    // the same standing as timeToRentMonths, which it sits alongside.
+    expect(RENOVATION_DURATION_MONTHS_BY_TIER.provenance).toBe("PLACEHOLDER");
   });
 });

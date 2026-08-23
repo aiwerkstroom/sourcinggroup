@@ -12,10 +12,16 @@
  * any other caller of runEngine() already supplies explicitly.
  */
 
-import { FINANCING_STRATEGIES, FINANCING_TIER_SELECTION_TIE_BREAK, RENOVATION_TIER_BY_MAINTENANCE_CONDITION } from "./parameters";
+import {
+  FINANCING_STRATEGIES,
+  FINANCING_TIER_SELECTION_TIE_BREAK,
+  RENOVATION_DURATION_MONTHS_BY_TIER,
+  RENOVATION_TIER_BY_MAINTENANCE_CONDITION,
+} from "./parameters";
 import type {
   FinancingStrategyId,
   MaintenanceCondition,
+  RenovationDurationProvenance,
   RenovationStrategyId,
   RenovationTierProvenance,
 } from "./types";
@@ -58,6 +64,35 @@ export function resolveRenovationTier(args: {
   }
   return {
     strategy: args.override,
+    provenance: { status: "customerChosen", derivedValue },
+  };
+}
+
+/**
+ * The renovation's duration in months, plus how it was arrived at (fase C
+ * stap 2). Mirrors resolveRenovationTier() exactly: the customer's figure
+ * wins when given, RENOVATION_DURATION_MONTHS_BY_TIER's default applies
+ * otherwise, and the default is reported either way.
+ *
+ * Takes the tier rather than the maintenanceCondition on purpose. The two
+ * overrides are independent, and the duration must follow the tier
+ * *actually in force* - a customer who overrode the tier to "heavy" and
+ * left the duration alone should get heavy's five months, not the three
+ * their "redelijke staat" answer would have implied. Callers therefore
+ * resolve the tier first and pass its result in.
+ */
+export function resolveRenovationDuration(args: {
+  /** The tier in force - resolveRenovationTier()'s own `strategy`, not the derived one. */
+  tier: RenovationStrategyId;
+  /** The wizard's optional explicit figure; absent means "use the tier's default". */
+  override?: number;
+}): { months: number; provenance: RenovationDurationProvenance } {
+  const derivedValue = RENOVATION_DURATION_MONTHS_BY_TIER.value[args.tier];
+  if (args.override === undefined) {
+    return { months: derivedValue, provenance: { status: "derived", derivedValue } };
+  }
+  return {
+    months: args.override,
     provenance: { status: "customerChosen", derivedValue },
   };
 }

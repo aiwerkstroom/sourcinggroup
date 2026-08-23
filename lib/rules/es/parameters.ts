@@ -1658,6 +1658,38 @@ export const RENOVATION_TIER_BY_MAINTENANCE_CONDITION: PlaceholderParameter<
 };
 
 /**
+ * How long each renovation tier takes to carry out (fase C stap 2), in
+ * months, before the lease-up period RENOVATION_STRATEGIES' own
+ * timeToRentMonths already covers.
+ *
+ * The two are additive and describe different things. timeToRentMonths is
+ * documented to the customer as the vacancy *after* the work is finished
+ * ("het pand staat X maanden leeg voordat het verhuurd wordt" -
+ * placeholder-disclosures.ts) - i.e. finding a tenant. The renovation
+ * itself was modelled as taking no time at all: the workbook has no
+ * duration column, and projection.ts prorated year 1 by the lease-up
+ * alone. That understated year 1 for every property, which is what this
+ * parameter fixes.
+ *
+ * PLACEHOLDER, and it has to be: this is a claim about how long real
+ * building work takes, and no external source is cited for these three
+ * figures. They are ordered by the scope of work each tier describes and
+ * nothing more - the same standing as timeToRentMonths itself, which is
+ * PLACEHOLDER for exactly the same reason. Treat a customer's own figure
+ * as strictly better information, which is why the wizard asks for one
+ * (RenovationDurationProvenance).
+ */
+export const RENOVATION_DURATION_MONTHS_BY_TIER: PlaceholderParameter<
+  Readonly<Record<RenovationStrategyId, number>>
+> = {
+  name: "RENOVATION_DURATION_MONTHS_BY_TIER",
+  value: { minimal: 1, light: 3, heavy: 5 },
+  provenance: "PLACEHOLDER",
+  reasoning:
+    "Claims a real-world duration for building work at each RENOVATION_STRATEGIES tier; no external source cited, and the workbook models no renovation duration at all (it has a capex column and a lease-up column, no doorlooptijd). Ordered by each tier's own described scope - minimal is cosmetic, heavy touches installations or layout - and deliberately kept to whole months, because the year-1 proration it feeds is monthly. Additive to timeToRentMonths, which covers the separate lease-up period after the work is done.",
+};
+
+/**
  * Which financing tier wins when the customer's preferredLtv sits exactly
  * midway between two of FINANCING_STRATEGIES' three LTVs (0.6/0.7/0.75) -
  * at 0.65 and 0.725. Off the midpoint, "nearest LTV" needs no further rule
@@ -1791,6 +1823,7 @@ export const ALL_PARAMETERS: ReadonlyArray<Parameter<unknown>> = [
   FREE_TIER_BAND_RENOVATION_TIER_FAVOURABLE,
   FREE_TIER_INDICATIVE_LABEL_THRESHOLDS,
   RENOVATION_TIER_BY_MAINTENANCE_CONDITION,
+  RENOVATION_DURATION_MONTHS_BY_TIER,
   FINANCING_TIER_SELECTION_TIE_BREAK,
   RENT_OVERRIDE_SIGNIFICANT_DEVIATION_THRESHOLD,
 ];

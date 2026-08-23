@@ -130,6 +130,8 @@ Dat is een zwak-voldoende: het rendement is er, maar de deal is niet haalbaar me
 
 > **Voetnoot:** de cashflow- en datazekerheidsscore hierboven zijn herrekend via de curves in §2, die leidend zijn — de eerder gepubliceerde versie van deze tabel gaf 3,1 en 3,6 (totaal 4,4), wat niet uit §2 volgde. Verder zijn dit de waarden ten tijde van het schrijven van deze spec, vóór de correctie in MODEL_SPEC.md §15 die gastos de comunidad als verplichte, niet-standaard last toevoegde. Sindsdien liggen de engine-uitkomsten voor deze referentiecasus lager (−€ 311/maand, DSCR 0,832, IRR +1,54% surplus, 13 placeholders); de live testuitkomst komt daarmee op een totaalscore van 3,8, niet 4,1. Zie `lib/rules/es/__tests__/score.test.ts`.
 
+> **Voetnoot (fase C stap 2):** hetzelfde is opnieuw gebeurd met de renovatieduur. Het model rekende de verbouwing als instantaan — de werkbladen kennen wel een CapEx-kolom en een aanlooptijd, maar geen doorlooptijd — waardoor jaar 1 volle huur telde over maanden waarin het pand een bouwplaats was. `RENOVATION_DURATION_MONTHS_BY_TIER` (PLACEHOLDER, 1/3/5 maanden) is daarbij opgeteld bij de bestaande aanloopleegstand. Voor deze referentiecasus (licht, 3 + 2 maanden) daalt de bruto huur in jaar 1 van € 23.700,60 naar € 16.590,42, de IRR van 5,54% naar 5,24%, en komt er één placeholder bij (13 → 14, datazekerheid 2,8 → 2,4). Totaalscore **3,6** op percentiel **68**, waar dat 3,8 op 70 was. De referentieverdeling uit §5 is opnieuw gegenereerd zoals "Verversing" voorschrijft; min/mediaan/max gaan van 0,4 / 2,7 / 6,8 naar 0,3 / 2,6 / 6,8.
+
 ## 5. Percentiel
 
 ### Referentieverdeling
@@ -160,6 +162,8 @@ De referentieverdeling wordt opnieuw gegenereerd wanneer:
 - parameters in parameters.ts veranderen (bronupdate, herclassificatie)
 - de scoringscurves of de weging worden bijgesteld
 - de crawl voldoende echte casussen heeft om de synthetische set te vervangen
+
+Toegepast bij fase C stap 2 (renovatieduur): een nieuwe PLACEHOLDER in parameters.ts die elke casus raakt, dus zowel de verdeling als de referentiecasus zijn herrekend. Zie de voetnoot bij §4.
 
 Leg het tijdstip van generatie vast in de verdeling zelf.
 

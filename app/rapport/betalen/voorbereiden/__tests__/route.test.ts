@@ -58,6 +58,7 @@ const validCase: WizardData = {
   staatEnLasten: {
     maintenanceCondition: "average",
     renovationStrategyOverride: "",
+    renovationDurationMonths: "",
     communityFeesAnnual: "900",
     cadastralSuelo: "",
     cadastralConstruccion: "",

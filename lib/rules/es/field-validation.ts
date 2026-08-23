@@ -52,7 +52,9 @@ export type FieldValidationKey =
   | "occupancyLongTermMustBeFraction"
   | "occupancyShortTermMustBeFraction"
   | "upcomingDerramasAmountMustBeZeroOrPositive"
-  | "freeTierCommunityFeesMustBeZeroOrPositive";
+  | "freeTierCommunityFeesMustBeZeroOrPositive"
+  | "renovationDurationMonthsOutOfRange"
+  | "renovationDurationMonthsMustBeWholeMonths";
 
 export function isFiniteNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
@@ -239,6 +241,27 @@ export function checkUpcomingDerramasAmount(value: unknown): FieldValidationKey 
  * report" - so reusing that copy would tell the customer their blank
  * answer is wrong when it is not.
  */
+/**
+ * Renovation duration in months (fase C stap 2). Optional - blank means
+ * "use RENOVATION_DURATION_MONTHS_BY_TIER's figure for the chosen tier" -
+ * and when given it must be a whole number of months from 0 to 12.
+ *
+ * Whole months because the year-1 proration it feeds counts months, not
+ * fractions of one (projection.ts). Capped at 12 because only year 1 is
+ * prorated: a longer renovation spills into year 2, which the projection
+ * does not model, and silently truncating that would overstate the
+ * outcome. The report discloses the spill when duration + lease-up still
+ * exceeds twelve months together, which this per-field cap cannot catch
+ * on its own.
+ */
+export function checkRenovationDurationMonths(value: unknown): FieldValidationKey | null {
+  if (value === undefined) return null;
+  if (!isFiniteNumber(value) || value < 0 || value > 12) {
+    return "renovationDurationMonthsOutOfRange";
+  }
+  return Number.isInteger(value) ? null : "renovationDurationMonthsMustBeWholeMonths";
+}
+
 export function checkFreeTierCommunityFeesAnnual(value: unknown): FieldValidationKey | null {
   if (value === undefined) return null;
   return !isFiniteNumber(value) || value < 0 ? "freeTierCommunityFeesMustBeZeroOrPositive" : null;

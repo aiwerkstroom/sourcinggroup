@@ -82,17 +82,17 @@ describe("scenario outcome (reference case, 10-year holding period)", () => {
     expect(outcome.years).toHaveLength(10);
 
     const y1 = outcome.years[0]!;
-    expect(y1.cashflowAfterTax).toBeCloseTo(-8094.569177, 4);
-    expect(y1.cumulativeCashflow).toBeCloseTo(-8094.569177, 4);
+    expect(y1.cashflowAfterTax).toBeCloseTo(-14635.934777, 4);
+    expect(y1.cumulativeCashflow).toBeCloseTo(-14635.934777, 4);
     // 330000 x 1.05^1 = 346500.
     expect(y1.propertyValue).toBeCloseTo(346500, 4);
     expect(y1.mortgageBalance).toBeCloseTo(235396.180058, 4);
     expect(y1.equityBuilt).toBeCloseTo(346500 - 235396.180058, 4);
 
     const y10 = outcome.years[9]!;
-    // Cumulative operating cashflow after 10 years: -22406.542135 (never
+    // Cumulative operating cashflow after 10 years: -28947.907735 (never
     // recoups the 197990 equity - see the payback test below).
-    expect(y10.cumulativeCashflow).toBeCloseTo(-22406.542135, 3);
+    expect(y10.cumulativeCashflow).toBeCloseTo(-28947.907735, 3);
     // 330000 x 1.05^10.
     expect(y10.propertyValue).toBeCloseTo(330000 * 1.05 ** 10, 4);
   });
@@ -101,9 +101,9 @@ describe("scenario outcome (reference case, 10-year holding period)", () => {
     ScenarioId,
     { totalReturn: number; paybackYear: null }
   > = {
-    conservative: { totalReturn: 0.286934, paybackYear: null },
-    base: { totalReturn: 0.769539, paybackYear: null },
-    optimistic: { totalReturn: 1.259109, paybackYear: null },
+    conservative: { totalReturn: 0.260172, paybackYear: null },
+    base: { totalReturn: 0.7365, paybackYear: null },
+    optimistic: { totalReturn: 1.223582, paybackYear: null },
   };
 
   (Object.keys(goldenTotals) as ScenarioId[]).forEach((scenario) => {
@@ -589,33 +589,33 @@ describe("scenario outcome (reference case, 10-year holding period)", () => {
         dimensions: {
           cashflow: 0.0, // -799.46/month, at or below the -500 anchor
           debtResilience: 0.8, // DSCR 0.583, just above the 0.50 floor
-          returnVsRequirement: 2.3, // IRR 2.175% - 4% = -1.825pp
+          returnVsRequirement: 2.0, // IRR 1.952% - 4% = -2.048pp
           feasibility: 3.0, // equity short (197.990 vs 115.000), budget fine
-          dataCertainty: 2.8, // 13 placeholders
+          dataCertainty: 2.4, // 14 placeholders
         },
-        total: 1.8,
+        total: 1.7,
         percentile: 22,
       },
       base: {
         dimensions: {
           cashflow: 1.5, // -311.14/month
           debtResilience: 3.3, // DSCR 0.832
-          returnVsRequirement: 6.5, // IRR 5.544% - 4% = +1.544pp
+          returnVsRequirement: 6.2, // IRR 5.239% - 4% = +1.239pp
           feasibility: 3.0,
-          dataCertainty: 2.8,
+          dataCertainty: 2.4,
         },
-        total: 3.8,
-        percentile: 70,
+        total: 3.6,
+        percentile: 68,
       },
       optimistic: {
         dimensions: {
           cashflow: 5.4, // +172.06/month
           debtResilience: 5.9, // DSCR 1.094
-          returnVsRequirement: 8.7, // IRR 8.640% - 4% = +4.640pp
+          returnVsRequirement: 8.6, // IRR 8.284% - 4% = +4.284pp
           feasibility: 3.0,
-          dataCertainty: 2.8,
+          dataCertainty: 2.4,
         },
-        total: 5.6,
+        total: 5.5,
         percentile: 94,
       },
     };
@@ -657,10 +657,10 @@ describe("scenario outcome (reference case, 10-year holding period)", () => {
 
     it("the data-certainty dimension is driven by this outcome's own placeholdersUsed, not a global tally", () => {
       const outcome = outcomeFor("base");
-      expect(outcome.placeholdersUsed).toHaveLength(13);
+      expect(outcome.placeholdersUsed).toHaveLength(14);
       // Same count the dimension was scored from - the score reads the
       // list this outcome built, not a second, independent count.
-      expect(outcome.score!.dimensions.dataCertainty).toBe(dataCertaintyScore(13));
+      expect(outcome.score!.dimensions.dataCertainty).toBe(dataCertaintyScore(14));
     });
 
     it("the percentile is resolved against the committed distribution, not a freshly generated one", () => {
@@ -675,7 +675,7 @@ describe("scenario outcome (reference case, 10-year holding period)", () => {
       const outcome = outcomeFor("base");
       expect(
         `Deze investering scoort in het ${outcome.percentile}ste percentiel van ons modelbereik.`,
-      ).toBe("Deze investering scoort in het 70ste percentiel van ons modelbereik.");
+      ).toBe("Deze investering scoort in het 68ste percentiel van ons modelbereik.");
     });
 
     it("a different investor scores the same property differently: the hurdle rate moves the return dimension", () => {
@@ -726,10 +726,10 @@ describe("scenario outcome (reference case, 10-year holding period)", () => {
         maxRenovationBudget: referenceCase.constraints.maxRenovationBudget,
         renovationCost: engineResult.selectedRenovation.capex,
       });
-      // IRR 5.544% against an 8% hurdle is a -2.456pp shortfall: 1.5, not
-      // the 6.5 the reference case's 4% hurdle produced. Total 2.3.
-      expect(demanding.score!.dimensions.returnVsRequirement).toBe(1.5);
-      expect(demanding.score!.total).toBe(2.3);
+      // IRR 5.239% against an 8% hurdle is a -2.761pp shortfall: 1.2, not
+      // the 6.2 the reference case's 4% hurdle produced. Total 2.1.
+      expect(demanding.score!.dimensions.returnVsRequirement).toBe(1.2);
+      expect(demanding.score!.total).toBe(2.1);
       // Every other dimension is untouched - the hurdle only enters §2.3.
       const reference = outcomeFor("base");
       expect(demanding.score!.dimensions.cashflow).toBe(
@@ -808,15 +808,15 @@ describe("scenario outcome (reference case, 10-year holding period)", () => {
       expect(outcome.percentile).toBeNull();
       // Everything else is still computed as before - scoring is additive.
       expect(outcome.placeholdersUsed.length).toBeGreaterThan(0);
-      expect(outcome.totalReturn).toBeCloseTo(0.769539, 4);
+      expect(outcome.totalReturn).toBeCloseTo(0.7365, 4);
     });
 
     it("omitting the hurdle rate lowers data certainty but raises the return score, and both land in the total", () => {
       // Two effects at once, in opposite directions:
-      // DEFAULT_MIN_REQUIRED_RETURN joins placeholdersUsed (13 -> 14, so
-      // dataCertainty 2.8 -> 2.4), while the 0% fallback hurdle turns the
-      // 5.544% IRR into a +5.544pp surplus (returnVsRequirement 6.5 ->
-      // 9.1). Net: total 3.8 -> 4.5, percentile 70 -> 83.
+      // DEFAULT_MIN_REQUIRED_RETURN joins placeholdersUsed (14 -> 15, so
+      // dataCertainty 2.4 -> 2.0), while the 0% fallback hurdle turns the
+      // 5.239% IRR into a +5.239pp surplus (returnVsRequirement 6.2 ->
+      // 9.0). Net: total 3.6 -> 4.4, percentile 68 -> 82.
       // That the total still rises here is a coincidence of this
       // property's own numbers (the return swing outweighs the
       // data-certainty drop for THIS deal) - the two dimensions move in
@@ -865,11 +865,11 @@ describe("scenario outcome (reference case, 10-year holding period)", () => {
         maxRenovationBudget: referenceCase.constraints.maxRenovationBudget,
         renovationCost: engineResult.selectedRenovation.capex,
       });
-      expect(outcome.placeholdersUsed).toHaveLength(14);
-      expect(outcome.score!.dimensions.dataCertainty).toBe(2.4);
-      expect(outcome.score!.dimensions.returnVsRequirement).toBe(9.1);
-      expect(outcome.score!.total).toBe(4.5);
-      expect(outcome.percentile).toBe(83);
+      expect(outcome.placeholdersUsed).toHaveLength(15);
+      expect(outcome.score!.dimensions.dataCertainty).toBe(2.0);
+      expect(outcome.score!.dimensions.returnVsRequirement).toBe(9.0);
+      expect(outcome.score!.total).toBe(4.4);
+      expect(outcome.percentile).toBe(82);
     });
   });
 });

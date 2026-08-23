@@ -65,7 +65,11 @@ export function runEngine(input: EngineInput): EngineResult {
   const rentalStrategies = rentalStrategyAvailability(property.hasTouristRentalLicense);
 
   const renovationStrategies = renovationStrategyTable(constraints);
-  const selectedRenovation = selectRenovation(selections.renovationStrategy, constraints);
+  const selectedRenovation = selectRenovation(
+    selections.renovationStrategy,
+    constraints,
+    selections.renovationDurationMonths,
+  );
 
   const income = buildIncomeModel({
     rentPerM2LongTerm: selections.rentPerM2LongTerm,
@@ -179,6 +183,7 @@ export function runEngine(input: EngineInput): EngineResult {
           usableAreaM2Provided: property.usableAreaM2 !== undefined,
           occupancyLongTermProvided: selections.occupancyLongTerm !== undefined,
           occupancyShortTermProvided: selections.occupancyShortTerm !== undefined,
+          renovationDurationProvided: selections.renovationDurationMonths !== undefined,
           cadastralValueProvided: property.cadastralValue !== undefined,
           // cadastralValue, when given, also replaces the building-share
           // default (projection.ts: "takes priority over
@@ -218,5 +223,6 @@ export function runEngine(input: EngineInput): EngineResult {
     rentInputProvenance,
     listingFieldProvenance: input.listingFieldProvenance ?? EMPTY_LISTING_FIELD_PROVENANCE,
     renovationTierProvenance: input.renovationTierProvenance ?? null,
+    renovationDurationProvenance: input.renovationDurationProvenance ?? null,
   };
 }

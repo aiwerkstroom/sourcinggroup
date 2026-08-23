@@ -85,6 +85,7 @@ const computable: WizardData = {
   staatEnLasten: {
     maintenanceCondition: "average",
     renovationStrategyOverride: "",
+    renovationDurationMonths: "",
     communityFeesAnnual: "900",
     cadastralSuelo: "",
     cadastralConstruccion: "",
@@ -175,13 +176,13 @@ describe("an underpayment does not release the report", () => {
 
     expect(response.status).toBe(200);
 
-    // The anchor, straight out of the release route: base scenario, 3.8
-    // at percentile 70, the pair engine.test.ts pins against the engine.
+    // The anchor, straight out of the release route: base scenario, 3.6
+    // at percentile 68, the pair engine.test.ts pins against the engine.
     const base = body.result.scenarioOutcomes.find(
       (outcome: { scenario: string }) => outcome.scenario === "base",
     );
-    expect(base.score.total).toBe(3.8);
-    expect(base.percentile).toBe(70);
+    expect(base.score.total).toBe(3.6);
+    expect(base.percentile).toBe(68);
     expect(await readPendingInput(token)).toBeNull();
   });
 });

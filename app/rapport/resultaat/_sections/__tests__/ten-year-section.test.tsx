@@ -30,7 +30,7 @@ const GOLDEN: Record<
   }>
 > = {
   conservative: [
-    { yearNumber: 1, extrapolated: false, grossIncome: 19197.486000000004, noi: 9899.203044000004, cashflowAfterTax: -13125.850367477702, mortgageBalance: 235858.79956344826, equityBuilt: 107341.20043655174 },
+    { yearNumber: 1, extrapolated: false, grossIncome: 13438.240200000002, noi: 4600.696908000002, cashflowAfterTax: -18424.356503477706, mortgageBalance: 235858.79956344826, equityBuilt: 107341.20043655174 },
     { yearNumber: 2, extrapolated: false, grossIncome: 24188.832360000004, noi: 14320.467045528003, cashflowAfterTax: -8741.853319704018, mortgageBalance: 223658.52123563373, equityBuilt: 133269.47876436633 },
     { yearNumber: 3, extrapolated: false, grossIncome: 25156.385654400005, noi: 15044.017643136893, cashflowAfterTax: -8279.930118386827, mortgageBalance: 210872.31485705602, equityBuilt: 160332.80514294404 },
     { yearNumber: 4, extrapolated: false, grossIncome: 26036.859152304, noi: 15692.056118030347, cashflowAfterTax: -7884.164017397531, mortgageBalance: 197472.04076799203, equityBuilt: 188581.28403200803 },
@@ -42,7 +42,7 @@ const GOLDEN: Record<
     { yearNumber: 10, extrapolated: true, grossIncome: 31089.371465210723, noi: 19298.03191954625, cashflowAfterTax: -5871.164109870654, mortgageBalance: 102420.42812925737, equityBuilt: 386060.18589379627 },
   ],
   base: [
-    { yearNumber: 1, extrapolated: false, grossIncome: 23700.600000000002, noi: 14173.016000000001, cashflowAfterTax: -8094.569176896959, mortgageBalance: 235396.18005784432, equityBuilt: 111103.81994215568 },
+    { yearNumber: 1, extrapolated: false, grossIncome: 16590.420000000002, noi: 7631.650400000002, cashflowAfterTax: -14635.93477689696, mortgageBalance: 235396.18005784432, equityBuilt: 111103.81994215568 },
     { yearNumber: 2, extrapolated: false, grossIncome: 29862.756, noi: 19674.305728, cashflowAfterTax: -3737.309528004759, mortgageBalance: 222774.09866627472, equityBuilt: 141050.90133372528 },
     { yearNumber: 3, extrapolated: false, grossIncome: 31057.266240000004, noi: 20609.467123168004, cashflowAfterTax: -3094.1751604869705, mortgageBalance: 209611.5649028194, equityBuilt: 172404.68509718066 },
     { yearNumber: 4, extrapolated: false, grossIncome: 32144.2705584, noi: 21450.246739743357, cashflowAfterTax: -2531.564791931906, mortgageBalance: 195885.43767392848, equityBuilt: 205231.62482607158 },
@@ -54,7 +54,7 @@ const GOLDEN: Record<
     { yearNumber: 10, extrapolated: true, grossIncome: 38381.94008050706, noi: 26164.15069858324, cashflowAfterTax: 467.7869416239473, mortgageBalance: 100266.96133348384, equityBuilt: 437268.2655030722 },
   ],
   optimistic: [
-    { yearNumber: 1, extrapolated: false, grossIncome: 28677.72600000001, noi: 18682.352538000006, cashflowAfterTax: -4093.1121892132387, mortgageBalance: 235160.04723738314, equityBuilt: 114639.95276261686 },
+    { yearNumber: 1, extrapolated: false, grossIncome: 20074.40820000001, noi: 10767.300162000007, cashflowAfterTax: -11127.088689970431, mortgageBalance: 235160.04723738314, equityBuilt: 114639.95276261686 },
     { yearNumber: 2, extrapolated: false, grossIncome: 36133.93476000001, noi: 25372.63917879601, cashflowAfterTax: 1220.3583850542118, mortgageBalance: 222323.7443154121, equityBuilt: 148464.25568458796 },
     { yearNumber: 3, extrapolated: false, grossIncome: 37579.29215040001, noi: 26537.085781155525, cashflowAfterTax: 2054.382917976804, mortgageBalance: 208971.12653199828, equityBuilt: 184064.1534680018 },
     { yearNumber: 4, extrapolated: false, grossIncome: 38894.56737566401, noi: 27586.421728454156, cashflowAfterTax: 2791.5278961876043, mortgageBalance: 195081.42614445387, equityBuilt: 221535.97065554623 },
@@ -132,12 +132,13 @@ describe("TenYearTable - rendered against the reference case", () => {
     const outcomes = outcomesFromReferenceCase();
     const html = renderToStaticMarkup(<TenYearTable outcomes={outcomes} />);
 
-    // Base scenario, year 1: grossIncome 23.700,60 -> rounded to whole euros.
-    expect(html).toContain("€ 23.701");
-    // Optimistic, year 10: cashflowAfterTax 6.804,57.
+    // Base scenario, year 1: grossIncome 16.590,42 -> rounded to whole euros
+    // (was 23.700,60 before fase C stap 2's renovation vacancy).
+    expect(html).toContain("€ 16.590");
+    // Optimistic, year 10: cashflowAfterTax 6.804,57 - year 10 is untouched.
     expect(html).toContain("€ 6.805");
-    // Conservative, year 1: cashflowAfterTax -13.125,85.
-    expect(html).toContain("€ -13.126");
+    // Conservative, year 1: cashflowAfterTax -18.424,36.
+    expect(html).toContain("€ -18.424");
   });
 });
 
