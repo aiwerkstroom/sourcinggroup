@@ -87,6 +87,8 @@ export function runEngine(input: EngineInput): EngineResult {
     constraints,
     strategy: selections.financingStrategy,
     residency: selections.residency,
+    interestRateOverride: selections.interestRateOverride,
+    loanTermYearsOverride: selections.loanTermYearsOverride,
   });
 
   const acquisition = acquisitionCosts({
@@ -184,6 +186,8 @@ export function runEngine(input: EngineInput): EngineResult {
           occupancyLongTermProvided: selections.occupancyLongTerm !== undefined,
           occupancyShortTermProvided: selections.occupancyShortTerm !== undefined,
           renovationDurationProvided: selections.renovationDurationMonths !== undefined,
+          interestRateProvided: selections.interestRateOverride !== undefined,
+          loanTermYearsProvided: selections.loanTermYearsOverride !== undefined,
           cadastralValueProvided: property.cadastralValue !== undefined,
           // cadastralValue, when given, also replaces the building-share
           // default (projection.ts: "takes priority over
@@ -224,5 +228,6 @@ export function runEngine(input: EngineInput): EngineResult {
     listingFieldProvenance: input.listingFieldProvenance ?? EMPTY_LISTING_FIELD_PROVENANCE,
     renovationTierProvenance: input.renovationTierProvenance ?? null,
     renovationDurationProvenance: input.renovationDurationProvenance ?? null,
+    financingTermsProvenance: input.financingTermsProvenance ?? null,
   };
 }

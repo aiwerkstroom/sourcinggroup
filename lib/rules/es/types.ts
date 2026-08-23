@@ -265,6 +265,16 @@ export interface ModelSelections {
    * only to override that default with a customer's own figure.
    */
   renovationDurationMonths?: number;
+  /**
+   * The customer's own all-in annual interest rate, as a fraction (0.036
+   * for 3.6%) - fase C stap 3. Omitted means "derive it from the wanted
+   * LTV via FINANCING_STRATEGIES", which is what the model always did.
+   * All-in: whatever a bank quoted this borrower, non-resident surcharge
+   * included, so the engine adds no spread on top of it.
+   */
+  interestRateOverride?: number;
+  /** The customer's own mortgage term in years (fase C stap 3). Omitted means the tier's own term. */
+  loanTermYearsOverride?: number;
   /** Excel "Selected Strategy" (D117). */
   financingStrategy: FinancingStrategyId;
   /**
@@ -378,6 +388,12 @@ export interface EngineInput {
    * duration and take the tier default silently.
    */
   renovationDurationProvenance?: RenovationDurationProvenance;
+  /**
+   * Optional, same passthrough treatment as the two above (fase C stap 3):
+   * whether selections.interestRateOverride/loanTermYearsOverride came
+   * from the customer, and what the tier would otherwise have given.
+   */
+  financingTermsProvenance?: FinancingTermsProvenance;
 }
 
 /** One row of the income model (long-term or short-term). */
@@ -442,11 +458,43 @@ export interface SelectedFinancing {
   /** MAX(minLtv, MIN(maxLtv, preferredLtv ?? strategy LTV)) - Excel D119. */
   ltv: number;
   loanTermYears: number;
-  /** Base (resident) rate of the selected strategy - Excel D123. */
+  /**
+   * Base (resident) rate of the selected strategy - Excel D123.
+   *
+   * Except under a customer's own rate (fase C stap 3), where this carries
+   * their all-in figure and nonResidentSpread is zero - see that field.
+   * Everything downstream reads `interestRate + nonResidentSpread`, so the
+   * effective rate is right either way.
+   */
   interestRate: number;
-  /** 0 for residents; parameters.nonResidentInterestSpread otherwise. */
+  /**
+   * 0 for residents; NON_RESIDENT_INTEREST_SPREAD otherwise - and 0 again
+   * whenever the customer supplied their own rate (fase C stap 3). A rate
+   * a bank actually quoted a non-resident already prices that surcharge
+   * in; adding it once more would charge them for it twice.
+   */
   nonResidentSpread: number;
   mortgageAmount: number;
+}
+
+/**
+ * Provenance of the two financing terms the customer can now override
+ * (fase C stap 3). Until this existed both were derived silently from the
+ * wanted LTV via FINANCING_STRATEGIES, with no way for someone holding a
+ * real bank offer to use it and no way to see what the model had assumed.
+ *
+ * One record with a half per field rather than a single status, because
+ * the two are independently optional: a customer may know their rate and
+ * not have settled a term, or the reverse.
+ *
+ * Both derivedValues are what the *tier* would have given. For the rate
+ * that is the all-in figure (tier rate plus any non-resident spread), not
+ * the base rate, because that is the number the customer is shown and the
+ * number their own quote is comparable to.
+ */
+export interface FinancingTermsProvenance {
+  interestRate: { status: DerivedFieldStatus; derivedValue: number };
+  loanTermYears: { status: DerivedFieldStatus; derivedValue: number };
 }
 
 /**
@@ -940,6 +988,12 @@ export interface EngineResult {
    * empty-constant treatment as renovationTierProvenance.
    */
   renovationDurationProvenance: RenovationDurationProvenance | null;
+  /**
+   * How selectedFinancing's rate and term were arrived at (fase C stap 3),
+   * or null when EngineInput.financingTermsProvenance was omitted - the
+   * tier's own terms were used and nobody was asked.
+   */
+  financingTermsProvenance: FinancingTermsProvenance | null;
 }
 
 // ---------------------------------------------------------------------------

@@ -145,6 +145,15 @@ export function PaidReport({ result }: PaidReportProps) {
             renovationDurationProvenance={result.renovationDurationProvenance}
             renovationDurationMonths={result.selectedRenovation.durationMonths}
             renovationLeaseUpMonths={result.selectedRenovation.timeToRentMonths}
+            financingTermsProvenance={result.financingTermsProvenance}
+            financingTermsInForce={{
+              // interestRate + nonResidentSpread is the effective rate
+              // everywhere downstream, and is exactly the customer's own
+              // figure when they supplied one (the spread is zeroed then).
+              allInRate:
+                result.selectedFinancing.interestRate + result.selectedFinancing.nonResidentSpread,
+              loanTermYears: result.selectedFinancing.loanTermYears,
+            }}
           />
         ) : (
           <NoExitPlanningNotice sectionNumber={8} title="Aannames en bronnen" />

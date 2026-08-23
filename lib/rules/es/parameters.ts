@@ -1689,25 +1689,6 @@ export const RENOVATION_DURATION_MONTHS_BY_TIER: PlaceholderParameter<
     "Claims a real-world duration for building work at each RENOVATION_STRATEGIES tier; no external source cited, and the workbook models no renovation duration at all (it has a capex column and a lease-up column, no doorlooptijd). Ordered by each tier's own described scope - minimal is cosmetic, heavy touches installations or layout - and deliberately kept to whole months, because the year-1 proration it feeds is monthly. Additive to timeToRentMonths, which covers the separate lease-up period after the work is done.",
 };
 
-/**
- * Which financing tier wins when the customer's preferredLtv sits exactly
- * midway between two of FINANCING_STRATEGIES' three LTVs (0.6/0.7/0.75) -
- * at 0.65 and 0.725. Off the midpoint, "nearest LTV" needs no further rule
- * and adds no new real-world claim (the three LTVs it compares against
- * are already ESTIMATE product-tier definitions in FINANCING_STRATEGIES).
- *
- * ESTIMATE: a tie-break is a product convention (which way TSG rounds an
- * ambiguous preference), not a claim about the world. "higher": offering
- * more leverage on an exact tie costs the customer nothing to be shown
- * and matches how a person reading "0.65" would round it.
- */
-export const FINANCING_TIER_SELECTION_TIE_BREAK: EstimateParameter<"lower" | "higher"> = {
-  name: "FINANCING_TIER_SELECTION_TIE_BREAK",
-  value: "higher",
-  provenance: "ESTIMATE",
-  reasoning:
-    "Which of the two equidistant financing tiers wins when preferredLtv sits exactly at a midpoint (0.65 or 0.725) between FINANCING_STRATEGIES' three LTVs. A product convention, not a real-world claim: 'higher' offers the customer more leverage on an exact tie.",
-};
 
 // ---------------------------------------------------------------------------
 // Rent input provenance (interview round 2/3 follow-up)
@@ -1824,6 +1805,5 @@ export const ALL_PARAMETERS: ReadonlyArray<Parameter<unknown>> = [
   FREE_TIER_INDICATIVE_LABEL_THRESHOLDS,
   RENOVATION_TIER_BY_MAINTENANCE_CONDITION,
   RENOVATION_DURATION_MONTHS_BY_TIER,
-  FINANCING_TIER_SELECTION_TIE_BREAK,
   RENT_OVERRIDE_SIGNIFICANT_DEVIATION_THRESHOLD,
 ];

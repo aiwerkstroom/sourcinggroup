@@ -14,7 +14,6 @@
 
 import {
   FINANCING_STRATEGIES,
-  FINANCING_TIER_SELECTION_TIE_BREAK,
   RENOVATION_DURATION_MONTHS_BY_TIER,
   RENOVATION_TIER_BY_MAINTENANCE_CONDITION,
 } from "./parameters";
@@ -98,11 +97,9 @@ export function resolveRenovationDuration(args: {
 }
 
 /**
- * "Gewenste LTV" -> financing tier: the tier whose LTV
- * (FINANCING_STRATEGIES[id].ltv.value, 0.6/0.7/0.75) is numerically
- * closest to preferredLtv. On an exact tie - preferredLtv 0.65 or 0.725,
- * the two midpoints between adjacent tiers - FINANCING_TIER_SELECTION_TIE_BREAK
- * decides; "higher" is the parameter's current value.
+ * "Gewenste LTV" -> financing tier: the first tier whose own LTV covers
+ * the LTV the customer wants (FINANCING_STRATEGIES[id].ltv.value,
+ * 0.6/0.7/0.75), falling through to the highest tier above that.
  *
  * This picks the tier ModelSelections.financingStrategy needs for its
  * loanTermYears (25/20/15, one per tier and not otherwise derivable from
@@ -112,27 +109,22 @@ export function resolveRenovationDuration(args: {
  * financing.ts, reading constraints.preferredLtv directly. Two different
  * questions - which tier's contract terms apply, and how much to borrow -
  * that happen to read the same customer input.
+ *
+ * Fase C stap 3 changed this from "nearest tier LTV" to the covering rule
+ * above, which is the rule financing.ts's selectInterestRate() has always
+ * used for the rate (Excel D123). The two disagreed for any preferredLtv
+ * strictly between two tiers, and the customer got the mismatch: at 0.62,
+ * the low tier's 25-year term with the medium tier's 2.85% rate. Fase C
+ * stap 3 makes that pairing visible in the wizard, so the disagreement had
+ * to go. Aligning the tier to the rate's rule (rather than the reverse)
+ * keeps the rate tracking the leverage actually taken on - and is the more
+ * defensible reading anyway: a tier that caps at 60% cannot fund 62%.
+ *
+ * A covering rule has no ties, which is why FINANCING_TIER_SELECTION_TIE_BREAK
+ * no longer exists - it only ever answered a question "nearest" could ask.
  */
 export function deriveFinancingStrategy(preferredLtv: number): FinancingStrategyId {
-  const tiers: ReadonlyArray<{ id: FinancingStrategyId; ltv: number }> = [
-    { id: "low", ltv: FINANCING_STRATEGIES.low.ltv.value },
-    { id: "medium", ltv: FINANCING_STRATEGIES.medium.ltv.value },
-    { id: "high", ltv: FINANCING_STRATEGIES.high.ltv.value },
-  ];
-  const preferHigherOnTie = FINANCING_TIER_SELECTION_TIE_BREAK.value === "higher";
-
-  let best = tiers[0]!;
-  let bestDistance = Math.abs(preferredLtv - best.ltv);
-  // Tiers are ascending by ltv, so a later tier in this loop always has a
-  // higher ltv than `best` - on a tie, switching to it is exactly what
-  // "higher wins ties" means; never switching is exactly "lower wins ties".
-  for (let i = 1; i < tiers.length; i++) {
-    const tier = tiers[i]!;
-    const distance = Math.abs(preferredLtv - tier.ltv);
-    if (distance < bestDistance || (distance === bestDistance && preferHigherOnTie)) {
-      best = tier;
-      bestDistance = distance;
-    }
-  }
-  return best.id;
+  if (preferredLtv <= FINANCING_STRATEGIES.low.ltv.value) return "low";
+  if (preferredLtv <= FINANCING_STRATEGIES.medium.ltv.value) return "medium";
+  return "high";
 }

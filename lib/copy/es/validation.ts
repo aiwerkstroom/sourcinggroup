@@ -49,6 +49,9 @@ export const FIELD_VALIDATION_COPY_NL: Readonly<Record<FieldValidationKey, strin
   renovationDurationMonthsOutOfRange:
     "Vul een doorlooptijd tussen 0 en 12 maanden in. Duurt de verbouwing langer? " +
     "Dan loopt de leegstand door in jaar 2, en dat rekent dit rapport niet door.",
+  interestRateOverrideOutOfRange:
+    "Vul een rente tussen 0% en 20% in. Bedoelde u bijvoorbeeld 3,6? Vul dan 3,6 in, niet 0,036.",
+  loanTermYearsOverrideOutOfRange: "Vul een looptijd tussen 1 en 40 jaar in, in hele jaren.",
   renovationDurationMonthsMustBeWholeMonths: "Vul een heel aantal maanden in.",
   freeTierCommunityFeesMustBeZeroOrPositive:
     "Servicekosten kunnen niet negatief zijn — € 0 mag wel, of laat het veld leeg.",
@@ -107,6 +110,10 @@ export function translateFieldValidation(key: FieldValidationKey): string {
       return FIELD_VALIDATION_COPY_NL.upcomingDerramasAmountMustBeZeroOrPositive;
     case "renovationDurationMonthsOutOfRange":
       return FIELD_VALIDATION_COPY_NL.renovationDurationMonthsOutOfRange;
+    case "interestRateOverrideOutOfRange":
+      return FIELD_VALIDATION_COPY_NL.interestRateOverrideOutOfRange;
+    case "loanTermYearsOverrideOutOfRange":
+      return FIELD_VALIDATION_COPY_NL.loanTermYearsOverrideOutOfRange;
     case "renovationDurationMonthsMustBeWholeMonths":
       return FIELD_VALIDATION_COPY_NL.renovationDurationMonthsMustBeWholeMonths;
     case "freeTierCommunityFeesMustBeZeroOrPositive":

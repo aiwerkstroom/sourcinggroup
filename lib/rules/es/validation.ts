@@ -81,6 +81,8 @@ const FIELD_ISSUE_EN: Record<FieldValidationKey, string> = {
   renovationDurationMonthsOutOfRange:
     "renovationDurationMonths must be between 0 and 12 (only year 1 is prorated)",
   renovationDurationMonthsMustBeWholeMonths: "renovationDurationMonths must be a whole number of months",
+  interestRateOverrideOutOfRange: "interestRateOverride must be a fraction between 0 and 0.2",
+  loanTermYearsOverrideOutOfRange: "loanTermYearsOverride must be a whole number of years between 1 and 40",
 };
 
 export function validateEngineInput(input: EngineInput): string[] {

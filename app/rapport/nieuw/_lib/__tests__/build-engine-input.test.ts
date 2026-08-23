@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { runEngine } from "@/lib/rules/es/engine";
-import { RENOVATION_DURATION_MONTHS_BY_TIER, RENOVATION_STRATEGIES } from "@/lib/rules/es/parameters";
+import {
+  FINANCING_STRATEGIES,
+  NON_RESIDENT_INTEREST_SPREAD,
+  RENOVATION_DURATION_MONTHS_BY_TIER,
+  RENOVATION_STRATEGIES,
+} from "@/lib/rules/es/parameters";
 import { referenceCase } from "@/lib/rules/es/__tests__/referencecase";
 import { buildEngineInput, FIXED_RESIDENCY } from "../build-engine-input";
 import { WizardAssemblyError } from "../build-engine-input";
@@ -64,6 +69,9 @@ const referenceWizardData: WizardData = {
     preferredLtvPercent: "75",
     minLtvPercent: "60",
     maxLtvPercent: "75",
+    hasOwnFinancingOffer: false,
+    interestRatePercent: "",
+    loanTermYears: "",
     maxMonthlyDebt: "1.000",
     minMonthlyCashflow: "500",
     minRoiTargetPercent: "4",
@@ -477,5 +485,109 @@ describe("buildEngineInput - the renovation-duration override (fase C stap 2)", 
     const y1 = (r: ReturnType<typeof runEngine>) =>
       r.scenarioOutcomes!.find((o) => o.scenario === "base")!.years[0]!.grossIncome;
     expect(y1(long)).toBeLessThan(y1(short));
+  });
+});
+
+/**
+ * Fase C stap 3: the bank-offer override through the wizard's own
+ * assembly, plus the tier-consistency repair the same step made.
+ */
+describe("buildEngineInput - the customer's own financing terms (fase C stap 3)", () => {
+  function withOffer(patch: Partial<WizardData["belegger"]>) {
+    return buildEngineInput({
+      ...referenceWizardData,
+      belegger: { ...referenceWizardData.belegger, ...patch },
+    });
+  }
+
+  it("supplies neither override, and reports both as derived, when the panel is closed", () => {
+    const a = withOffer({ hasOwnFinancingOffer: false });
+    expect(a.selections.interestRateOverride).toBeUndefined();
+    expect(a.selections.loanTermYearsOverride).toBeUndefined();
+    expect(a.financingTermsProvenance!.interestRate.status).toBe("derived");
+    expect(a.financingTermsProvenance!.loanTermYears.status).toBe("derived");
+  });
+
+  it("ignores stale values left in the fields once the panel is closed again", () => {
+    // The customer opened the panel, typed, then unticked. What they see
+    // is the derived terms, so that is what must be computed.
+    const a = withOffer({
+      hasOwnFinancingOffer: false,
+      interestRatePercent: "3,6",
+      loanTermYears: "25",
+    });
+    expect(a.selections.interestRateOverride).toBeUndefined();
+    expect(a.selections.loanTermYearsOverride).toBeUndefined();
+  });
+
+  it("converts the typed percentage to the engine's fraction", () => {
+    const a = withOffer({ hasOwnFinancingOffer: true, interestRatePercent: "3,6" });
+    expect(a.selections.interestRateOverride).toBeCloseTo(0.036, 12);
+    expect(a.financingTermsProvenance!.interestRate.status).toBe("customerChosen");
+  });
+
+  it("lets each half be supplied on its own", () => {
+    const rateOnly = withOffer({ hasOwnFinancingOffer: true, interestRatePercent: "3,6" });
+    expect(rateOnly.selections.loanTermYearsOverride).toBeUndefined();
+    expect(rateOnly.financingTermsProvenance!.loanTermYears.status).toBe("derived");
+
+    const termOnly = withOffer({ hasOwnFinancingOffer: true, loanTermYears: "25" });
+    expect(termOnly.selections.interestRateOverride).toBeUndefined();
+    expect(termOnly.selections.loanTermYearsOverride).toBe(25);
+    expect(termOnly.financingTermsProvenance!.interestRate.status).toBe("derived");
+    expect(termOnly.financingTermsProvenance!.loanTermYears.status).toBe("customerChosen");
+  });
+
+  it("carries the all-in derived rate as the provenance's comparison figure", () => {
+    // Not the base tier rate: the customer typed an all-in number, so the
+    // figure it is contrasted against has to be all-in too.
+    const a = withOffer({ hasOwnFinancingOffer: true, interestRatePercent: "3,6" });
+    expect(a.financingTermsProvenance!.interestRate.derivedValue).toBeCloseTo(
+      FINANCING_STRATEGIES.high.interestRate.value + NON_RESIDENT_INTEREST_SPREAD.value,
+      12,
+    );
+  });
+
+  it("an own rate really reaches the engine, and suppresses the non-resident spread", () => {
+    const result = runEngine(withOffer({ hasOwnFinancingOffer: true, interestRatePercent: "3,6" }));
+    expect(result.selectedFinancing.interestRate).toBeCloseTo(0.036, 12);
+    expect(result.selectedFinancing.nonResidentSpread).toBe(0);
+  });
+
+  it("an own rate drops the tier's rate and the spread from the reported assumptions", () => {
+    const result = runEngine(withOffer({ hasOwnFinancingOffer: true, interestRatePercent: "3,6" }));
+    const names = result.scenarioOutcomes!
+      .find((o) => o.scenario === "base")!
+      .assumptionsUsed.map((p) => p.name);
+    expect(names).not.toContain("FINANCING_STRATEGIES.high.interestRate");
+    expect(names).not.toContain("NON_RESIDENT_INTEREST_SPREAD");
+    // The tier's LTV still applies - it is the starting point for clampLtv.
+    expect(names).toContain("FINANCING_STRATEGIES.high.ltv");
+    // And the term is still the tier's, since only the rate was overridden.
+    expect(names).toContain("FINANCING_STRATEGIES.high.loanTermYears");
+  });
+
+  it("overriding a SOURCED rate does not move data certainty - it was never a placeholder", () => {
+    const plain = runEngine(withOffer({ hasOwnFinancingOffer: false }));
+    const overridden = runEngine(
+      withOffer({ hasOwnFinancingOffer: true, interestRatePercent: "3,6" }),
+    );
+    const dims = (r: ReturnType<typeof runEngine>) =>
+      r.scenarioOutcomes!.find((o) => o.scenario === "base")!.score!.dimensions.dataCertainty;
+    expect(dims(overridden)).toBe(dims(plain));
+  });
+
+  it("the derived tier now pairs its own term with its own rate, at the LTVs that used to split them", () => {
+    // Fase C stap 3's other half. At 62% the wizard used to assemble the
+    // low tier (25 years) while the engine priced it at medium's rate.
+    const a = withOffer({ preferredLtvPercent: "62" });
+    expect(a.selections.financingStrategy).toBe("medium");
+    const result = runEngine(a);
+    expect(result.selectedFinancing.loanTermYears).toBe(
+      FINANCING_STRATEGIES.medium.loanTermYears.value,
+    );
+    expect(result.selectedFinancing.interestRate).toBe(
+      FINANCING_STRATEGIES.medium.interestRate.value,
+    );
   });
 });

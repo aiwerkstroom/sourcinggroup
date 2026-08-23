@@ -102,6 +102,18 @@ export interface BeleggerStepData {
   preferredLtvPercent: string;
   minLtvPercent: string;
   maxLtvPercent: string;
+  /**
+   * Fase C stap 3: the customer's own bank offer, revealed by
+   * hasOwnFinancingOffer. Both "" when not supplied, in which case the
+   * tier derived from the wanted LTV supplies them - which is what the
+   * wizard did unconditionally, and invisibly, before this existed.
+   *
+   * The rate is held as a percentage the customer types ("3,6"), like the
+   * LTV fields, and converted to the engine's fraction at validation time.
+   */
+  hasOwnFinancingOffer: boolean;
+  interestRatePercent: string;
+  loanTermYears: string;
   maxMonthlyDebt: string;
   minMonthlyCashflow: string;
   minRoiTargetPercent: string;
@@ -221,6 +233,9 @@ export const EMPTY_BELEGGER: BeleggerStepData = {
   preferredLtvPercent: "",
   minLtvPercent: "",
   maxLtvPercent: "",
+  hasOwnFinancingOffer: false,
+  interestRatePercent: "",
+  loanTermYears: "",
   maxMonthlyDebt: "",
   minMonthlyCashflow: "",
   minRoiTargetPercent: "",

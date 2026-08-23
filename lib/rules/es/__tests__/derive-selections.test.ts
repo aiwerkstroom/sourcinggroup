@@ -7,11 +7,11 @@ import {
 } from "../derive-selections";
 import {
   FINANCING_STRATEGIES,
-  FINANCING_TIER_SELECTION_TIE_BREAK,
   RENOVATION_DURATION_MONTHS_BY_TIER,
   RENOVATION_TIER_BY_MAINTENANCE_CONDITION,
 } from "../parameters";
 import { RENOVATION_STRATEGIES } from "../parameters";
+import { selectInterestRate } from "../financing";
 
 describe("deriveRenovationStrategy - staat van onderhoud -> renovation tier", () => {
   it("maps all three conditions exactly as RENOVATION_TIER_BY_MAINTENANCE_CONDITION defines", () => {
@@ -45,25 +45,50 @@ describe("deriveFinancingStrategy - gewenste LTV -> financing tier", () => {
     expect(deriveFinancingStrategy(FINANCING_STRATEGIES.high.ltv.value)).toBe("high");
   });
 
-  it("picks the nearest tier off the midpoints", () => {
+  it("picks the first tier that can actually cover the wanted LTV (fase C stap 3)", () => {
+    // A tier capping at 60% cannot fund 62%, so 0.62 is medium's, not
+    // low's - this was "nearest" (and therefore low) until fase C stap 3.
     expect(deriveFinancingStrategy(0.5)).toBe("low");
-    expect(deriveFinancingStrategy(0.63)).toBe("low");
+    expect(deriveFinancingStrategy(0.62)).toBe("medium");
+    expect(deriveFinancingStrategy(0.63)).toBe("medium");
     expect(deriveFinancingStrategy(0.68)).toBe("medium");
-    expect(deriveFinancingStrategy(0.71)).toBe("medium");
+    expect(deriveFinancingStrategy(0.71)).toBe("high");
     expect(deriveFinancingStrategy(0.74)).toBe("high");
+  });
+
+  it("treats each tier's own LTV as covered by that tier, not the next one up", () => {
+    expect(deriveFinancingStrategy(FINANCING_STRATEGIES.low.ltv.value)).toBe("low");
+    expect(deriveFinancingStrategy(FINANCING_STRATEGIES.medium.ltv.value)).toBe("medium");
+    expect(deriveFinancingStrategy(FINANCING_STRATEGIES.high.ltv.value)).toBe("high");
+  });
+
+  it("falls through to the highest tier above its LTV, rather than refusing", () => {
+    // The engine still clamps the LTV actually used (clampLtv); this only
+    // decides whose contract terms apply.
     expect(deriveFinancingStrategy(0.8)).toBe("high");
+    expect(deriveFinancingStrategy(1)).toBe("high");
   });
 
-  it("breaks the two exact ties (0.65, 0.725) toward the higher tier, per the parameter", () => {
-    expect(FINANCING_TIER_SELECTION_TIE_BREAK.value).toBe("higher");
-    // 0.65 is exactly midway between low (0.6) and medium (0.7).
-    expect(deriveFinancingStrategy(0.65)).toBe("medium");
-    // 0.725 is exactly midway between medium (0.7) and high (0.75).
-    expect(deriveFinancingStrategy(0.725)).toBe("high");
+  it("agrees with selectInterestRate() on every LTV - the disagreement fase C stap 3 removed", () => {
+    // The defect: two rules read the same preferredLtv and disagreed, so a
+    // customer at 0.62 got low's 25-year term priced at medium's rate.
+    // Now the tier is chosen by the rate's own covering rule, so the rate
+    // for the derived tier is that tier's rate, by construction - swept
+    // across the whole range rather than spot-checked.
+    for (let ltv = 0; ltv <= 1.0001; ltv += 0.01) {
+      const tier = deriveFinancingStrategy(ltv);
+      expect(selectInterestRate(ltv, tier)).toBe(FINANCING_STRATEGIES[tier].interestRate.value);
+    }
   });
 
-  it("the tie-break is a product convention, so it is ESTIMATE", () => {
-    expect(FINANCING_TIER_SELECTION_TIE_BREAK.provenance).toBe("ESTIMATE");
+  it("the term and the rate now come from the same tier at the two LTVs that used to split them", () => {
+    for (const ltv of [0.62, 0.72]) {
+      const tier = deriveFinancingStrategy(ltv);
+      expect(selectInterestRate(ltv, tier)).toBe(FINANCING_STRATEGIES[tier].interestRate.value);
+    }
+    // Concretely: 0.62 is medium's now - 20 years at 2.85%, not 25 at 2.85%.
+    expect(deriveFinancingStrategy(0.62)).toBe("medium");
+    expect(FINANCING_STRATEGIES.medium.loanTermYears.value).toBe(20);
   });
 
   it("does not decide loan term via a fourth, invented number - it reads FINANCING_STRATEGIES directly", () => {

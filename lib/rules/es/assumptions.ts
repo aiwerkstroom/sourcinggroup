@@ -88,6 +88,21 @@ export function collectUsedParameters(args: {
    * assumption this outcome rests on.
    */
   renovationDurationProvided: boolean;
+  /**
+   * Whether the customer supplied their own interest rate / mortgage term
+   * (fase C stap 3). When they did, the tier's own figure did not enter
+   * this outcome and must not be listed as an assumption it rests on. An
+   * overridden rate also suppresses NON_RESIDENT_INTEREST_SPREAD, since a
+   * quoted rate is all-in (SelectedFinancing.nonResidentSpread).
+   *
+   * Neither is PLACEHOLDER - the tier term is ESTIMATE and the rate is
+   * SOURCED - so overriding them changes which assumptions are reported
+   * without moving the data-certainty dimension. That is the right
+   * behaviour: replacing a sourced figure with your own is a different
+   * kind of improvement from replacing an unverified one.
+   */
+  interestRateProvided: boolean;
+  loanTermYearsProvided: boolean;
   minRequiredReturnProvided: boolean;
   cadastralValueProvided: boolean;
   usableAreaM2Provided: boolean;
@@ -163,9 +178,13 @@ export function collectUsedParameters(args: {
   // "only what was actually selected" rule as renovation.
   if (args.financingStrategy !== undefined) {
     const financing = FINANCING_STRATEGIES[args.financingStrategy];
-    params.push(financing.ltv, financing.loanTermYears, financing.interestRate);
+    // The tier's LTV always applies - it is the starting point clampLtv()
+    // works from, whatever the customer said about rate or term.
+    params.push(financing.ltv);
+    if (!args.loanTermYearsProvided) params.push(financing.loanTermYears);
+    if (!args.interestRateProvided) params.push(financing.interestRate);
   }
-  if (args.residency === "nonResident") {
+  if (args.residency === "nonResident" && !args.interestRateProvided) {
     params.push(NON_RESIDENT_INTEREST_SPREAD);
   }
 

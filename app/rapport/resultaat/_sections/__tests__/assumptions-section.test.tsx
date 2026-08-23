@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { describeAssumption } from "@/lib/copy/es/assumption-disclosures";
 import { referenceCase } from "@/lib/rules/es/__tests__/referencecase";
 import { runEngine } from "@/lib/rules/es/engine";
+import type { FinancingTermsProvenance } from "@/lib/rules/es/types";
 import { AssumptionsSection } from "../assumptions-section";
 
 /**
@@ -28,6 +29,12 @@ function buildProps() {
     renovationDurationProvenance: result.renovationDurationProvenance,
     renovationDurationMonths: result.selectedRenovation.durationMonths,
     renovationLeaseUpMonths: result.selectedRenovation.timeToRentMonths,
+    financingTermsProvenance: result.financingTermsProvenance,
+    financingTermsInForce: {
+      allInRate:
+        result.selectedFinancing.interestRate + result.selectedFinancing.nonResidentSpread,
+      loanTermYears: result.selectedFinancing.loanTermYears,
+    },
   };
 }
 
@@ -320,5 +327,105 @@ describe("AssumptionsSection - the renovation duration (fase C stap 2)", () => {
     );
     expect(html).not.toContain("verbouwtijd");
     expect(html).not.toContain("doorlooptijd");
+  });
+});
+
+/**
+ * Fase C stap 3: where the mortgage rate and term came from, and the
+ * all-in clarification that only appears once a rate was overridden.
+ */
+describe("AssumptionsSection - the financing terms (fase C stap 3)", () => {
+  const derived: FinancingTermsProvenance["interestRate"] = {
+    status: "derived",
+    derivedValue: 0.042,
+  };
+  const derivedTerm: FinancingTermsProvenance["loanTermYears"] = {
+    status: "derived",
+    derivedValue: 15,
+  };
+
+  function render(
+    provenance: FinancingTermsProvenance,
+    inForce: { allInRate: number; loanTermYears: number },
+  ) {
+    const props = buildProps();
+    return renderToStaticMarkup(
+      <AssumptionsSection
+        {...props}
+        financingTermsProvenance={provenance}
+        financingTermsInForce={inForce}
+      />,
+    );
+  }
+
+  it("calls both derived when neither was supplied, and says they are not a quote", () => {
+    const html = render(
+      { interestRate: derived, loanTermYears: derivedTerm },
+      { allInRate: 0.042, loanTermYears: 15 },
+    );
+    expect(html).toContain("4,2%");
+    expect(html).toContain("15 jaar");
+    expect(html).toContain("niet uit een offerte");
+    // Nothing to clarify about all-in when the customer supplied no rate.
+    expect(html).not.toContain("als all-in behandeld");
+  });
+
+  it("contrasts both against the derived pair when both were supplied", () => {
+    const html = render(
+      {
+        interestRate: { status: "customerChosen", derivedValue: 0.042 },
+        loanTermYears: { status: "customerChosen", derivedValue: 15 },
+      },
+      { allInRate: 0.036, loanTermYears: 25 },
+    );
+    expect(html).toContain("U gaf zelf een rente van 3,6%");
+    expect(html).toContain("looptijd van 25 jaar");
+    expect(html).toContain("4,2%");
+    expect(html).toContain("15 jaar");
+  });
+
+  it("names only the overridden half when just the rate was supplied", () => {
+    const html = render(
+      {
+        interestRate: { status: "customerChosen", derivedValue: 0.042 },
+        loanTermYears: derivedTerm,
+      },
+      { allInRate: 0.036, loanTermYears: 15 },
+    );
+    expect(html).toContain("U gaf zelf een rente van 3,6%");
+    expect(html).toContain("De looptijd (15 jaar) is wel afgeleid.");
+  });
+
+  it("names only the overridden half when just the term was supplied", () => {
+    const html = render(
+      {
+        interestRate: derived,
+        loanTermYears: { status: "customerChosen", derivedValue: 15 },
+      },
+      { allInRate: 0.042, loanTermYears: 25 },
+    );
+    expect(html).toContain("U gaf zelf een looptijd van 25 jaar");
+    expect(html).toContain("De rente (4,2%) is wel afgeleid.");
+  });
+
+  it("spells out that an own rate is all-in, so nobody wonders about a hidden surcharge", () => {
+    const html = render(
+      {
+        interestRate: { status: "customerChosen", derivedValue: 0.042 },
+        loanTermYears: derivedTerm,
+      },
+      { allInRate: 0.036, loanTermYears: 15 },
+    );
+    expect(html).toContain("als all-in behandeld");
+    expect(html).toContain("geen opslag voor niet-ingezetenen bovenop");
+  });
+
+  it("shows no financing line at all when nobody was asked", () => {
+    const props = buildProps();
+    const html = renderToStaticMarkup(
+      <AssumptionsSection {...props} financingTermsProvenance={null} />,
+    );
+    expect(html).not.toContain("uit een offerte");
+    expect(html).not.toContain("als all-in behandeld");
   });
 });

@@ -37,6 +37,10 @@
 
 import type { AssumptionCategory } from "@/lib/copy/es/assumption-disclosures";
 import { ASSUMPTION_CATEGORY_ORDER, describeAssumption } from "@/lib/copy/es/assumption-disclosures";
+import {
+  translateAllInRateNote,
+  translateFinancingTermsProvenanceNote,
+} from "@/lib/copy/es/financing-terms-provenance-disclosures";
 import { translateListingFieldsFromListingNote } from "@/lib/copy/es/listing-field-provenance-disclosures";
 import {
   translateRenovationDurationProvenanceNote,
@@ -44,6 +48,7 @@ import {
   translateRenovationVacancyOverflowNote,
 } from "@/lib/copy/es/renovation-tier-provenance-disclosures";
 import type {
+  FinancingTermsProvenance,
   ListingFieldProvenanceReport,
   Parameter,
   ParameterProvenance,
@@ -65,6 +70,10 @@ export interface AssumptionsSectionProps {
   /** The renovation's two vacancy periods actually used, in months. */
   renovationDurationMonths: number;
   renovationLeaseUpMonths: number;
+  /** Fase C stap 3. Null when nobody was asked for financing terms - see EngineResult. */
+  financingTermsProvenance: FinancingTermsProvenance | null;
+  /** The terms actually used. The rate is all-in (base + any non-resident spread), matching what step 3 showed. */
+  financingTermsInForce: { allInRate: number; loanTermYears: number };
 }
 
 const PROVENANCE_LABEL_NL: Readonly<Record<ParameterProvenance, string>> = {
@@ -125,6 +134,8 @@ export function AssumptionsSection({
   renovationDurationProvenance,
   renovationDurationMonths,
   renovationLeaseUpMonths,
+  financingTermsProvenance,
+  financingTermsInForce,
 }: AssumptionsSectionProps) {
   const byCategory = new Map<AssumptionCategory, Parameter<unknown>[]>();
   for (const param of assumptionsUsed) {
@@ -143,6 +154,11 @@ export function AssumptionsSection({
     renovationDurationProvenance,
     renovationDurationMonths,
   );
+  const financingTermsNote = translateFinancingTermsProvenanceNote(
+    financingTermsProvenance,
+    financingTermsInForce,
+  );
+  const allInRateNote = translateAllInRateNote(financingTermsProvenance);
   const vacancyOverflowNote = translateRenovationVacancyOverflowNote(
     renovationDurationMonths,
     renovationLeaseUpMonths,
@@ -176,6 +192,14 @@ export function AssumptionsSection({
         <p className="text-text-faint max-w-prose text-xs leading-relaxed">
           {renovationDurationNote}
         </p>
+      ) : null}
+
+      {financingTermsNote !== null ? (
+        <p className="text-text-faint max-w-prose text-xs leading-relaxed">{financingTermsNote}</p>
+      ) : null}
+
+      {allInRateNote !== null ? (
+        <p className="text-text-faint max-w-prose text-xs leading-relaxed">{allInRateNote}</p>
       ) : null}
 
       {vacancyOverflowNote !== null ? (

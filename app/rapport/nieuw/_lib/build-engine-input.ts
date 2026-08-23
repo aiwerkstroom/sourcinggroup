@@ -34,6 +34,8 @@
  *   runEngine() does none of this comparing itself, only a passthrough.
  */
 
+import { derivedAllInInterestRate } from "@/lib/rules/es/financing";
+import { FINANCING_STRATEGIES } from "@/lib/rules/es/parameters";
 import {
   deriveFinancingStrategy,
   resolveRenovationDuration,
@@ -43,6 +45,7 @@ import { EMPTY_LISTING_FIELD_PROVENANCE } from "@/lib/rules/es/types";
 import type {
   CadastralValue,
   EngineInput,
+  FinancingTermsProvenance,
   ListingFieldProvenanceReport,
   ListingFieldProvenanceStatus,
   MaintenanceCondition,
@@ -223,6 +226,35 @@ export function buildEngineInput(data: WizardData): EngineInput {
         : number(staatEnLasten.renovationDurationMonths, "renovationDurationMonths"),
   });
 
+  // Fase C stap 3: the customer's own bank offer, when they opened the
+  // panel and filled a field. Each half is independently optional - a
+  // quote may fix the rate without fixing the term - and an unopened
+  // panel means neither, whatever strings the fields still hold.
+  const financingStrategy = deriveFinancingStrategy(preferredLtv);
+  const interestRateOverride =
+    belegger.hasOwnFinancingOffer && belegger.interestRatePercent !== ""
+      ? percentAsFraction(belegger.interestRatePercent, "interestRateOverride")
+      : undefined;
+  const loanTermYearsOverride =
+    belegger.hasOwnFinancingOffer && belegger.loanTermYears !== ""
+      ? number(belegger.loanTermYears, "loanTermYearsOverride")
+      : undefined;
+  const derivedAllInRate = derivedAllInInterestRate({
+    preferredLtv,
+    strategy: financingStrategy,
+    residency: FIXED_RESIDENCY,
+  });
+  const financingTermsProvenance: FinancingTermsProvenance = {
+    interestRate: {
+      status: interestRateOverride === undefined ? "derived" : "customerChosen",
+      derivedValue: derivedAllInRate,
+    },
+    loanTermYears: {
+      status: loanTermYearsOverride === undefined ? "derived" : "customerChosen",
+      derivedValue: FINANCING_STRATEGIES[financingStrategy].loanTermYears.value,
+    },
+  };
+
   return {
     property: {
       // PropertyInput.name is required by the type but is a label, not an
@@ -287,7 +319,9 @@ export function buildEngineInput(data: WizardData): EngineInput {
         renovationDuration.provenance.status === "customerChosen"
           ? renovationDuration.months
           : undefined,
-      financingStrategy: deriveFinancingStrategy(preferredLtv),
+      financingStrategy,
+      interestRateOverride,
+      loanTermYearsOverride,
       residency: FIXED_RESIDENCY,
       taxResidency,
       rentPerM2FromActualCurrentRent:
@@ -311,5 +345,6 @@ export function buildEngineInput(data: WizardData): EngineInput {
     listingFieldProvenance: computeListingFieldProvenance(pand, data.listingOrigin),
     renovationTierProvenance: renovationTier.provenance,
     renovationDurationProvenance: renovationDuration.provenance,
+    financingTermsProvenance,
   };
 }

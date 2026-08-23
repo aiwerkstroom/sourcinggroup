@@ -28,10 +28,10 @@ import type {
   RenovationStrategyId,
   RenovationTierProvenance,
 } from "@/lib/rules/es/types";
+import { RENOVATION_STRATEGY_CHOICE_COPY_NL } from "./selections";
 
 /** Matches projection.ts's own year-1 window; the overflow note below measures against it. */
 const MONTHS_PER_YEAR = 12;
-import { RENOVATION_STRATEGY_CHOICE_COPY_NL } from "./selections";
 
 /** Lower-case tier name for mid-sentence use, e.g. "het scenario grondig". */
 function tierName(tier: RenovationStrategyId): string {

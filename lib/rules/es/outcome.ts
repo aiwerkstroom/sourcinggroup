@@ -189,6 +189,10 @@ export function buildScenarioOutcome(args: {
   renovationImprovementShareProvided?: boolean;
   /** True when the caller supplied ModelSelections.renovationDurationMonths instead of relying on RENOVATION_DURATION_MONTHS_BY_TIER (fase C stap 2). */
   renovationDurationProvided?: boolean;
+  /** True when the customer supplied their own all-in interest rate instead of the tier's (fase C stap 3). */
+  interestRateProvided?: boolean;
+  /** True when the customer supplied their own mortgage term instead of the tier's (fase C stap 3). */
+  loanTermYearsProvided?: boolean;
   /** True when the caller passed PropertyInput.cadastralValue through to fixedOperatingCosts (operating.ts) instead of relying on DEFAULT_CADASTRAL_TO_PURCHASE_PRICE_RATIO for the IBI base. */
   cadastralValueProvided?: boolean;
   /** True when the caller passed PropertyInput.usableAreaM2 directly to buildIncomeModel (income.ts, via engine.ts) instead of relying on DEFAULT_USABLE_TO_BUILT_AREA_RATIO to derive it from builtAreaM2. */
@@ -272,6 +276,10 @@ export function buildScenarioOutcome(args: {
     occupancyShortTermProvided: args.occupancyShortTermProvided ?? false,
   });
 
+  // Note the two financing flags are absent above and present below: the
+  // tier's rate is SOURCED and its term ESTIMATE, so neither is a
+  // placeholder and overriding them cannot move data certainty - only
+  // which assumptions the outcome is reported to rest on.
   const assumptionsUsed = collectUsedParameters({
     scenario: args.scenario,
     rentalStrategy: args.rentalStrategy,
@@ -283,6 +291,8 @@ export function buildScenarioOutcome(args: {
     buildingShareOfValueProvided: args.buildingShareOfValueProvided ?? false,
     renovationImprovementShareProvided: args.renovationImprovementShareProvided ?? false,
     renovationDurationProvided: args.renovationDurationProvided ?? false,
+    interestRateProvided: args.interestRateProvided ?? false,
+    loanTermYearsProvided: args.loanTermYearsProvided ?? false,
     minRequiredReturnProvided: args.minRequiredReturn !== undefined,
     cadastralValueProvided: args.cadastralValueProvided ?? false,
     usableAreaM2Provided: args.usableAreaM2Provided ?? false,

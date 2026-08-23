@@ -54,7 +54,9 @@ export type FieldValidationKey =
   | "upcomingDerramasAmountMustBeZeroOrPositive"
   | "freeTierCommunityFeesMustBeZeroOrPositive"
   | "renovationDurationMonthsOutOfRange"
-  | "renovationDurationMonthsMustBeWholeMonths";
+  | "renovationDurationMonthsMustBeWholeMonths"
+  | "interestRateOverrideOutOfRange"
+  | "loanTermYearsOverrideOutOfRange";
 
 export function isFiniteNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
@@ -260,6 +262,37 @@ export function checkRenovationDurationMonths(value: unknown): FieldValidationKe
     return "renovationDurationMonthsOutOfRange";
   }
   return Number.isInteger(value) ? null : "renovationDurationMonthsMustBeWholeMonths";
+}
+
+/**
+ * The customer's own all-in mortgage rate (fase C stap 3), as a fraction
+ * (0.036 for 3,6%) - the form converts before calling this, same as the
+ * LTV fields.
+ *
+ * Optional; blank means the tier's own rate applies. Bounded at 0-20%
+ * rather than left open: this is a rate a bank quoted, and a figure
+ * outside that band is far more likely a percent/fraction mix-up (3.6
+ * typed where 0.036 was meant) than a real offer. Zero is allowed - an
+ * interest-free family loan is a real arrangement.
+ */
+export function checkInterestRateOverride(value: unknown): FieldValidationKey | null {
+  if (value === undefined) return null;
+  return !isFiniteNumber(value) || value < 0 || value > 0.2
+    ? "interestRateOverrideOutOfRange"
+    : null;
+}
+
+/**
+ * The customer's own mortgage term (fase C stap 3), in whole years.
+ * Optional; blank means the tier's own term. 1-40 years: below one year
+ * the annuity schedule stops being a mortgage, and no Spanish lender
+ * writes past forty.
+ */
+export function checkLoanTermYearsOverride(value: unknown): FieldValidationKey | null {
+  if (value === undefined) return null;
+  return !isFiniteNumber(value) || !Number.isInteger(value) || value < 1 || value > 40
+    ? "loanTermYearsOverrideOutOfRange"
+    : null;
 }
 
 export function checkFreeTierCommunityFeesAnnual(value: unknown): FieldValidationKey | null {

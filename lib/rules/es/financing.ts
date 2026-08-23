@@ -150,18 +150,48 @@ export function selectFinancing(args: {
   constraints: InvestorConstraints;
   strategy: FinancingStrategyId;
   residency: Residency;
+  /**
+   * The customer's own all-in annual rate, as a fraction (fase C stap 3).
+   * Wins outright over the tier's, and suppresses the non-resident spread
+   * - see SelectedFinancing.nonResidentSpread.
+   */
+  interestRateOverride?: number;
+  /** The customer's own term in years (fase C stap 3). Wins over the tier's. */
+  loanTermYearsOverride?: number;
 }): SelectedFinancing {
   const strategyDef = FINANCING_STRATEGIES[args.strategy];
   const ltv = clampLtv(args.constraints, strategyDef.ltv.value);
-  const interestRate = selectInterestRate(args.constraints.preferredLtv, args.strategy);
-  const nonResidentSpread =
+  const derivedRate = selectInterestRate(args.constraints.preferredLtv, args.strategy);
+  const derivedSpread =
     args.residency === "nonResident" ? NON_RESIDENT_INTEREST_SPREAD.value : 0;
+
+  // A customer's quote is all-in, so it replaces base rate *and* spread
+  // together. Keeping the spread here would price the non-resident
+  // surcharge twice: once inside the quote, once on top of it.
+  const overridden = args.interestRateOverride !== undefined;
+
   return {
     strategy: args.strategy,
     ltv,
-    loanTermYears: strategyDef.loanTermYears.value,
-    interestRate,
-    nonResidentSpread,
+    loanTermYears: args.loanTermYearsOverride ?? strategyDef.loanTermYears.value,
+    interestRate: overridden ? args.interestRateOverride! : derivedRate,
+    nonResidentSpread: overridden ? 0 : derivedSpread,
     mortgageAmount: args.purchasePrice * ltv,
   };
+}
+
+/**
+ * The all-in rate the tier would have given (fase C stap 3) - base rate
+ * plus any non-resident spread. This is what the wizard shows before a
+ * customer overrides anything, and what FinancingTermsProvenance carries
+ * as its derivedValue, because a customer's own quote is comparable to an
+ * all-in figure and not to a base rate.
+ */
+export function derivedAllInInterestRate(args: {
+  preferredLtv: number | undefined;
+  strategy: FinancingStrategyId;
+  residency: Residency;
+}): number {
+  const base = selectInterestRate(args.preferredLtv, args.strategy);
+  return base + (args.residency === "nonResident" ? NON_RESIDENT_INTEREST_SPREAD.value : 0);
 }

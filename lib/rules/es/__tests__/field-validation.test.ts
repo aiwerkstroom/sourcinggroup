@@ -171,6 +171,8 @@ describe("Dutch copy covers every field-validation key", () => {
     "freeTierCommunityFeesMustBeZeroOrPositive",
     "renovationDurationMonthsOutOfRange",
     "renovationDurationMonthsMustBeWholeMonths",
+    "interestRateOverrideOutOfRange",
+    "loanTermYearsOverrideOutOfRange",
   ];
 
   it("has exactly one Record entry per key", () => {

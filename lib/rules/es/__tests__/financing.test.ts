@@ -4,10 +4,12 @@ import {
   annualAnnuityDebtService,
   annualInterestOnly,
   clampLtv,
+  derivedAllInInterestRate,
   financingStrategyTable,
   selectFinancing,
   selectInterestRate,
 } from "../financing";
+import { FINANCING_STRATEGIES, NON_RESIDENT_INTEREST_SPREAD } from "../parameters";
 import { referenceCase } from "./referencecase";
 
 // Golden values: corrected TSG_Model_v3.xlsx.
@@ -160,5 +162,105 @@ describe("selected financing (reference case)", () => {
       residency: "resident",
     });
     expect(resident.nonResidentSpread).toBe(0);
+  });
+});
+
+/**
+ * Fase C stap 3: the customer's own bank offer. The rate half carries the
+ * one detail that is easy to get wrong and expensive if you do - a quoted
+ * rate is all-in, so the non-resident spread must not be added on top of
+ * it.
+ */
+describe("selectFinancing - the customer's own rate and term (fase C stap 3)", () => {
+  const base = {
+    purchasePrice: 330_000,
+    constraints: {
+      totalBudget: 450_000,
+      maxRenovationBudget: 60_000,
+      minLtv: 0.6,
+      maxLtv: 0.75,
+      riskTolerance: "medium" as const,
+      minRoiTarget: 0.04,
+      minMonthlyCashflow: 500,
+      maxMonthlyDebt: 1_000,
+    },
+    strategy: "high" as const,
+    residency: "nonResident" as const,
+  };
+
+  it("uses the tier's own rate and term when nothing is supplied", () => {
+    const f = selectFinancing(base);
+    expect(f.interestRate).toBe(FINANCING_STRATEGIES.high.interestRate.value);
+    expect(f.loanTermYears).toBe(FINANCING_STRATEGIES.high.loanTermYears.value);
+    expect(f.nonResidentSpread).toBe(NON_RESIDENT_INTEREST_SPREAD.value);
+  });
+
+  it("treats a supplied rate as all-in: the non-resident spread is not added on top", () => {
+    // The double-count this guards: a bank quoting a non-resident has
+    // already priced the surcharge in, so adding it again would turn a
+    // 3.6% offer into an effective 4.6%.
+    const f = selectFinancing({ ...base, interestRateOverride: 0.036 });
+    expect(f.interestRate).toBe(0.036);
+    expect(f.nonResidentSpread).toBe(0);
+    // Everything downstream reads interestRate + nonResidentSpread.
+    expect(f.interestRate + f.nonResidentSpread).toBeCloseTo(0.036, 12);
+  });
+
+  it("a supplied term replaces the tier's, and does not disturb the rate", () => {
+    const f = selectFinancing({ ...base, loanTermYearsOverride: 25 });
+    expect(f.loanTermYears).toBe(25);
+    expect(f.interestRate).toBe(FINANCING_STRATEGIES.high.interestRate.value);
+    expect(f.nonResidentSpread).toBe(NON_RESIDENT_INTEREST_SPREAD.value);
+  });
+
+  it("the two overrides are independent", () => {
+    const both = selectFinancing({
+      ...base,
+      interestRateOverride: 0.036,
+      loanTermYearsOverride: 25,
+    });
+    expect(both.interestRate + both.nonResidentSpread).toBeCloseTo(0.036, 12);
+    expect(both.loanTermYears).toBe(25);
+  });
+
+  it("never touches the LTV or the mortgage amount - those are a separate question", () => {
+    const plain = selectFinancing(base);
+    const overridden = selectFinancing({
+      ...base,
+      interestRateOverride: 0.01,
+      loanTermYearsOverride: 40,
+    });
+    expect(overridden.ltv).toBe(plain.ltv);
+    expect(overridden.mortgageAmount).toBe(plain.mortgageAmount);
+    expect(overridden.strategy).toBe(plain.strategy);
+  });
+
+  it("a resident gets no spread either way, so an override changes only the rate", () => {
+    const resident = selectFinancing({ ...base, residency: "resident" });
+    expect(resident.nonResidentSpread).toBe(0);
+    const overridden = selectFinancing({
+      ...base,
+      residency: "resident",
+      interestRateOverride: 0.03,
+    });
+    expect(overridden.interestRate).toBe(0.03);
+    expect(overridden.nonResidentSpread).toBe(0);
+  });
+
+  it("derivedAllInInterestRate() is what a customer's own figure is comparable to", () => {
+    // The rate shown in the wizard and carried as the provenance's
+    // derivedValue: base plus spread, not the base rate on its own.
+    const allIn = derivedAllInInterestRate({
+      preferredLtv: 0.75,
+      strategy: "high",
+      residency: "nonResident",
+    });
+    expect(allIn).toBeCloseTo(
+      FINANCING_STRATEGIES.high.interestRate.value + NON_RESIDENT_INTEREST_SPREAD.value,
+      12,
+    );
+    expect(
+      derivedAllInInterestRate({ preferredLtv: 0.75, strategy: "high", residency: "resident" }),
+    ).toBe(FINANCING_STRATEGIES.high.interestRate.value);
   });
 });

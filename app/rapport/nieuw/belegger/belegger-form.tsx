@@ -34,6 +34,8 @@ import { RENTAL_STRATEGY_COPY_NL } from "@/lib/copy/es/selections";
 import { translateFieldValidation } from "@/lib/copy/es/validation";
 import {
   checkHoldingYears,
+  checkInterestRateOverride,
+  checkLoanTermYearsOverride,
   checkLtvRange,
   checkMaxLtv,
   checkMaxMonthlyDebt,
@@ -52,7 +54,9 @@ import type { FieldValidationKey } from "@/lib/rules/es/field-validation";
 import { rentalStrategyAvailability } from "@/lib/rules/es/licensing";
 import type { RentPrefillSource } from "@/lib/rules/es/rent-prefill";
 import type { RentalStrategy } from "@/lib/rules/es/types";
-import { FieldGroup, NumberField, RadioGroup, SelectField } from "../_components/fields";
+import { CheckboxField, FieldGroup, NumberField, RadioGroup, SelectField } from "../_components/fields";
+import type { FinancingBand } from "../_lib/financing-bands";
+import { pickFinancingBand } from "../_lib/financing-bands";
 import { parseNumberInput } from "../_lib/parse-number";
 import { OTHER_NEIGHBORHOOD, useWizard } from "../_state/wizard-state";
 import type { BeleggerStepData } from "../_state/wizard-state";
@@ -82,6 +86,32 @@ function validateRequired(
   return key === null ? undefined : translateFieldValidation(key);
 }
 
+/** "3,85%" - one or two decimals, Dutch comma, for the derived-terms line (fase C stap 3). */
+function formatPercentNl(fraction: number): string {
+  return `${(fraction * 100).toLocaleString("nl-NL", { maximumFractionDigits: 2 })}%`;
+}
+
+/** The same number without the sign, for use as a field placeholder. */
+function formatRateInputNl(fraction: number): string {
+  return (fraction * 100).toLocaleString("nl-NL", { maximumFractionDigits: 2 });
+}
+
+/**
+ * Same as validateRequired, for a field where blank is a real answer:
+ * an empty value passes rather than reporting "required" (fase C stap 3).
+ */
+function validateOptional(
+  raw: string,
+  rule: (value: number) => FieldValidationKey | null,
+  transform: (value: number) => number = (v) => v,
+): string | undefined {
+  const parsed = parseNumberInput(raw);
+  if (parsed.state === "empty") return undefined;
+  if (parsed.state === "invalid") return translateFieldValidation("mustBeANumber");
+  const key = rule(transform(parsed.value));
+  return key === null ? undefined : translateFieldValidation(key);
+}
+
 const PREFILL_SOURCE_NOTE: Readonly<Record<RentPrefillSource, string | null>> = {
   actualCurrentRent:
     "Voorgevuld met de werkelijke huidige huur van dit pand, omgerekend naar €/m². Dat is een waarneming aan dit gebouw, geen schatting — het rapport vermeldt dat zo.",
@@ -103,7 +133,16 @@ const TAX_RESIDENCY_OPTIONS = [
   { value: "nonEu", label: "Buiten de EU (bijv. VK, Zwitserland, VS, VAE)" },
 ];
 
-export function BeleggerForm() {
+export interface BeleggerFormProps {
+  /**
+   * The financing tiers, flattened by the Server Component (page.tsx) so
+   * this client module never imports parameters.ts - see
+   * _lib/financing-bands.ts for why that matters.
+   */
+  financingBands: readonly FinancingBand[];
+}
+
+export function BeleggerForm({ financingBands }: BeleggerFormProps) {
   const router = useRouter();
   const { data, setBelegger, completedSteps, markCompleted } = useWizard();
   const step = data.belegger;
@@ -196,6 +235,18 @@ export function BeleggerForm() {
       step.maxRenovationBudget,
       checkMaxRenovationBudget,
     );
+    // Fase C stap 3: only validated when the customer opened the offer
+    // panel and actually typed something - both stay optional inside it,
+    // since a bank quote may fix the rate without fixing the term.
+    if (step.hasOwnFinancingOffer) {
+      next.interestRatePercent = validateOptional(
+        step.interestRatePercent,
+        checkInterestRateOverride,
+        (v) => v / 100,
+      );
+      next.loanTermYears = validateOptional(step.loanTermYears, checkLoanTermYearsOverride);
+    }
+
     next.preferredLtvPercent = validateRequired(
       step.preferredLtvPercent,
       (v) => checkPreferredLtv(v),
@@ -268,6 +319,17 @@ export function BeleggerForm() {
     router.push("/rapport/nieuw/exit");
   }
 
+  // Fase C stap 3: what the wanted LTV currently implies. Null until a
+  // usable LTV is typed - showing a rate before there is an LTV to derive
+  // it from would present a number the model has not concluded.
+  const derivedTerms = (() => {
+    const parsed = parseNumberInput(step.preferredLtvPercent);
+    if (parsed.state !== "ok") return null;
+    const ltv = parsed.value / 100;
+    if (!Number.isFinite(ltv) || ltv < 0 || ltv > 1) return null;
+    return pickFinancingBand(financingBands, ltv);
+  })();
+
   const field = (key: keyof BeleggerStepData) => ({
     value: String(step[key]),
     onChange: (value: string) => {
@@ -314,12 +376,63 @@ export function BeleggerForm() {
           label="Gewenste LTV"
           unit="%"
           placeholder="70"
-          hint="Welk deel van de aankoopprijs u wilt financieren. Dit bepaalt ook met welke rente en looptijd het model rekent."
+          hint="Welk deel van de aankoopprijs u wilt financieren. Hieruit leiden we ook de rente en looptijd af waarmee we rekenen; die staan hieronder en u kunt ze overschrijven met een concreet aanbod van uw bank."
           {...field("preferredLtvPercent")}
         />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <NumberField label="Minimale LTV" unit="%" placeholder="60" {...field("minLtvPercent")} />
-          <NumberField label="Maximale LTV" unit="%" placeholder="75" {...field("maxLtvPercent")} />
+          <NumberField
+            label="Minimale LTV"
+            unit="%"
+            placeholder="60"
+            hint="De ondergrens die u accepteert. Ligt uw gewenste LTV lager, dan rekenen we alsnog met deze ondergrens — bijvoorbeeld omdat een bank onder dit niveau geen hypotheek verstrekt."
+            {...field("minLtvPercent")}
+          />
+          <NumberField
+            label="Maximale LTV"
+            unit="%"
+            placeholder="75"
+            hint="De bovengrens die u accepteert. Ligt uw gewenste LTV hoger, dan rekenen we met deze bovengrens."
+            {...field("maxLtvPercent")}
+          />
+        </div>
+
+        {/*
+          Fase C stap 3: what the wanted LTV implies, shown before the
+          customer can act on it rather than only in the finished report -
+          and overridable, because someone holding a real offer knows
+          better than a tier definition does.
+        */}
+        <div className="border-border flex flex-col gap-3 rounded-md border border-dashed px-4 py-3">
+          <p className="text-text-muted max-w-prose text-sm leading-relaxed">
+            {derivedTerms === null
+              ? "Vul een gewenste LTV in, dan tonen we hier met welke rente en looptijd we rekenen."
+              : `Op basis van uw gewenste LTV rekenen we met ${formatPercentNl(derivedTerms.allInRate)} rente over ${derivedTerms.loanTermYears} jaar.`}
+          </p>
+          <CheckboxField
+            label="Ik heb een concreet aanbod van mijn bank"
+            checked={step.hasOwnFinancingOffer}
+            onChange={(checked) => setBelegger({ hasOwnFinancingOffer: checked })}
+            hint="Vul dan hieronder de rente en looptijd in die u daadwerkelijk krijgt aangeboden. Daar rekenen we mee in plaats van met onze eigen aanname."
+          />
+          {step.hasOwnFinancingOffer ? (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <NumberField
+                label="Rente"
+                unit="%"
+                optional
+                placeholder={derivedTerms === null ? "" : formatRateInputNl(derivedTerms.allInRate)}
+                hint="De rente die uw bank u daadwerkelijk aanbiedt, inclusief eventuele opslagen voor niet-ingezetenen. We tellen er niets bovenop."
+                {...field("interestRatePercent")}
+              />
+              <NumberField
+                label="Looptijd"
+                unit="jaar"
+                optional
+                placeholder={derivedTerms === null ? "" : String(derivedTerms.loanTermYears)}
+                {...field("loanTermYears")}
+              />
+            </div>
+          ) : null}
         </div>
         <NumberField
           label="Maximale maandlast"

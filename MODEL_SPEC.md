@@ -907,3 +907,25 @@ PLACEHOLDER, en dat is de juiste markering: het is een claim over hoe lang echt 
 2. Alleen jaar 1 wordt geprorateerd. Loopt de leegstand door in jaar 2, dan valt dat buiten het model: jaar 2 telt een vol jaar. Het formulier accepteert daarom maximaal 12 maanden verbouwtijd, en het rapport meldt expliciet dat jaar 2 te hoog staat wanneer verbouwing plus aanloop samen de twaalf maanden passeren. Stil afkappen zou de uitkomst mooier maken dan hij is.
 
 **Gevolg voor de referentiecasus** (Avenida Primado Reig 19, licht scenario: 3 + 2 = 5 maanden leeg): bruto huur jaar 1 van € 23.700,60 naar € 16.590,42, cashflow vóór belasting van −€ 8.094,57 naar −€ 14.635,93, IRR van 5,54% naar 5,24%, TSG-score van 3,8 naar 3,6 op percentiel 68. De referentieverdeling uit SCORE_SPEC.md §5 is opnieuw gegenereerd, zoals de "Verversing"-regel daar voorschrijft. Jaar 2 en verder zijn ongewijzigd — wat zelf de controle is dat de proratie tot het eerste jaar beperkt is gebleven.
+
+## 20. Financieringsvoorwaarden — zichtbaar, overschrijfbaar, en één regel in plaats van twee
+
+**Twee regels op dezelfde invoer.** De gewenste LTV bepaalde zowel de tier (voor de looptijd) als de rente, maar via verschillende regels: `deriveFinancingStrategy()` koos de *dichtstbijzijnde* tier-LTV, `selectInterestRate()` (Excel D123) de *eerste tier waarvan de LTV de gewenste dekt*. Bij een gewenste LTV strikt tussen twee tiers gaven die verschillende antwoorden, en de klant kreeg het verschil: bij 62% de looptijd van `low` (25 jaar) met de rente van `medium` (2,85%).
+
+Zolang geen van beide getallen zichtbaar was, bleef dat onopgemerkt. Deze stap toont ze, dus moest de tegenspraak weg.
+
+**De reparatie** trekt de tier naar de regel van de rente, niet andersom: `deriveFinancingStrategy()` gebruikt nu dezelfde dekkende regel. Bij 62% is dat `medium` — 20 jaar tegen 2,85%, één tier, één paar voorwaarden. Dat is ook inhoudelijk de betere lezing: een tier die op 60% aftopt kán geen 62% financieren.
+
+Twee gevolgen:
+- `FINANCING_TIER_SELECTION_TIE_BREAK` is verwijderd. Een dekkende regel kent geen gelijkspel, dus die parameter beantwoordde een vraag die niet meer bestaat.
+- De referentieverdeling verandert **niet**. De synthetische generator loot zijn tier onafhankelijk van de LTV, en de renteregel is ongemoeid gelaten — de andere richting (rente volgt de tier) zou daar ~67% van de casussen hebben geraakt.
+
+**Zichtbaar en overschrijfbaar.** Stap 3 toont, zodra een LTV is ingevuld, met welke rente en looptijd wordt gerekend. Achter een vinkje ("ik heb een concreet aanbod van mijn bank") staan twee optionele velden. Een ingevulde waarde wint volledig van de tier — hetzelfde precedent als de huur-override en de kadastrale waarde: een hard klantfeit verslaat een modelaanname.
+
+**De rente is all-in.** Een bank die een niet-ingezetene een rente offreert, heeft die opslag al verwerkt. `NON_RESIDENT_INTEREST_SPREAD` wordt daarom níét bovenop een opgegeven rente geteld: `SelectedFinancing.nonResidentSpread` gaat op nul, zodat `interestRate + nonResidentSpread` — wat de rest van de engine leest — precies het opgegeven getal is. Zonder die stap zou een aanbod van 3,6% stilzwijgend 4,6% worden. Het rapport zegt dit ook met zoveel woorden.
+
+**Herkomst.** `FinancingTermsProvenance` heeft een helft per veld, want de twee zijn onafhankelijk optioneel; beide dragen wat de tier zou hebben gegeven, zodat het rapport kan contrasteren. De afgeleide rente die het draagt is de all-in rente, niet de basisrente — anders zou de klant zijn eigen all-in offerte tegen een basisgetal leggen.
+
+Anders dan bij de renovatieduur beweegt de **datazekerheid niet**: de tier-rente is SOURCED en de looptijd ESTIMATE, geen van beide PLACEHOLDER. Overschrijven verandert dus wélke aannames het rapport noemt, niet hoe zeker de data heet te zijn. Dat is juist — je eigen offerte in de plaats stellen van een gepubliceerde marktrente is een ander soort verbetering dan het invullen van een onbevestigde schatting.
+
+**Client-bundel.** De afleiding moet live meelopen met wat de klant typt, dus ze kan niet één keer server-side worden opgelost zoals bij stap 1 en 2. Het formulier krijgt in plaats daarvan een platte tabel van de drie tiers als prop (`_lib/financing-bands.ts`, dat zelf niets importeert) en doet daar een pure lookup op. `financing-bands.test.ts` pint die lookup tegen `deriveFinancingStrategy()` over het hele 0–1-bereik, zodat de regel niet op twee plekken uit elkaar kan lopen.
