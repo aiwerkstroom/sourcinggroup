@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { deriveFinancingStrategy, deriveRenovationStrategy } from "../derive-selections";
+import {
+  deriveFinancingStrategy,
+  deriveRenovationStrategy,
+  resolveRenovationTier,
+} from "../derive-selections";
 import {
   FINANCING_STRATEGIES,
   FINANCING_TIER_SELECTION_TIE_BREAK,
@@ -83,6 +87,71 @@ describe("both derivations feed straight into the existing tier tables, nothing 
     for (const ltv of [0.0, 0.3, 0.6, 0.65, 0.7, 0.725, 0.75, 1.0]) {
       const tier = deriveFinancingStrategy(ltv);
       expect(FINANCING_STRATEGIES[tier]).toBeDefined();
+    }
+  });
+});
+
+/**
+ * Fase C stap 1. The tier itself was already covered above; what is new
+ * here is that the *provenance* record is right, including in the two
+ * cases a naive implementation gets wrong: the derived value must survive
+ * an override (so the report can contrast them), and a customer choosing
+ * the tier the lookup would also have produced must still read as a
+ * choice.
+ */
+describe("resolveRenovationTier - the tier plus how it was arrived at (fase C stap 1)", () => {
+  it("falls back to the derivation, and says so, when no override is given", () => {
+    for (const condition of ["good", "average", "poor"] as const) {
+      const { strategy, provenance } = resolveRenovationTier({ maintenanceCondition: condition });
+      expect(strategy).toBe(deriveRenovationStrategy(condition));
+      expect(provenance.status).toBe("derived");
+      expect(provenance.derivedValue).toBe(deriveRenovationStrategy(condition));
+    }
+  });
+
+  it("uses the override, and marks it as the customer's, when one is given", () => {
+    const { strategy, provenance } = resolveRenovationTier({
+      maintenanceCondition: "average",
+      override: "heavy",
+    });
+    expect(strategy).toBe("heavy");
+    expect(provenance.status).toBe("customerChosen");
+  });
+
+  it("keeps carrying what the derivation would have said, even when overridden", () => {
+    // The whole reason the report can say "u koos grondig; afgeleid was
+    // licht" - drop this and the override becomes unauditable.
+    const { provenance } = resolveRenovationTier({
+      maintenanceCondition: "average",
+      override: "heavy",
+    });
+    expect(provenance.derivedValue).toBe("light");
+    expect(provenance.derivedValue).toBe(deriveRenovationStrategy("average"));
+  });
+
+  it("reads as a choice even when the customer picks exactly what the derivation would have", () => {
+    // The improvement over the comparison-based statuses
+    // (ListingFieldProvenanceStatus): an explicit pick is a real signal, so
+    // it does not silently collapse into "derived" the way a retyped
+    // listing value collapses into "fromListing".
+    const { strategy, provenance } = resolveRenovationTier({
+      maintenanceCondition: "average",
+      override: "light",
+    });
+    expect(strategy).toBe("light");
+    expect(provenance.status).toBe("customerChosen");
+    expect(provenance.derivedValue).toBe("light");
+  });
+
+  it("an override never changes the tier's own parameters - only which tier applies", () => {
+    // The ESTIMATE-vs-PLACEHOLDER laundering guard: choosing a tier
+    // explicitly must not upgrade that tier's unverified multipliers.
+    const { strategy } = resolveRenovationTier({
+      maintenanceCondition: "good",
+      override: "heavy",
+    });
+    for (const field of ["capex", "rentMultiplier", "maintenanceFactor", "utilitiesEfficiency"] as const) {
+      expect(RENOVATION_STRATEGIES[strategy][field].provenance).toBe("PLACEHOLDER");
     }
   });
 });

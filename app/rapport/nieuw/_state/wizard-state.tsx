@@ -58,6 +58,14 @@ export interface PandStepData {
 export interface StaatEnLastenStepData {
   /** "" until answered; otherwise a MaintenanceCondition. Drives renovationStrategy via deriveRenovationStrategy(). */
   maintenanceCondition: string;
+  /**
+   * Fase C stap 1: "" means "derive it from maintenanceCondition above",
+   * which is the default and what the wizard did unconditionally before
+   * this field existed; otherwise a RenovationStrategyId the customer
+   * picked instead. Empty is a real answer here, not an unanswered
+   * question - hence no validation, unlike maintenanceCondition itself.
+   */
+  renovationStrategyOverride: string;
   communityFeesAnnual: string;
   /** Both cadastral halves are optional, but supplying one without the other is not (MODEL_SPEC.md §16). */
   cadastralSuelo: string;
@@ -185,6 +193,7 @@ export const EMPTY_PAND: PandStepData = {
 
 export const EMPTY_STAAT_EN_LASTEN: StaatEnLastenStepData = {
   maintenanceCondition: "",
+  renovationStrategyOverride: "",
   communityFeesAnnual: "",
   cadastralSuelo: "",
   cadastralConstruccion: "",

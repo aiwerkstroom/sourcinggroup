@@ -36,7 +36,7 @@
 
 import {
   deriveFinancingStrategy,
-  deriveRenovationStrategy,
+  resolveRenovationTier,
 } from "@/lib/rules/es/derive-selections";
 import { EMPTY_LISTING_FIELD_PROVENANCE } from "@/lib/rules/es/types";
 import type {
@@ -45,6 +45,7 @@ import type {
   ListingFieldProvenanceReport,
   ListingFieldProvenanceStatus,
   MaintenanceCondition,
+  RenovationStrategyId,
   RentalStrategy,
   TaxResidency,
 } from "@/lib/rules/es/types";
@@ -199,6 +200,17 @@ export function buildEngineInput(data: WizardData): EngineInput {
 
   const preferredLtv = percentAsFraction(belegger.preferredLtvPercent, "preferredLtv");
 
+  // Fase C stap 1: the tier, plus the record of whether it was derived or
+  // chosen. "" is the step's own "derive it for me" sentinel, so it maps
+  // to undefined rather than being passed through as a tier id.
+  const renovationTier = resolveRenovationTier({
+    maintenanceCondition: staatEnLasten.maintenanceCondition as MaintenanceCondition,
+    override:
+      staatEnLasten.renovationStrategyOverride === ""
+        ? undefined
+        : (staatEnLasten.renovationStrategyOverride as RenovationStrategyId),
+  });
+
   return {
     property: {
       // PropertyInput.name is required by the type but is a label, not an
@@ -252,9 +264,7 @@ export function buildEngineInput(data: WizardData): EngineInput {
         ? number(belegger.rentPerM2ShortTerm, "rentPerM2ShortTerm")
         : 1,
       rentalStrategy,
-      renovationStrategy: deriveRenovationStrategy(
-        staatEnLasten.maintenanceCondition as MaintenanceCondition,
-      ),
+      renovationStrategy: renovationTier.strategy,
       financingStrategy: deriveFinancingStrategy(preferredLtv),
       residency: FIXED_RESIDENCY,
       taxResidency,
@@ -277,5 +287,6 @@ export function buildEngineInput(data: WizardData): EngineInput {
       holdingYears: number(belegger.holdingYears, "holdingYears"),
     },
     listingFieldProvenance: computeListingFieldProvenance(pand, data.listingOrigin),
+    renovationTierProvenance: renovationTier.provenance,
   };
 }

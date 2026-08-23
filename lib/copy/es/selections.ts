@@ -9,7 +9,12 @@
  * to compile.
  */
 
-import type { FreeTierRentLevel, MaintenanceCondition, RentalStrategy } from "../../rules/es/types";
+import type {
+  FreeTierRentLevel,
+  MaintenanceCondition,
+  RentalStrategy,
+  RenovationStrategyId,
+} from "../../rules/es/types";
 
 /**
  * "Staat van onderhoud" (UI_SPEC.md §3). The wording is deliberately
@@ -41,6 +46,65 @@ export const MAINTENANCE_CONDITION_ORDER: readonly MaintenanceCondition[] = [
   "average",
   "poor",
 ];
+
+/**
+ * Renovatiescenario, as an explicit override of the derivation above (fase
+ * C stap 1).
+ *
+ * This qualifies MAINTENANCE_CONDITION_COPY_NL's own reasoning rather than
+ * contradicting it. That note argues against *asking* "hoeveel renovatie
+ * is nodig?", because it would put RENOVATION_TIER_BY_MAINTENANCE_CONDITION's
+ * unverified step into the customer's mouth - and that still holds for the
+ * default path, which is why deriving remains the default option and the
+ * condition question keeps its own wording. What changed is that a
+ * customer who has had a contractor walk through the property knows the
+ * answer better than a PLACEHOLDER lookup does, and had no way to say so.
+ * The override is opt-in, never preselected, and always recorded as
+ * "customerChosen" against the derived value (RenovationTierProvenance),
+ * so a tier that came from the customer is never presented as if the model
+ * concluded it.
+ *
+ * Descriptions name the scope of work, not a euro figure: the per-tier
+ * capex in RENOVATION_STRATEGIES is itself PLACEHOLDER, so quoting it here
+ * as if it were a quote would be a stronger claim than the model can make.
+ */
+export const RENOVATION_STRATEGY_CHOICE_COPY_NL: Readonly<
+  Record<RenovationStrategyId, { label: string; description: string }>
+> = {
+  minimal: {
+    label: "Minimaal",
+    description: "Schilderwerk en kleine herstelwerkzaamheden. Het pand is in de kern in orde.",
+  },
+  light: {
+    label: "Licht",
+    description: "Keuken, badkamer of afwerking aanpakken. Installaties blijven grotendeels intact.",
+  },
+  heavy: {
+    label: "Grondig",
+    description: "Installaties, indeling of casco aanpakken. Een ingrijpende verbouwing.",
+  },
+};
+
+export const RENOVATION_STRATEGY_ORDER: readonly RenovationStrategyId[] = [
+  "minimal",
+  "light",
+  "heavy",
+];
+
+/** The wizard's "derive it for me" sentinel - "" in StaatEnLastenStepData.renovationStrategyOverride. */
+export const RENOVATION_STRATEGY_DERIVED_OPTION_VALUE = "";
+
+/**
+ * Label for the derive-it-for-me option, naming the tier the derivation
+ * currently lands on so the customer sees what they are accepting before
+ * deciding whether to override it.
+ */
+export function renovationStrategyDerivedOptionLabel(
+  derived: RenovationStrategyId | null,
+): string {
+  if (derived === null) return "Afgeleid uit de staat van onderhoud";
+  return `Afgeleid uit de staat van onderhoud (${RENOVATION_STRATEGY_CHOICE_COPY_NL[derived].label})`;
+}
 
 /** Verhuurstrategie (used by step 3; the permit gate decides which are offered). */
 export const RENTAL_STRATEGY_COPY_NL: Readonly<Record<RentalStrategy, string>> = {

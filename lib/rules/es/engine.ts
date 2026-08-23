@@ -25,6 +25,14 @@
  * function's only job is to default to EMPTY_LISTING_FIELD_PROVENANCE
  * when the caller did not supply one - no new calculation logic, same as
  * PropertyInput.propertyType.
+ *
+ * EngineResult.renovationTierProvenance (fase C stap 1) is a third
+ * passthrough of the same kind. resolveRenovationTier() in
+ * derive-selections.ts is what actually decides the tier and records how;
+ * by the time selections.renovationStrategy reaches this function that
+ * decision is already made, so all this does is carry the record
+ * alongside it - null when the caller supplied a tier with no "staat van
+ * onderhoud" behind it and there is therefore nothing to report.
  */
 
 import { acquisitionCosts } from "./acquisition";
@@ -209,5 +217,6 @@ export function runEngine(input: EngineInput): EngineResult {
     scenarioOutcomes,
     rentInputProvenance,
     listingFieldProvenance: input.listingFieldProvenance ?? EMPTY_LISTING_FIELD_PROVENANCE,
+    renovationTierProvenance: input.renovationTierProvenance ?? null,
   };
 }

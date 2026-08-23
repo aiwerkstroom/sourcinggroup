@@ -22,6 +22,9 @@ import { useState } from "react";
 import {
   MAINTENANCE_CONDITION_COPY_NL,
   MAINTENANCE_CONDITION_ORDER,
+  RENOVATION_STRATEGY_CHOICE_COPY_NL,
+  RENOVATION_STRATEGY_ORDER,
+  renovationStrategyDerivedOptionLabel,
 } from "@/lib/copy/es/selections";
 import { translateFieldValidation } from "@/lib/copy/es/validation";
 import {
@@ -30,6 +33,7 @@ import {
   checkCommunityFeesAnnual,
   checkUpcomingDerramasAmount,
 } from "@/lib/rules/es/field-validation";
+import type { MaintenanceCondition, RenovationStrategyId } from "@/lib/rules/es/types";
 import { CheckboxField, FieldGroup, NumberField, RadioGroup, SelectField } from "../_components/fields";
 import { parseNumberInput } from "../_lib/parse-number";
 import { useWizard } from "../_state/wizard-state";
@@ -61,13 +65,34 @@ const LICENCE_OPTIONS = [
 
 type FieldErrors = Partial<Record<keyof StaatEnLastenStepData, string>>;
 
-export function StaatEnLastenForm() {
+export interface StaatEnLastenFormProps {
+  /**
+   * RENOVATION_TIER_BY_MAINTENANCE_CONDITION, already resolved by the
+   * Server Component that renders this form (fase C stap 1). Passed in
+   * rather than derived here on purpose: importing the derivation into
+   * this client module pulls all of parameters.ts into the browser bundle
+   * - see page.tsx's own note.
+   */
+  derivedTierByCondition: Readonly<Record<MaintenanceCondition, RenovationStrategyId>>;
+}
+
+export function StaatEnLastenForm({ derivedTierByCondition }: StaatEnLastenFormProps) {
   const router = useRouter();
   const { data, setStaatEnLasten, markCompleted } = useWizard();
   const step = data.staatEnLasten;
   const [errors, setErrors] = useState<FieldErrors>({});
 
   const isRented = RENTED_STATUSES.has(step.currentRentStatus);
+
+  // What the "derive it for me" option currently resolves to, shown in its
+  // own label so the customer sees what they are accepting before deciding
+  // to override it. Null until the condition question is answered - there
+  // is nothing to derive from yet, and the label says so rather than
+  // guessing a tier.
+  const derivedRenovationTier =
+    step.maintenanceCondition === ""
+      ? null
+      : (derivedTierByCondition[step.maintenanceCondition as MaintenanceCondition] ?? null);
 
   function validate(): FieldErrors {
     const next: FieldErrors = {};
@@ -188,6 +213,17 @@ export function StaatEnLastenForm() {
             description: MAINTENANCE_CONDITION_COPY_NL[condition].description,
           }))}
           {...field("maintenanceCondition")}
+        />
+        <SelectField
+          label="Renovatiescenario"
+          optional
+          hint="Weet u al wat er moet gebeuren — bijvoorbeeld na een bezichtiging met een aannemer? Kies het scenario dan zelf. Uw keuze staat dan als zodanig in het rapport, naast wat het model uit de staat van onderhoud zou hebben afgeleid."
+          options={RENOVATION_STRATEGY_ORDER.map((tier) => ({
+            value: tier,
+            label: `${RENOVATION_STRATEGY_CHOICE_COPY_NL[tier].label} — ${RENOVATION_STRATEGY_CHOICE_COPY_NL[tier].description}`,
+          }))}
+          placeholder={renovationStrategyDerivedOptionLabel(derivedRenovationTier)}
+          {...field("renovationStrategyOverride")}
         />
       </FieldGroup>
 

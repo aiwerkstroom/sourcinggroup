@@ -19,6 +19,12 @@ function buildProps() {
   return {
     assumptionsUsed: outcome.assumptionsUsed,
     listingFieldProvenance: result.listingFieldProvenance,
+    // The reference case supplies renovationStrategy directly, with no
+    // "staat van onderhoud" behind it, so there is no derivation to report
+    // - null here is the honest value, not a fixture shortcut. Fase C stap
+    // 1's own rendering is covered in its dedicated describe block below.
+    renovationTierProvenance: result.renovationTierProvenance,
+    renovationStrategy: result.selectedRenovation.id,
   };
 }
 
@@ -159,5 +165,67 @@ describe("AssumptionsSection - the ยง6.8 listing-fields note (SOURCING_SPEC.md ย
       />,
     );
     expect(html).not.toContain("overgenomen uit de gekozen listing");
+  });
+});
+
+/**
+ * Fase C stap 1: the renovation tier's own provenance line. Three
+ * outcomes, not two - "chosen" splits depending on whether the customer's
+ * pick happens to coincide with what the derivation would have said, and
+ * a sentence contrasting a tier with itself would read as nonsense.
+ */
+describe("AssumptionsSection - the renovation tier's provenance (fase C stap 1)", () => {
+  it("says the model derived it, and calls the mapping a schatting, under 'derived'", () => {
+    const props = buildProps();
+    const html = renderToStaticMarkup(
+      <AssumptionsSection
+        {...props}
+        renovationTierProvenance={{ status: "derived", derivedValue: "light" }}
+        renovationStrategy="light"
+      />,
+    );
+    expect(html).toContain("is door het model afgeleid");
+    expect(html).toContain("staat van onderhoud");
+    expect(html).toContain("schatting");
+    expect(html).not.toContain("koos");
+  });
+
+  it("contrasts the chosen tier against the derived one when they differ", () => {
+    const props = buildProps();
+    const html = renderToStaticMarkup(
+      <AssumptionsSection
+        {...props}
+        renovationTierProvenance={{ status: "customerChosen", derivedValue: "light" }}
+        renovationStrategy="heavy"
+      />,
+    );
+    // Both tiers named, and which one the numbers rest on stated outright.
+    expect(html).toContain("U koos het renovatiescenario grondig zelf");
+    expect(html).toContain("zou het model licht hebben afgeleid");
+    expect(html).toContain("Er is met uw keuze gerekend.");
+  });
+
+  it("does not contrast a tier with itself when the choice matches the derivation", () => {
+    const props = buildProps();
+    const html = renderToStaticMarkup(
+      <AssumptionsSection
+        {...props}
+        renovationTierProvenance={{ status: "customerChosen", derivedValue: "heavy" }}
+        renovationStrategy="heavy"
+      />,
+    );
+    expect(html).toContain("U koos het renovatiescenario grondig zelf");
+    expect(html).toContain("hetzelfde scenario");
+    // The contrasting clause would be self-referential here, so it is absent.
+    expect(html).not.toContain("zou het model grondig hebben afgeleid");
+  });
+
+  it("shows no line at all when there was no derivation to report on", () => {
+    const props = buildProps();
+    const html = renderToStaticMarkup(
+      <AssumptionsSection {...props} renovationTierProvenance={null} />,
+    );
+    expect(html).not.toContain("renovatiescenario");
+    expect(html).not.toContain("staat van onderhoud");
   });
 });

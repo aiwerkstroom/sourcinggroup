@@ -84,6 +84,7 @@ const computable: WizardData = {
   },
   staatEnLasten: {
     maintenanceCondition: "average",
+    renovationStrategyOverride: "",
     communityFeesAnnual: "900",
     cadastralSuelo: "",
     cadastralConstruccion: "",

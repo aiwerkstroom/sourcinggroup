@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   MAINTENANCE_CONDITION_COPY_NL,
   MAINTENANCE_CONDITION_ORDER,
+  RENOVATION_STRATEGY_CHOICE_COPY_NL,
+  RENOVATION_STRATEGY_ORDER,
   RENTAL_STRATEGY_COPY_NL,
+  renovationStrategyDerivedOptionLabel,
 } from "../../../copy/es/selections";
 import { deriveRenovationStrategy } from "../derive-selections";
 import { rentalStrategyAvailability } from "../licensing";
@@ -72,6 +75,46 @@ describe("the permit gate does what step 2 tells the customer it will do", () =>
     ]);
     for (const entry of availability.unavailable) {
       expect(entry.reason).toContain("título habilitante");
+    }
+  });
+});
+
+/**
+ * Fase C stap 1: the renovation-tier choice copy, and the label of its
+ * "derive it for me" option - which names the tier the derivation
+ * currently lands on, so the customer sees what they are accepting.
+ */
+describe("renovation tier choice copy (fase C stap 1)", () => {
+  it("has a label and a description for all three tiers", () => {
+    for (const tier of RENOVATION_STRATEGY_ORDER) {
+      const { label, description } = RENOVATION_STRATEGY_CHOICE_COPY_NL[tier];
+      expect(label.length).toBeGreaterThan(0);
+      expect(description.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("offers the three tiers in ascending order of work", () => {
+    expect(RENOVATION_STRATEGY_ORDER).toEqual(["minimal", "light", "heavy"]);
+  });
+
+  it("names the derived tier in the derive-it-for-me label", () => {
+    expect(renovationStrategyDerivedOptionLabel("light")).toBe(
+      "Afgeleid uit de staat van onderhoud (Licht)",
+    );
+    expect(renovationStrategyDerivedOptionLabel("heavy")).toBe(
+      "Afgeleid uit de staat van onderhoud (Grondig)",
+    );
+  });
+
+  it("names no tier when there is nothing to derive from yet", () => {
+    // The condition question is unanswered - guessing a tier here would
+    // show the customer an assumption the model has not actually made.
+    expect(renovationStrategyDerivedOptionLabel(null)).toBe("Afgeleid uit de staat van onderhoud");
+  });
+
+  it("describes scope of work, never a euro figure - the per-tier capex is itself PLACEHOLDER", () => {
+    for (const tier of RENOVATION_STRATEGY_ORDER) {
+      expect(RENOVATION_STRATEGY_CHOICE_COPY_NL[tier].description).not.toMatch(/€|\d{3}/);
     }
   });
 });

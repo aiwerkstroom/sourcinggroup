@@ -352,6 +352,17 @@ export interface EngineInput {
    * calculation logic" treatment PropertyInput.propertyType already gets.
    */
   listingFieldProvenance?: ListingFieldProvenanceReport;
+  /**
+   * Optional: set by buildEngineInput() from the wizard's "staat van
+   * onderhoud" answer and its optional renovation-tier override (fase C
+   * stap 1). runEngine() derives nothing here - selections.renovationStrategy
+   * already carries the resolved tier, and this only records how that tier
+   * was arrived at, the same passthrough treatment listingFieldProvenance
+   * gets. Omitted by every caller that supplies renovationStrategy
+   * directly with no maintenanceCondition behind it (tests, the free tier),
+   * where there is no derivation to report on.
+   */
+  renovationTierProvenance?: RenovationTierProvenance;
 }
 
 /** One row of the income model (long-term or short-term). */
@@ -885,6 +896,16 @@ export interface EngineResult {
    * call outside this feature's own golden tests.
    */
   listingFieldProvenance: ListingFieldProvenanceReport;
+  /**
+   * How selections.renovationStrategy was arrived at (fase C stap 1), or
+   * null when EngineInput.renovationTierProvenance was omitted - i.e. when
+   * the caller supplied a tier directly with no "staat van onderhoud"
+   * behind it, so there is no derivation to report on. Null rather than a
+   * shared empty constant (the treatment listingFieldProvenance gets),
+   * because "no derivation happened" is a single fact here, not four
+   * independently-absent fields.
+   */
+  renovationTierProvenance: RenovationTierProvenance | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -1269,6 +1290,40 @@ export type RentProvenanceDisclosureKey =
  * to tell the two apart).
  */
 export type ListingFieldProvenanceStatus = "fromListing" | "confirmed";
+
+/**
+ * Whether a wizard field the model can derive was left to that derivation
+ * or set by the customer instead (fase C).
+ *
+ * Deliberately *not* derived by comparison, unlike
+ * ListingFieldProvenanceStatus and RentReferenceStatus above. Those two
+ * infer "the customer touched this" from the value differing from what it
+ * was prefilled with, and both carry the same accepted edge case: someone
+ * who re-enters the original value reads as untouched. The fields this
+ * status covers offer an explicit "derive it for me" option in the form
+ * itself, so the signal is real rather than inferred - and a customer who
+ * deliberately picks the value the derivation would also have picked
+ * correctly reads as "customerChosen", which the comparison approach
+ * could never express.
+ */
+export type DerivedFieldStatus = "derived" | "customerChosen";
+
+/**
+ * Provenance of the renovation tier the engine actually used (fase C stap
+ * 1). Until this existed the tier was always
+ * deriveRenovationStrategy(maintenanceCondition), via
+ * RENOVATION_TIER_BY_MAINTENANCE_CONDITION (PLACEHOLDER), with no way for
+ * a customer who knows what the property needs to say so.
+ *
+ * derivedValue is carried under both statuses, not only under "derived" -
+ * that is what lets the report say "u koos grondig; afgeleid uit de staat
+ * van onderhoud was licht" rather than silently showing one of the two.
+ */
+export interface RenovationTierProvenance {
+  status: DerivedFieldStatus;
+  /** What deriveRenovationStrategy() says for the supplied maintenanceCondition, whether or not it was used. */
+  derivedValue: RenovationStrategyId;
+}
 
 /**
  * Provenance of one field prefilled from a listing. Generic over the

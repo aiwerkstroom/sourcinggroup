@@ -26,21 +26,35 @@
  * boxed treatment, these three don't drive the headline figures, so the
  * approved design keeps them calm: no box, no colour, the same register
  * as this section's own faint per-parameter notes.
+ *
+ * EngineResult.renovationTierProvenance (fase C stap 1) gets a line in
+ * that same quiet register, and for the same reason: it says where a
+ * choice came from, not what it was worth. It sits above the listing line
+ * rather than below because it is present on every wizard-built report,
+ * where the listing line only appears for a report entered via a chosen
+ * listing - the unconditional note reads first.
  */
 
 import type { AssumptionCategory } from "@/lib/copy/es/assumption-disclosures";
 import { ASSUMPTION_CATEGORY_ORDER, describeAssumption } from "@/lib/copy/es/assumption-disclosures";
 import { translateListingFieldsFromListingNote } from "@/lib/copy/es/listing-field-provenance-disclosures";
+import { translateRenovationTierProvenanceNote } from "@/lib/copy/es/renovation-tier-provenance-disclosures";
 import type {
   ListingFieldProvenanceReport,
   Parameter,
   ParameterProvenance,
+  RenovationStrategyId,
+  RenovationTierProvenance,
 } from "@/lib/rules/es/types";
 
 export interface AssumptionsSectionProps {
   /** ScenarioOutcome.assumptionsUsed for the base scenario. */
   assumptionsUsed: readonly Parameter<unknown>[];
   listingFieldProvenance: ListingFieldProvenanceReport;
+  /** Fase C stap 1. Null when no "staat van onderhoud" drove the tier - see EngineResult. */
+  renovationTierProvenance: RenovationTierProvenance | null;
+  /** The tier actually used, needed to contrast against the derived one. */
+  renovationStrategy: RenovationStrategyId;
 }
 
 const PROVENANCE_LABEL_NL: Readonly<Record<ParameterProvenance, string>> = {
@@ -96,6 +110,8 @@ function CategoryGroup({
 export function AssumptionsSection({
   assumptionsUsed,
   listingFieldProvenance,
+  renovationTierProvenance,
+  renovationStrategy,
 }: AssumptionsSectionProps) {
   const byCategory = new Map<AssumptionCategory, Parameter<unknown>[]>();
   for (const param of assumptionsUsed) {
@@ -106,6 +122,10 @@ export function AssumptionsSection({
   }
 
   const listingFieldsNote = translateListingFieldsFromListingNote(listingFieldProvenance);
+  const renovationTierNote = translateRenovationTierProvenanceNote(
+    renovationTierProvenance,
+    renovationStrategy,
+  );
 
   return (
     <section aria-labelledby="sectie-aannames" className="flex flex-col gap-6">
@@ -126,6 +146,10 @@ export function AssumptionsSection({
           <CategoryGroup key={category} category={category} params={byCategory.get(category)!} />
         ))}
       </div>
+
+      {renovationTierNote !== null ? (
+        <p className="text-text-faint max-w-prose text-xs leading-relaxed">{renovationTierNote}</p>
+      ) : null}
 
       {listingFieldsNote !== null ? (
         <p className="text-text-faint text-xs leading-relaxed">{listingFieldsNote}</p>

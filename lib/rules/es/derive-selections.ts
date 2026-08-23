@@ -13,7 +13,12 @@
  */
 
 import { FINANCING_STRATEGIES, FINANCING_TIER_SELECTION_TIE_BREAK, RENOVATION_TIER_BY_MAINTENANCE_CONDITION } from "./parameters";
-import type { FinancingStrategyId, MaintenanceCondition, RenovationStrategyId } from "./types";
+import type {
+  FinancingStrategyId,
+  MaintenanceCondition,
+  RenovationStrategyId,
+  RenovationTierProvenance,
+} from "./types";
 
 /**
  * "Staat van onderhoud" -> renovation tier, via
@@ -23,6 +28,38 @@ import type { FinancingStrategyId, MaintenanceCondition, RenovationStrategyId } 
  */
 export function deriveRenovationStrategy(condition: MaintenanceCondition): RenovationStrategyId {
   return RENOVATION_TIER_BY_MAINTENANCE_CONDITION.value[condition];
+}
+
+/**
+ * The renovation tier the engine should actually use, plus how it was
+ * arrived at (fase C stap 1). The customer's explicit choice wins over the
+ * derivation whenever one was made; absent one, this is
+ * deriveRenovationStrategy() with a provenance record wrapped around it.
+ *
+ * The derived value is reported under both statuses, deliberately: a
+ * report that shows only the tier in force cannot tell the customer what
+ * the model would have concluded on its own, and that comparison is the
+ * whole point of asking. See RenovationTierProvenance.
+ *
+ * Same split as deriveRenovationStrategy() itself - this decides the tier
+ * and records the provenance, and does not touch the tier's own
+ * parameters. RENOVATION_STRATEGIES' capex/rentMultiplier/... stay
+ * PLACEHOLDER and keep travelling to the customer through
+ * placeholdersUsed; overriding *which* tier applies launders none of them.
+ */
+export function resolveRenovationTier(args: {
+  maintenanceCondition: MaintenanceCondition;
+  /** The wizard's optional explicit tier choice; absent means "derive it for me". */
+  override?: RenovationStrategyId;
+}): { strategy: RenovationStrategyId; provenance: RenovationTierProvenance } {
+  const derivedValue = deriveRenovationStrategy(args.maintenanceCondition);
+  if (args.override === undefined) {
+    return { strategy: derivedValue, provenance: { status: "derived", derivedValue } };
+  }
+  return {
+    strategy: args.override,
+    provenance: { status: "customerChosen", derivedValue },
+  };
 }
 
 /**

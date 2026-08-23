@@ -140,6 +140,8 @@ export function PaidReport({ result }: PaidReportProps) {
           <AssumptionsSection
             assumptionsUsed={base.assumptionsUsed}
             listingFieldProvenance={result.listingFieldProvenance}
+            renovationTierProvenance={result.renovationTierProvenance}
+            renovationStrategy={result.selectedRenovation.id}
           />
         ) : (
           <NoExitPlanningNotice sectionNumber={8} title="Aannames en bronnen" />

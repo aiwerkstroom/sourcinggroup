@@ -111,6 +111,7 @@ const secondCase: WizardData = {
   },
   staatEnLasten: {
     maintenanceCondition: "average",
+    renovationStrategyOverride: "",
     communityFeesAnnual: "700",
     cadastralSuelo: "",
     cadastralConstruccion: "",

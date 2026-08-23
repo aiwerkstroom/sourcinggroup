@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { runEngine } from "@/lib/rules/es/engine";
+import { RENOVATION_STRATEGIES } from "@/lib/rules/es/parameters";
 import { referenceCase } from "@/lib/rules/es/__tests__/referencecase";
 import { buildEngineInput, FIXED_RESIDENCY } from "../build-engine-input";
 import { WizardAssemblyError } from "../build-engine-input";
@@ -45,6 +46,7 @@ const referenceWizardData: WizardData = {
     // "average" is what deriveRenovationStrategy maps to "light", the
     // reference case's own renovation strategy.
     maintenanceCondition: "average",
+    renovationStrategyOverride: "",
     communityFeesAnnual: "900",
     cadastralSuelo: "",
     cadastralConstruccion: "",
@@ -335,5 +337,65 @@ describe("buildEngineInput - unparseable data is a bug, not user error", () => {
         pand: { ...referenceWizardData.pand, purchasePrice: "abc" },
       }),
     ).toThrow(/purchasePrice/);
+  });
+});
+
+/**
+ * Fase C stap 1: the renovation-tier override, end to end through the
+ * wizard's own assembly - the derivation tests above cover the mapping
+ * itself, this covers that the form's "" sentinel and the provenance
+ * record survive the trip into EngineInput.
+ */
+describe("buildEngineInput - the renovation-tier override (fase C stap 1)", () => {
+  function withOverride(override: string) {
+    return buildEngineInput({
+      ...referenceWizardData,
+      staatEnLasten: {
+        ...referenceWizardData.staatEnLasten,
+        maintenanceCondition: "average",
+        renovationStrategyOverride: override,
+      },
+    });
+  }
+
+  it("treats \"\" as 'derive it for me', not as a tier id", () => {
+    const assembled = withOverride("");
+    expect(assembled.selections.renovationStrategy).toBe("light");
+    expect(assembled.renovationTierProvenance).toEqual({
+      status: "derived",
+      derivedValue: "light",
+    });
+  });
+
+  it("lets an explicit choice replace the derived tier in the calculation", () => {
+    const assembled = withOverride("heavy");
+    expect(assembled.selections.renovationStrategy).toBe("heavy");
+    expect(assembled.renovationTierProvenance).toEqual({
+      status: "customerChosen",
+      derivedValue: "light",
+    });
+  });
+
+  it("carries the override all the way into the engine result, not just the input", () => {
+    const result = runEngine(withOverride("heavy"));
+    expect(result.selectedRenovation.id).toBe("heavy");
+    expect(result.renovationTierProvenance).toEqual({
+      status: "customerChosen",
+      derivedValue: "light",
+    });
+    // And the tier's own figures follow the override, which is the point:
+    // a different tier is a different capex/multiplier set, not a relabel.
+    expect(result.selectedRenovation.capex).toBe(RENOVATION_STRATEGIES.heavy.capex.value);
+  });
+
+  it("an override into a tier over the renovation budget is reported, not silently allowed", () => {
+    // The reference case's maxRenovationBudget is € 60.000 and heavy's
+    // capex is € 66.000, so this override legitimately breaks the budget
+    // constraint - the engine must say so rather than absorb it.
+    const result = runEngine(withOverride("heavy"));
+    expect(RENOVATION_STRATEGIES.heavy.capex.value).toBeGreaterThan(
+      referenceCase.constraints.maxRenovationBudget,
+    );
+    expect(result.selectedRenovation.withinMaxRenovationBudget).toBe(false);
   });
 });
