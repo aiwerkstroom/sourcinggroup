@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { runEngine } from "../engine";
+import { referenceCase } from "./referencecase";
 import {
   ALL_PARAMETERS,
   BANK_FEE,
@@ -10,6 +12,7 @@ import {
   DEPRECIATION_BUILDING_SHARE,
   DEPRECIATION_SCENARIO_FACTORS,
   FINANCING_STRATEGIES,
+  NON_RESIDENT_TYPICAL_LTV_RANGE,
   HYBRID_SHARE_LONG_TERM,
   HYBRID_SHARE_SHORT_TERM,
   INSURANCE_COSTS_ANNUAL,
@@ -81,10 +84,10 @@ describe("parameter provenance audit", () => {
     expect(placeholders).toContain("RENOVATION_STRATEGIES.light.capex");
   });
 
-  it("distribution: 25 SOURCED / 51 ESTIMATE / 33 PLACEHOLDER (SCORE_SPEC.md adds 7 scoring-curve + 11 distribution-generation ESTIMATEs; the free indication adds 4 band ESTIMATE + 1 band PLACEHOLDER + 1 indicative-label ESTIMATE; paid-form derivation adds 1 maintenance-tier PLACEHOLDER + 1 rent-deviation-threshold ESTIMATE, the tie-break ESTIMATE having been removed in fase C stap 3 when the tier rule stopped producing ties; fase C stap 2 adds 1 renovation-duration PLACEHOLDER)", () => {
+  it("distribution: 26 SOURCED / 51 ESTIMATE / 33 PLACEHOLDER (SCORE_SPEC.md adds 7 scoring-curve + 11 distribution-generation ESTIMATEs; the free indication adds 4 band ESTIMATE + 1 band PLACEHOLDER + 1 indicative-label ESTIMATE; paid-form derivation adds 1 maintenance-tier PLACEHOLDER + 1 rent-deviation-threshold ESTIMATE, the tie-break ESTIMATE having been removed in fase C stap 3 when the tier rule stopped producing ties; fase C stap 2 adds 1 renovation-duration PLACEHOLDER; fase C stap 3 adds 1 typical-LTV SOURCED)", () => {
     const counts = { SOURCED: 0, ESTIMATE: 0, PLACEHOLDER: 0 };
     for (const p of ALL_PARAMETERS) counts[p.provenance]++;
-    expect(counts).toEqual({ SOURCED: 25, ESTIMATE: 51, PLACEHOLDER: 33 });
+    expect(counts).toEqual({ SOURCED: 26, ESTIMATE: 51, PLACEHOLDER: 33 });
     expect(counts.SOURCED + counts.ESTIMATE + counts.PLACEHOLDER).toBe(ALL_PARAMETERS.length);
   });
 
@@ -294,5 +297,49 @@ describe("derived values: weakest-link provenance", () => {
       hypotheticallyDowngraded,
     ]);
     expect(derivedTotal.provenance).toBe("PLACEHOLDER");
+  });
+});
+
+/**
+ * Fase C stap 3: the typical non-resident LTV range. It informs a wizard
+ * hint and nothing else, which is a legitimate role (RENT_MATRIX_LONG_TERM_PER_M2
+ * has the same one) but an unusual one - so what it claims and how it is
+ * labelled are worth pinning.
+ */
+describe("NON_RESIDENT_TYPICAL_LTV_RANGE (fase C stap 3)", () => {
+  it("is SOURCED, with a source and a consultation date", () => {
+    // A claim about what lenders actually do, from published independent
+    // guidance - not a TSG modelling choice, so not ESTIMATE.
+    expect(NON_RESIDENT_TYPICAL_LTV_RANGE.provenance).toBe("SOURCED");
+    if (NON_RESIDENT_TYPICAL_LTV_RANGE.provenance === "SOURCED") {
+      expect(NON_RESIDENT_TYPICAL_LTV_RANGE.source).toContain("marktconsensus");
+      expect(NON_RESIDENT_TYPICAL_LTV_RANGE.date).toBe("2026-08");
+    }
+  });
+
+  it("holds a coherent range in engine units (fractions, not percentages)", () => {
+    const { min, max } = NON_RESIDENT_TYPICAL_LTV_RANGE.value;
+    expect(min).toBeLessThan(max);
+    expect(min).toBeGreaterThan(0);
+    expect(max).toBeLessThanOrEqual(1);
+  });
+
+  it("sits inside what the engine's own tiers can actually finance", () => {
+    // A hint that pointed above the highest tier would be telling the
+    // customer to expect something this model cannot represent.
+    expect(NON_RESIDENT_TYPICAL_LTV_RANGE.value.max).toBeLessThanOrEqual(
+      FINANCING_STRATEGIES.high.ltv.value,
+    );
+  });
+
+  it("no calculation reads it - it is reference data for the wizard's copy", () => {
+    // If this ever starts driving a figure it needs to appear in
+    // assumptionsUsed, which it deliberately does not today.
+    const result = runEngine(referenceCase);
+    for (const outcome of result.scenarioOutcomes!) {
+      expect(outcome.assumptionsUsed.map((p) => p.name)).not.toContain(
+        "NON_RESIDENT_TYPICAL_LTV_RANGE",
+      );
+    }
   });
 });

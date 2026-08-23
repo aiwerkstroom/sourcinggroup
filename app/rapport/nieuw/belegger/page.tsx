@@ -1,5 +1,8 @@
 import { derivedAllInInterestRate } from "@/lib/rules/es/financing";
-import { FINANCING_STRATEGIES } from "@/lib/rules/es/parameters";
+import {
+  FINANCING_STRATEGIES,
+  NON_RESIDENT_TYPICAL_LTV_RANGE,
+} from "@/lib/rules/es/parameters";
 import type { FinancingStrategyId } from "@/lib/rules/es/types";
 import { FIXED_RESIDENCY } from "../_lib/build-engine-input";
 import type { FinancingBand } from "../_lib/financing-bands";
@@ -39,6 +42,14 @@ const FINANCING_BANDS: readonly FinancingBand[] = TIER_ORDER.map((id) => ({
   }),
 }));
 
+/**
+ * What lenders typically offer a non-resident, for the "Maximale LTV"
+ * hint. Resolved here for the same reason the bands are - it lives in
+ * parameters.ts - but unlike them it is a constant, so it needs no
+ * lookup on the client at all.
+ */
+const TYPICAL_LTV_RANGE = NON_RESIDENT_TYPICAL_LTV_RANGE.value;
+
 export default function BeleggerPage() {
-  return <BeleggerForm financingBands={FINANCING_BANDS} />;
+  return <BeleggerForm financingBands={FINANCING_BANDS} typicalLtvRange={TYPICAL_LTV_RANGE} />;
 }

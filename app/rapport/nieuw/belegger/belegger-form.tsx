@@ -91,6 +91,11 @@ function formatPercentNl(fraction: number): string {
   return `${(fraction * 100).toLocaleString("nl-NL", { maximumFractionDigits: 2 })}%`;
 }
 
+/** "60%" - a whole-percent LTV bound for the hint copy (fase C stap 3). */
+function formatLtvPercentNl(fraction: number): string {
+  return `${(fraction * 100).toLocaleString("nl-NL", { maximumFractionDigits: 0 })}%`;
+}
+
 /** The same number without the sign, for use as a field placeholder. */
 function formatRateInputNl(fraction: number): string {
   return (fraction * 100).toLocaleString("nl-NL", { maximumFractionDigits: 2 });
@@ -140,9 +145,15 @@ export interface BeleggerFormProps {
    * _lib/financing-bands.ts for why that matters.
    */
   financingBands: readonly FinancingBand[];
+  /**
+   * NON_RESIDENT_TYPICAL_LTV_RANGE, resolved by the Server Component -
+   * what lenders typically finance for a non-resident, as fractions. Used
+   * only to inform the "Maximale LTV" hint; no calculation reads it.
+   */
+  typicalLtvRange: { min: number; max: number };
 }
 
-export function BeleggerForm({ financingBands }: BeleggerFormProps) {
+export function BeleggerForm({ financingBands, typicalLtvRange }: BeleggerFormProps) {
   const router = useRouter();
   const { data, setBelegger, completedSteps, markCompleted } = useWizard();
   const step = data.belegger;
@@ -391,7 +402,7 @@ export function BeleggerForm({ financingBands }: BeleggerFormProps) {
             label="Maximale LTV"
             unit="%"
             placeholder="75"
-            hint="De bovengrens die u accepteert. Ligt uw gewenste LTV hoger, dan rekenen we met deze bovengrens."
+            hint={`De bovengrens die u accepteert. Ligt uw gewenste LTV hoger, dan rekenen we met deze bovengrens. Spaanse banken financieren aan niet-ingezetenen doorgaans tussen ${formatLtvPercentNl(typicalLtvRange.min)} en ${formatLtvPercentNl(typicalLtvRange.max)}.`}
             {...field("maxLtvPercent")}
           />
         </div>

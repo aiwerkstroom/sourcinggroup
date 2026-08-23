@@ -16,7 +16,10 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { useEffect } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { derivedAllInInterestRate } from "@/lib/rules/es/financing";
-import { FINANCING_STRATEGIES } from "@/lib/rules/es/parameters";
+import {
+  FINANCING_STRATEGIES,
+  NON_RESIDENT_TYPICAL_LTV_RANGE,
+} from "@/lib/rules/es/parameters";
 import type { FinancingStrategyId } from "@/lib/rules/es/types";
 import type { FinancingBand } from "../../_lib/financing-bands";
 import { useWizard, WizardProvider } from "../../_state/wizard-state";
@@ -62,7 +65,10 @@ function renderForm() {
   return render(
     <WizardProvider>
       <Primer>
-        <BeleggerForm financingBands={BANDS} />
+        <BeleggerForm
+          financingBands={BANDS}
+          typicalLtvRange={NON_RESIDENT_TYPICAL_LTV_RANGE.value}
+        />
       </Primer>
     </WizardProvider>,
   );
@@ -143,6 +149,26 @@ describe("BeleggerForm - the three LTV fields each explain themselves (fase C st
     renderForm();
     expect(screen.getByText(/Ligt uw gewenste LTV lager, dan rekenen we alsnog met deze ondergrens/)).toBeInTheDocument();
     expect(screen.getByText(/Ligt uw gewenste LTV hoger, dan rekenen we met deze bovengrens/)).toBeInTheDocument();
+  });
+
+  it("tells the customer what lenders typically offer a non-resident, from the sourced range", () => {
+    renderForm();
+    expect(
+      screen.getByText(
+        /Spaanse banken financieren aan niet-ingezetenen doorgaans tussen 60% en 70%/,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("renders that range from the parameter, not from a second hardcoded pair", () => {
+    // The figures in the sentence have to move if the sourced range ever
+    // does - otherwise the copy silently outlives its own source.
+    renderForm();
+    const { min, max } = NON_RESIDENT_TYPICAL_LTV_RANGE.value;
+    const expected = new RegExp(
+      `doorgaans tussen ${Math.round(min * 100)}% en ${Math.round(max * 100)}%`,
+    );
+    expect(screen.getByText(expected)).toBeInTheDocument();
   });
 });
 

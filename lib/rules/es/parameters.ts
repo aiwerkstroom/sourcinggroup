@@ -654,6 +654,45 @@ export const NON_RESIDENT_INTEREST_SPREAD: SourcedParameter<number> = {
   date: "2025",
 };
 
+/**
+ * What Spanish lenders typically finance for a non-resident buyer, as an
+ * LTV range (fase C stap 3).
+ *
+ * Consumed by no calculation: it exists to tell a customer, next to the
+ * "Maximale LTV" field in wizard step 3, what bound is realistic before
+ * they set one. The engine's own LTV still comes from the customer's
+ * min/max and clampLtv(); this only informs the answer. Same standing as
+ * RENT_MATRIX_LONG_TERM_PER_M2, which is likewise reference data rather
+ * than an input.
+ *
+ * SOURCED: a claim about what lenders actually do, backed by independent
+ * published guidance rather than a TSG modelling choice. The seven
+ * consulted sources, all August 2026 unless dated otherwise:
+ *
+ * 1. Costa Luz Lawyers (updated 2026-06-21) - 60-70% LTV, 25-year term
+ * 2. Reselecta (2026-05-18) - 60-70%, "65% most common offer"
+ * 3. MySpainVisa (2026-06-11) - typically 70%, occasionally 75% for strong profiles
+ * 4. Traverse International Finance - 60-70%, term often capped near 20 years, sometimes 25 max
+ * 5. MaxSpain (2025-10-29) - 60-70%, "60% the more cautious, more common expectation"
+ * 6. Expatica (2026-01-23) - 50-70% for non-residents
+ * 7. Homerun Brokers Marbella (2025-09-19) - 60-70%, citing Banco de España
+ *
+ * The stored 60-70% is the consensus of those seven, not their full
+ * span: two sit outside it in opposite directions (Expatica opens at
+ * 50%, MySpainVisa reaches 75% for strong profiles). The Dutch copy says
+ * "doorgaans", which is what a central tendency with outliers on both
+ * sides honestly supports - and the customer's own max LTV field remains
+ * theirs to set outside this range if their lender does.
+ */
+export const NON_RESIDENT_TYPICAL_LTV_RANGE: SourcedParameter<{ min: number; max: number }> = {
+  name: "NON_RESIDENT_TYPICAL_LTV_RANGE",
+  value: { min: 0.6, max: 0.7 },
+  provenance: "SOURCED",
+  source:
+    "marktconsensus niet-ingezetenen-hypotheekaanbieders, meerdere onafhankelijke adviesbureaus (o.a. Costa Luz Lawyers, Reselecta, MySpainVisa, Expatica)",
+  date: "2026-08",
+};
+
 // ---------------------------------------------------------------------------
 // Scenario layer
 // ---------------------------------------------------------------------------
@@ -1754,6 +1793,7 @@ export const ALL_PARAMETERS: ReadonlyArray<Parameter<unknown>> = [
   ]),
   ...Object.values(FINANCING_STRATEGIES).flatMap((s) => [s.ltv, s.loanTermYears, s.interestRate]),
   NON_RESIDENT_INTEREST_SPREAD,
+  NON_RESIDENT_TYPICAL_LTV_RANGE,
   ...Object.values(SCENARIOS).flatMap((s) => [
     s.rentLevelMultiplier,
     s.occupancyMultiplier,
