@@ -152,6 +152,31 @@ describe("the reference case through all three options", () => {
     expect(nonEuNames).toContain("RENTAL_INCOME_TAX_RATE_NON_EU");
     expect(nonEuNames).not.toContain("RENTAL_INCOME_TAX_RATE_EU");
   });
+
+  it("does NOT carry the EU/non-EU split into capital gains tax at sale - confirmed correct, not a bug (Agencia Tributaria IRNR tariff table: a flat 19% for every non-resident, unlike the 19%/24% rental income split above)", () => {
+    // computeExit() (exit.ts) never takes a taxResidency/euResident
+    // argument at all - CAPITAL_GAINS_TAX_RATE_NON_RESIDENT.value is a
+    // single flat rate applied regardless of who is asking. This is the
+    // golden test for that boundary: two independent legal sources
+    // confirm the 19%/24% distinction governs general income (rent) only,
+    // never capital gains, and the three engine runs below are the same
+    // nl/eu/nonEu inputs the rental-income tests above already use - the
+    // only difference is which figure this test reads off them.
+    const nlGains = nl.scenarioOutcomes!.map((o) => o.exit.capitalGainsTax);
+    const euGains = eu.scenarioOutcomes!.map((o) => o.exit.capitalGainsTax);
+    const nonEuGains = nonEu.scenarioOutcomes!.map((o) => o.exit.capitalGainsTax);
+
+    expect(nlGains).toEqual(euGains);
+    expect(nlGains).toEqual(nonEuGains);
+    // Not a vacuous pass on three zeros - the reference case's own base
+    // scenario owes real capital gains tax.
+    expect(nlGains.some((tax) => tax > 0)).toBe(true);
+
+    // Contrast with the same three runs' rental income tax, which DOES
+    // differ - the point is not "nothing differs by residency", it is
+    // "this specific figure doesn't, that one does".
+    expect(nl.tax.taxDueBase).not.toBe(nonEu.tax.taxDueBase);
+  });
 });
 
 describe("existing behaviour is untouched - NL/EU was the implicit assumption", () => {
