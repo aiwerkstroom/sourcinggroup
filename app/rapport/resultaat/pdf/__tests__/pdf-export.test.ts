@@ -209,9 +209,9 @@ describe("PDF export - reference case, extracted text against the established go
   });
 
   it("carries the TSG-score and its five dimension scores (tsg-score-section.test.tsx's own golden values)", () => {
-    expect(referenceCasePdfText).toContain("3,6");
-    expect(referenceCasePdfText).toContain("percentiel 68");
-    for (const dimension of ["1,5", "3,3", "6,2", "3,0", "2,4"]) {
+    expect(referenceCasePdfText).toContain("3,7");
+    expect(referenceCasePdfText).toContain("percentiel 70");
+    for (const dimension of ["1,5", "3,3", "6,5", "3,0", "2,4"]) {
       expect(referenceCasePdfText).toContain(dimension);
     }
   });
@@ -226,7 +226,7 @@ describe("PDF export - reference case, extracted text against the established go
     for (const value of ["€ -799", "€ -311", "€ 172"]) {
       expect(referenceCasePdfText).toContain(normalize(value));
     }
-    for (const value of ["0,58", "0,83", "1,09", "1,95%", "5,24%", "8,28%", "1,7", "3,6", "5,5"]) {
+    for (const value of ["0,58", "0,83", "1,09", "2,13%", "5,45%", "8,53%", "1,7", "3,7", "5,5"]) {
       expect(referenceCasePdfText).toContain(value);
     }
   });
@@ -235,7 +235,7 @@ describe("PDF export - reference case, extracted text against the established go
     const result = runEngine(referenceCase);
     const base = result.scenarioOutcomes!.find((o) => o.scenario === "base")!;
     const { exit } = base;
-    expect(exit.netSaleProceeds).toBeCloseTo(372757.53105462214, 4);
+    expect(exit.netSaleProceeds).toBeCloseTo(371817.03105462214, 4);
 
     for (const value of [
       formatEuro(exit.sellingPrice),
@@ -274,8 +274,8 @@ describe("PDF export - a second, non-reference case through POST /rapport/result
     expect(base.percentile).toBe(0);
     expect(baseScenario.monthlyCashflow).toBeCloseTo(-548.8209814572721, 6);
     expect(baseScenario.dscr).toBeCloseTo(0.3583224968394108, 6);
-    expect(base.irr.defined && base.irr.irr).toBeCloseTo(-0.019567118379054588, 6);
-    expect(base.exit.netSaleProceeds).toBeCloseTo(192962.31366249273, 3);
+    expect(base.irr.defined && base.irr.irr).toBeCloseTo(-0.01796069371746853, 6);
+    expect(base.exit.netSaleProceeds).toBeCloseTo(192335.31366249273, 3);
   });
 
   it("carries this case's own address, not the reference case's", () => {

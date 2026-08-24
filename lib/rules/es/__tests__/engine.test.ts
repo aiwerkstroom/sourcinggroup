@@ -113,9 +113,11 @@ describe("reference case Avenida Primado Reig 19 (Excel parity)", () => {
   });
 
   it("acquisition and budget compliance match (D145-D153, H149/H151)", () => {
-    expect(result.acquisition.total).toBeCloseTo(445490, 9);
+    // 440540, not the workbook's 445490: AJD is not owed on a resale
+    // purchase (MODEL_SPEC.md §22).
+    expect(result.acquisition.total).toBeCloseTo(440540, 9);
     expect(result.acquisition.mortgageAmount).toBe(247500);
-    expect(result.acquisition.equityRequired).toBeCloseTo(197990, 9);
+    expect(result.acquisition.equityRequired).toBeCloseTo(193040, 9);
     expect(result.acquisition.withinTotalBudget).toBe(true);
     expect(result.acquisition.renovationWithinBudget).toBe(true);
   });
@@ -284,17 +286,17 @@ describe("EngineResult.scenarioOutcomes: runEngine() wired end to end to score a
 
     const golden: Record<string, { dimensions: Record<string, number>; total: number; percentile: number }> = {
       conservative: {
-        dimensions: { cashflow: 0.0, debtResilience: 0.8, returnVsRequirement: 2.0, feasibility: 3.0, dataCertainty: 2.4 },
+        dimensions: { cashflow: 0.0, debtResilience: 0.8, returnVsRequirement: 2.2, feasibility: 3.0, dataCertainty: 2.4 },
         total: 1.7,
         percentile: 22,
       },
       base: {
-        dimensions: { cashflow: 1.5, debtResilience: 3.3, returnVsRequirement: 6.2, feasibility: 3.0, dataCertainty: 2.4 },
-        total: 3.6,
-        percentile: 68,
+        dimensions: { cashflow: 1.5, debtResilience: 3.3, returnVsRequirement: 6.5, feasibility: 3.0, dataCertainty: 2.4 },
+        total: 3.7,
+        percentile: 70,
       },
       optimistic: {
-        dimensions: { cashflow: 5.4, debtResilience: 5.9, returnVsRequirement: 8.6, feasibility: 3.0, dataCertainty: 2.4 },
+        dimensions: { cashflow: 5.4, debtResilience: 5.9, returnVsRequirement: 8.7, feasibility: 3.0, dataCertainty: 2.4 },
         total: 5.5,
         percentile: 94,
       },
@@ -316,9 +318,9 @@ describe("EngineResult.scenarioOutcomes: runEngine() wired end to end to score a
     // agree on the summary figures.
     const result = runEngine(referenceCase);
     const engineOutcome = result.scenarioOutcomes!.find((o) => o.scenario === "base")!;
-    expect(engineOutcome.totalReturn).toBeCloseTo(0.7365, 4);
+    expect(engineOutcome.totalReturn).toBeCloseTo(0.776156, 4);
     expect(engineOutcome.paybackYear).toBeNull();
-    expect(engineOutcome.equityFit.equityRequired).toBeCloseTo(197990, 6);
+    expect(engineOutcome.equityFit.equityRequired).toBeCloseTo(193040, 6);
     expect(engineOutcome.equityFit.fitsWithinAvailableEquity).toBe(false);
     expect(engineOutcome.placeholdersUsed).toHaveLength(14);
   });

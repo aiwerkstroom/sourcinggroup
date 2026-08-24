@@ -9,7 +9,7 @@
  * - EXISTING BEHAVIOUR IS UNCHANGED. Every wizard entry today has
  *   listingOrigin: null, so EngineResult.listingFieldProvenance must be
  *   EMPTY_LISTING_FIELD_PROVENANCE (all four null) and the reference
- *   case's own anchor - base scenario score 3,6 at percentile 68 - must
+ *   case's own anchor - base scenario score 3,7 at percentile 70 - must
  *   still land exactly there. If either moved, this step would have
  *   quietly touched the paid path it was never meant to touch.
  * - THE COMPARISON IS NUMERIC, NOT STRING-EXACT, for the three numeric
@@ -93,12 +93,12 @@ describe("no listing involved (every wizard entry today) - existing behaviour is
     expect(result.listingFieldProvenance).toEqual(EMPTY_LISTING_FIELD_PROVENANCE);
   });
 
-  it("the reference case's own anchor is untouched: base scenario 3,6 at percentile 68", () => {
+  it("the reference case's own anchor is untouched: base scenario 3,7 at percentile 70", () => {
     const input = buildEngineInput(referenceWizardData);
     const result = runEngine(input);
     const base = result.scenarioOutcomes!.find((o) => o.scenario === "base")!;
-    expect(base.score!.total).toBe(3.6);
-    expect(base.percentile).toBe(68);
+    expect(base.score!.total).toBe(3.7);
+    expect(base.percentile).toBe(70);
   });
 
   it("runEngine() called on a bare EngineInput with no listingFieldProvenance key at all still defaults cleanly", () => {

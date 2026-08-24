@@ -390,6 +390,14 @@ export const DEFAULT_CADASTRAL_TO_PURCHASE_PRICE_RATIO: PlaceholderParameter<num
  * aligned them with Reference Info (the leading set). ITP and AJD are
  * statutory tax rates; notary, registration and agency fees are market
  * rates from the cited sources.
+ *
+ * stampDutyAJD is NOT charged on this model's transactions - see
+ * acquisition.ts's chargedRates(). The rate itself is correct and stays
+ * here, because AJD is real: it applies to a new-build deed (beside IVA),
+ * and to the mortgage deed, which the lender has owed since the 2018
+ * reform. Neither is what this engine prices. It is kept rather than
+ * deleted so a future new-build path has it, correctly sourced, ready to
+ * use.
  */
 export const ACQUISITION_RATES: SourcedParameter<{
   transferTaxITP: number;

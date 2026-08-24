@@ -25,9 +25,9 @@ describe("ExitSection - golden render against the reference case", () => {
     expect(exit.sellingPrice).toBeCloseTo(537535.226836556, 4);
     expect(exit.sellingCommission).toBeCloseTo(21501.40907346224, 4);
     expect(exit.municipalCapitalGainsTax).toBe(3500);
-    expect(exit.capitalGainsTax).toBeCloseTo(39509.32537498781, 4);
+    expect(exit.capitalGainsTax).toBeCloseTo(40449.82537498781, 4);
     expect(exit.mortgageBalanceAtExit).toBeCloseTo(100266.96133348384, 4);
-    expect(exit.netSaleProceeds).toBeCloseTo(372757.53105462214, 4);
+    expect(exit.netSaleProceeds).toBeCloseTo(371817.03105462214, 4);
 
     // The engine's own formula (exit.ts) - netSaleProceeds is not a second,
     // independently-derived figure.
@@ -60,9 +60,9 @@ describe("ExitSection - golden render against the reference case", () => {
     expect(html).toMatch(/537\.535/);
     expect(html).toMatch(/-21\.501/);
     expect(html).toMatch(/-3\.500/);
-    expect(html).toMatch(/-39\.509/);
+    expect(html).toMatch(/-40\.450/);
     expect(html).toMatch(/-100\.267/);
-    expect(html).toMatch(/372\.758/);
+    expect(html).toMatch(/371\.817/);
   });
 
   it("renders every row with its own label - no merging", () => {

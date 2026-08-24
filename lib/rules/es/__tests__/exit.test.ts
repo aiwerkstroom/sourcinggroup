@@ -46,14 +46,16 @@ describe("exit (reference case, 10-year holding period)", () => {
     });
   }
 
-  it("computes the acquisition value for CGT from ITP/AJD/notary/registration/legal, +0 mejora, minus cumulative depreciation", () => {
-    // 330000 + 33000 + 4950 + 1650 + 990 + 3300 = 373890, +0 mejora (default
-    // share 0), - 69300 cumulative depreciation (6930/year x 10 years, the
-    // same figure §4's tax layer actually deducted) = 304590.
+  it("computes the acquisition value for CGT from ITP/notary/registration/legal, +0 mejora, minus cumulative depreciation", () => {
+    // 330000 + 33000 + 0 (AJD is not owed on a resale purchase -
+    // MODEL_SPEC.md §22; it was 4950 here) + 1650 + 990 + 3300 = 368940,
+    // +0 mejora (default share 0), - 69300 cumulative depreciation
+    // (6930/year x 10 years, the same figure §4's tax layer actually
+    // deducted) = 299640.
     const result = exitFor("base");
     expect(result.renovationImprovementValue).toBe(0);
     expect(result.cumulativeDepreciation).toBeCloseTo(69300, 6);
-    expect(result.acquisitionValueForCapitalGainsTax).toBeCloseTo(304590, 6);
+    expect(result.acquisitionValueForCapitalGainsTax).toBeCloseTo(299640, 6);
   });
 
   it("defaults renovationImprovementShare to 0: no renovation cost raises the acquisition value without justification", () => {
@@ -81,14 +83,14 @@ describe("exit (reference case, 10-year holding period)", () => {
       assumptions: testAssumptions,
       renovationImprovementShare: 0.5,
     });
-    // 55000 (light strategy capex) x 0.5 = 27500 mejora; 373890 + 27500 -
-    // 69300 cumulative depreciation = 332090.
+    // 55000 (light strategy capex) x 0.5 = 27500 mejora; 368940 + 27500 -
+    // 69300 cumulative depreciation = 327140.
     expect(result.renovationImprovementValue).toBeCloseTo(27500, 6);
-    expect(result.acquisitionValueForCapitalGainsTax).toBeCloseTo(332090, 6);
+    expect(result.acquisitionValueForCapitalGainsTax).toBeCloseTo(327140, 6);
     expect(result.transferValueForCapitalGainsTax).toBeCloseTo(512533.8177630936, 4);
-    expect(result.capitalGain).toBeCloseTo(180443.81776309363, 4);
-    expect(result.capitalGainsTax).toBeCloseTo(34284.32537498779, 4);
-    expect(result.netSaleProceeds).toBeCloseTo(377982.53105510585, 4);
+    expect(result.capitalGain).toBeCloseTo(185393.81776309374, 4);
+    expect(result.capitalGainsTax).toBeCloseTo(35224.82537498781, 4);
+    expect(result.netSaleProceeds).toBeCloseTo(377042.03105462214, 4);
   });
 
   const golden: Record<
@@ -108,30 +110,30 @@ describe("exit (reference case, 10-year holding period)", () => {
       sellingPrice: 488480.61402305367,
       sellingCommission: 19539.224560922146,
       transferValueForCapitalGainsTax: 465441.38946213154,
-      capitalGain: 156693.38946213154,
-      capitalGainsTax: 29771.74399780499,
+      capitalGain: 161643.38946213154,
+      capitalGainsTax: 30712.24399780499,
       mortgageBalanceAtExit: 102420.428129,
-      netSaleProceeds: 333249.21733532654,
+      netSaleProceeds: 332308.7173350692,
       nonResidentWithholdingAdvance: 14654.418420691609,
     },
     base: {
       sellingPrice: 537535.2268365559,
       sellingCommission: 21501.409073462237,
       transferValueForCapitalGainsTax: 512533.8177630936,
-      capitalGain: 207943.81776309363,
-      capitalGainsTax: 39509.32537498779,
+      capitalGain: 212893.81776309374,
+      capitalGainsTax: 40449.82537498781,
       mortgageBalanceAtExit: 100266.961333,
-      netSaleProceeds: 372757.53105510585,
+      netSaleProceeds: 371817.03105462214,
       nonResidentWithholdingAdvance: 16126.056805096676,
     },
     optimistic: {
       sellingPrice: 590979.739859142,
       sellingCommission: 23639.189594365682,
       transferValueForCapitalGainsTax: 563840.5502647763,
-      capitalGain: 262022.55026477634,
-      capitalGainsTax: 49784.28455030751,
+      capitalGain: 266972.55026477634,
+      capitalGainsTax: 50724.78455030751,
       mortgageBalanceAtExit: 99191.89344,
-      netSaleProceeds: 414864.3722744688,
+      netSaleProceeds: 413923.87227423035,
       nonResidentWithholdingAdvance: 17729.39219577426,
     },
   };

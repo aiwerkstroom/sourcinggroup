@@ -16,7 +16,7 @@ import type { WizardData } from "../../_state/wizard-state";
  * (Avenida Primado Reig 19) through the four steps exactly as a customer
  * would fill them, assemble it, and check the engine produces the figures
  * already locked down in outcome.test.ts - base scenario score 3,8 and
- * percentile 68.
+ * percentile 70.
  *
  * Two places where the wizard cannot express the reference case literally,
  * both harmless and checked below:
@@ -157,8 +157,8 @@ describe("buildEngineInput - the reference case, end to end through the wizard",
     // independently locked down in outcome.test.ts.
     const result = runEngine(assembled);
     const base = result.scenarioOutcomes!.find((o) => o.scenario === "base")!;
-    expect(base.score!.total).toBe(3.6);
-    expect(base.percentile).toBe(68);
+    expect(base.score!.total).toBe(3.7);
+    expect(base.percentile).toBe(70);
   });
 
   it("matches the hand-written reference case scenario for scenario", () => {

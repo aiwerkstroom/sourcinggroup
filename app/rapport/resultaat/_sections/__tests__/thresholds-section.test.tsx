@@ -35,7 +35,7 @@ describe("ThresholdsSection - golden data against the reference case", () => {
   it("computes the expected pass/fail per threshold before rendering", () => {
     const props = buildProps();
 
-    expect(props.equityFit.equityRequired).toBeCloseTo(197990, 0);
+    expect(props.equityFit.equityRequired).toBeCloseTo(193040, 0);
     expect(props.equityFit.equityAvailable).toBe(115000);
     expect(props.equityFit.fitsWithinAvailableEquity).toBe(false);
 
@@ -44,7 +44,7 @@ describe("ThresholdsSection - golden data against the reference case", () => {
     expect(props.cashflow.meetsMinMonthlyCashflow).toBe(false);
 
     expect(props.returnRequirement.minRequiredReturn).toBe(0.04);
-    expect(props.irr.defined && props.irr.irr).toBeCloseTo(0.05239467195060571, 6);
+    expect(props.irr.defined && props.irr.irr).toBeCloseTo(0.054542739910539234, 6);
     expect(props.returnRequirement.meetsMinRequiredReturn).toBe(true);
   });
 });

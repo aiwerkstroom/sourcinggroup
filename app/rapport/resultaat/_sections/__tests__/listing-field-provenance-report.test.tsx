@@ -158,11 +158,11 @@ describe("a direct wizard entry - no listing involved, today's existing behaviou
     expect(html).not.toContain("overgenomen uit de gekozen listing");
   });
 
-  it("the reference case's own anchor is untouched: base scenario 3,6 at percentile 68", () => {
+  it("the reference case's own anchor is untouched: base scenario 3,7 at percentile 70", () => {
     const input = buildEngineInput(referenceWizardData);
     const result = runEngine(input);
     const base = result.scenarioOutcomes!.find((o) => o.scenario === "base")!;
-    expect(base.score!.total).toBe(3.6);
-    expect(base.percentile).toBe(68);
+    expect(base.score!.total).toBe(3.7);
+    expect(base.percentile).toBe(70);
   });
 });

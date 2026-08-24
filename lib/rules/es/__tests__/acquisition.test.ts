@@ -16,7 +16,10 @@ describe("acquisition costs (reference case)", () => {
 
   it("computes each cost line (D131-D143)", () => {
     expect(acq.transferTaxITP).toBeCloseTo(33000, 9);
-    expect(acq.stampDutyAJD).toBeCloseTo(4950, 9);
+    // Zero, deliberately diverging from the workbook's 4950 - AJD is not
+    // owed on a resale purchase deed. See acquisition.ts's chargedRates()
+    // and MODEL_SPEC.md §22.
+    expect(acq.stampDutyAJD).toBe(0);
     expect(acq.notaryFee).toBeCloseTo(1650, 9);
     expect(acq.registrationFee).toBeCloseTo(990, 9);
     expect(acq.legalAdvice).toBeCloseTo(3300, 9);
@@ -24,12 +27,12 @@ describe("acquisition costs (reference case)", () => {
     expect(acq.bankFee).toBe(100);
   });
 
-  it("computes total acquisition costs 445490 (D145)", () => {
-    expect(acq.total).toBeCloseTo(445490, 9);
+  it("computes total acquisition costs 440540 - the workbook's 445490 less the AJD double count", () => {
+    expect(acq.total).toBeCloseTo(440540, 9);
   });
 
-  it("computes equity required 197990 (D153)", () => {
-    expect(acq.equityRequired).toBeCloseTo(197990, 9);
+  it("computes equity required 193040 - the workbook's 197990 less the AJD double count", () => {
+    expect(acq.equityRequired).toBeCloseTo(193040, 9);
   });
 
   it("passes both budget checks (H149/H151)", () => {
@@ -120,8 +123,11 @@ describe("acquisitionCostRates - the figure the free indication quotes", () => {
   it("sums exactly the rate parameters acquisitionCosts() applies", () => {
     const r = ACQUISITION_RATES.value;
     const rates = acquisitionCostRates();
+    // Note stampDutyAJD is absent: it is a real rate that this
+    // transaction type does not owe (chargedRates()), so the quoted
+    // headline must not include it either.
     expect(rates.mandatory).toBeCloseTo(
-      r.transferTaxITP + r.stampDutyAJD + r.notaryFee + r.registrationFee + LEGAL_ADVICE_FEE.value,
+      r.transferTaxITP + r.notaryFee + r.registrationFee + LEGAL_ADVICE_FEE.value,
       12,
     );
     expect(rates.agency).toBe(r.agencyFee);
@@ -169,15 +175,118 @@ describe("acquisitionCostRates - the figure the free indication quotes", () => {
     expect(rates.mandatory).toBeGreaterThan(rates.agency);
   });
 
-  it("the mandatory rate is 13,3% and the agent fee 5% on today's parameters", () => {
-    // A golden value, so a parameter change has to be noticed rather than
-    // silently restating the page's headline. Note this is above the
-    // "11-12%" commonly quoted for Spain: that figure covers ITP, notary,
-    // registration and legal advice (11,8% here) and leaves out the 1,5%
-    // stamp duty this model also charges - see MODEL_SPEC.md §21.
+  it("the mandatory rate is 11,8% and the agent fee 5% on today's parameters", () => {
+    // Hand-checkable: ITP 10% + notaris 0,5% + registratie 0,3% +
+    // juridisch 1,0% = 11,8%. This is the figure independent Spanish
+    // sources quote as "11-12% kosten koper"; the model briefly showed
+    // 13,3% because it also charged 1,5% AJD, which a resale purchase
+    // does not owe (MODEL_SPEC.md §22).
     const rates = acquisitionCostRates();
-    expect(rates.mandatory).toBeCloseTo(0.133, 10);
+    expect(rates.mandatory).toBeCloseTo(0.118, 10);
     expect(rates.agency).toBeCloseTo(0.05, 10);
-    expect(rates.total).toBeCloseTo(0.183, 10);
+    expect(rates.total).toBeCloseTo(0.168, 10);
+  });
+
+  it("charges no stamp duty at all on this transaction type", () => {
+    // The correction itself, stated as its own claim rather than only
+    // implied by the total.
+    const priced = acquisitionCosts({
+      purchasePrice: 250_000,
+      renovationCosts: 0,
+      mortgageAmount: 0,
+      constraints: { totalBudget: 1_000_000, maxRenovationBudget: 0 },
+    });
+    expect(priced.stampDutyAJD).toBe(0);
+    // And the rate that would have produced it is still on the parameter,
+    // ready for a new-build path that does owe it.
+    expect(ACQUISITION_RATES.value.stampDutyAJD).toBeCloseTo(0.015, 12);
+  });
+
+  it("11,8% of a purchase price is what a buyer actually gets charged", () => {
+    // The worked example: EUR 250.000 -> EUR 29.500 mandatory costs.
+    const price = 250_000;
+    const priced = acquisitionCosts({
+      purchasePrice: price,
+      renovationCosts: 0,
+      mortgageAmount: 0,
+      constraints: { totalBudget: 1_000_000, maxRenovationBudget: 0 },
+    });
+    const mandatory =
+      priced.transferTaxITP +
+      priced.stampDutyAJD +
+      priced.notaryFee +
+      priced.registrationFee +
+      priced.legalAdvice;
+    expect(mandatory).toBeCloseTo(29_500, 6);
+    expect(mandatory / price).toBeCloseTo(acquisitionCostRates().mandatory, 12);
+  });
+});
+
+/**
+ * The AJD correction, stated as its own claim rather than only implied by
+ * the totals above (MODEL_SPEC.md §22).
+ *
+ * Worth pinning separately because the parameter still exists and is
+ * still correct: what changed is that this transaction type does not owe
+ * it. A future new-build path would legitimately charge it again, and
+ * these tests should then be read as "existing build owes none", not as
+ * "the rate is dead".
+ */
+describe("AJD is not charged on a resale purchase (MODEL_SPEC.md §22)", () => {
+  const priced = (purchasePrice: number) =>
+    acquisitionCosts({
+      purchasePrice,
+      renovationCosts: 0,
+      mortgageAmount: 0,
+      constraints: { totalBudget: 10_000_000, maxRenovationBudget: 0 },
+    });
+
+  it("charges zero stamp duty at any price", () => {
+    for (const price of [80_000, 250_000, 330_000, 600_000]) {
+      expect(priced(price).stampDutyAJD).toBe(0);
+    }
+  });
+
+  it("keeps the rate on the parameter, sourced and ready for a new-build path", () => {
+    // Deleting it would lose a correct, cited figure for a transaction
+    // type this engine may one day price.
+    expect(ACQUISITION_RATES.value.stampDutyAJD).toBeCloseTo(0.015, 12);
+    expect(ACQUISITION_RATES.provenance).toBe("SOURCED");
+  });
+
+  it("hand-checkable: EUR 250.000 costs EUR 29.500, not EUR 33.250", () => {
+    // 10% ITP + 0,5% notaris + 0,3% registratie + 1,0% juridisch = 11,8%.
+    // With the 1,5% AJD the model used to add, it would have been 13,3%
+    // -> EUR 33.250.
+    const p = priced(250_000);
+    const mandatory =
+      p.transferTaxITP + p.stampDutyAJD + p.notaryFee + p.registrationFee + p.legalAdvice;
+    expect(mandatory).toBeCloseTo(29_500, 6);
+    expect(mandatory).not.toBeCloseTo(33_250, 6);
+  });
+
+  it("keeps the quoted rate and the charged amount in step, by construction", () => {
+    // The two used to be written out separately, which is how they could
+    // drift; they now read one shared definition. This checks the
+    // property that matters at three prices rather than trusting that.
+    const rates = acquisitionCostRates();
+    for (const price of [80_000, 330_000, 600_000]) {
+      const p = priced(price);
+      const mandatory =
+        p.transferTaxITP + p.stampDutyAJD + p.notaryFee + p.registrationFee + p.legalAdvice;
+      expect(mandatory / price).toBeCloseTo(rates.mandatory, 12);
+      expect(p.agencyFees / price).toBeCloseTo(rates.agency, 12);
+    }
+  });
+
+  it("lowers the capital-gains acquisition base too, which raises the tax", () => {
+    // The correction is not purely a saving: AJD was part of the
+    // deductible acquisition value (exit.ts), so removing it enlarges the
+    // taxable gain. Both effects are real and both are now modelled.
+    const p = priced(330_000);
+    const deductible =
+      p.transferTaxITP + p.stampDutyAJD + p.notaryFee + p.registrationFee + p.legalAdvice;
+    expect(deductible).toBeCloseTo(38_940, 6);
+    expect(deductible).not.toBeCloseTo(43_890, 6);
   });
 });

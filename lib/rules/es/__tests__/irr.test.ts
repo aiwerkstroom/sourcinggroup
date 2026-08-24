@@ -173,9 +173,9 @@ describe("scenario IRR (reference case, 10-year holding period)", () => {
   }
 
   const golden: Record<ScenarioId, number> = {
-    conservative: 0.019522793298820035,
-    base: 0.05239467195060571,
-    optimistic: 0.08283859450893945,
+    conservative: 0.021317758646910080,
+    base: 0.054542739910539234,
+    optimistic: 0.08532196074374951,
   };
 
   (Object.keys(golden) as ScenarioId[]).forEach((scenario) => {
@@ -209,7 +209,8 @@ describe("scenario IRR (reference case, 10-year holding period)", () => {
   });
 
   it("uses AcquisitionCosts.equityRequired as year 0, not a separate eigen-inbreng + renovatie sum", () => {
-    // Excel-verified: D153 = 197990 (MODEL_SPEC.md §11).
-    expect(engineResult.acquisition.equityRequired).toBeCloseTo(197990, 6);
+    // D153 is 197990 in the workbook; 193040 here, because AJD is
+    // not owed on a resale purchase (MODEL_SPEC.md §22).
+    expect(engineResult.acquisition.equityRequired).toBeCloseTo(193040, 6);
   });
 });

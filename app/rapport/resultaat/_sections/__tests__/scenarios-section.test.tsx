@@ -43,20 +43,20 @@ describe("ScenariosSection - golden render against the reference case", () => {
     expect(byId.conservative.monthlyCashflow).toBeCloseTo(-799.459411956443, 8);
     expect(byId.conservative.dscr).toBeCloseTo(0.5833445954702777, 10);
     expect(byId.conservative.irr.defined && byId.conservative.irr.irr).toBeCloseTo(
-      0.019522793298820035,
+      0.021317758646910080,
       6,
     );
     expect(byId.conservative.scoreTotal).toBe(1.7);
 
     expect(byId.base.monthlyCashflow).toBeCloseTo(-311.138231408102, 8);
     expect(byId.base.dscr).toBeCloseTo(0.8323276301747033, 10);
-    expect(byId.base.irr.defined && byId.base.irr.irr).toBeCloseTo(0.05239467195060571, 6);
-    expect(byId.base.scoreTotal).toBe(3.6);
+    expect(byId.base.irr.defined && byId.base.irr.irr).toBeCloseTo(0.054542739910539234, 6);
+    expect(byId.base.scoreTotal).toBe(3.7);
 
     expect(byId.optimistic.monthlyCashflow).toBeCloseTo(172.05543916912, 8);
     expect(byId.optimistic.dscr).toBeCloseTo(1.0943011144996524, 10);
     expect(byId.optimistic.irr.defined && byId.optimistic.irr.irr).toBeCloseTo(
-      0.08283859450893945,
+      0.08532196074374951,
       6,
     );
     expect(byId.optimistic.scoreTotal).toBe(5.5);
@@ -75,12 +75,12 @@ describe("ScenariosSection - golden render against the reference case", () => {
     expect(html).toContain("0,83");
     expect(html).toContain("1,09");
 
-    expect(html).toContain("1,95%");
-    expect(html).toContain("5,24%");
-    expect(html).toContain("8,28%");
+    expect(html).toContain("2,13%");
+    expect(html).toContain("5,45%");
+    expect(html).toContain("8,53%");
 
     expect(html).toContain("1,7");
-    expect(html).toContain("3,6");
+    expect(html).toContain("3,7");
     expect(html).toContain("5,5");
   });
 

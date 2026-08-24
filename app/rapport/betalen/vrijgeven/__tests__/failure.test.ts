@@ -179,13 +179,13 @@ describe("an underpayment does not release the report", () => {
 
     expect(response.status).toBe(200);
 
-    // The anchor, straight out of the release route: base scenario, 3.6
-    // at percentile 68, the pair engine.test.ts pins against the engine.
+    // The anchor, straight out of the release route: base scenario, 3.7
+    // at percentile 70, the pair engine.test.ts pins against the engine.
     const base = body.result.scenarioOutcomes.find(
       (outcome: { scenario: string }) => outcome.scenario === "base",
     );
-    expect(base.score.total).toBe(3.6);
-    expect(base.percentile).toBe(68);
+    expect(base.score.total).toBe(3.7);
+    expect(base.percentile).toBe(70);
     expect(await readPendingInput(token)).toBeNull();
   });
 });
