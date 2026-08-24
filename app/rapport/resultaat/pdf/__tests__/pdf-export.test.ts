@@ -6,7 +6,7 @@ import { PDFParse } from "pdf-parse";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { buildEngineInput } from "@/app/rapport/nieuw/_lib/build-engine-input";
 import type { WizardData } from "@/app/rapport/nieuw/_state/wizard-state";
-import { SESSION_COOKIE } from "@/lib/auth/supabase-mock";
+import { SESSION_COOKIE } from "@/lib/auth/auth-contract";
 import { referenceCase } from "@/lib/rules/es/__tests__/referencecase";
 import { runEngine } from "@/lib/rules/es/engine";
 import { formatEuro, formatPercent } from "../../_lib/format";
@@ -61,12 +61,11 @@ function normalize(s: string): string {
  * stap 4: "alle /rapport/* routes" includes these two, unlike the
  * internal print routes they drive, which stay excluded on purpose - see
  * middleware.ts's own docstring). This test drives them with a raw
- * fetch(), not a browser, so there is no real supabase-mock.ts session to
+ * fetch(), not a browser, so there is no real Auth-backend session to
  * carry - middleware only checks the cookie's presence and shape, so a
  * hand-built cookie in the same format signUp()/signIn() would have set
  * is sufficient without going through either of those functions (which
- * are client-only, document.cookie-based, and unusable from this
- * Node-side test regardless).
+ * are client-only and unusable from this Node-side test regardless).
  */
 function fakeSessionCookieHeader(): string {
   const value = encodeURIComponent(

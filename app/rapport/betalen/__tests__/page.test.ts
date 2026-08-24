@@ -4,7 +4,7 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { WizardData } from "@/app/rapport/nieuw/_state/wizard-state";
-import { SESSION_COOKIE } from "@/lib/auth/supabase-mock";
+import { SESSION_COOKIE } from "@/lib/auth/auth-contract";
 
 /**
  * Golden test for the payment page (fase 4 stap 2, stap 3 van 5), and

@@ -12,19 +12,27 @@
  *
  * The core check is the one this task named: after signUp() runs through
  * the context, the context's own `user` must equal what a call to
- * supabase-mock.ts's getSession() - bypassing the context entirely -
+ * auth-memory.ts's getSession() - bypassing the context entirely -
  * independently returns. That is the thing actually worth verifying:
  * not that the context holds *some* user object, but that it is reading
- * and writing the same session the mock itself considers current.
+ * and writing the same session the backend itself considers current.
+ *
+ * Imports auth-memory.ts directly rather than the auth-client.ts facade:
+ * vitest.setup.ts sets TSG_AUTH_STORE=memory for the whole suite, so the
+ * facade already resolves to this exact module - importing it directly
+ * here is what lets this file bypass the context and compare against the
+ * backend's own state, the same pattern pending-input.test.ts uses for
+ * pending-input-memory.ts.
  */
 
 import { act, render, screen, waitFor } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it } from "vitest";
-import * as mockAuth from "../supabase-mock";
+import { SESSION_COOKIE } from "../auth-contract";
+import * as mockAuth from "../auth-memory";
 import { AuthProvider, useAuth } from "../useAuth";
 
-/** Each test brings its own email - supabase-mock.ts's user registry is globalThis-backed and deliberately outlives any one test (see below), so reusing an email across tests would collide with an already-registered account. */
+/** Each test brings its own email - auth-memory.ts's user registry is globalThis-backed and deliberately outlives any one test (see below), so reusing an email across tests would collide with an already-registered account. */
 function Probe({ email }: { email: string }) {
   const { user, loading, signUp, signIn, signOut } = useAuth();
   return (
@@ -40,13 +48,13 @@ function Probe({ email }: { email: string }) {
 }
 
 beforeEach(() => {
-  // Each test starts from a clean cookie jar - supabase-mock.ts's
+  // Each test starts from a clean cookie jar - auth-memory.ts's
   // in-memory user registry persists across tests in the same process
   // (globalThis-backed, by design), but the session itself should not.
-  document.cookie = "tsg-mock-session=; path=/; max-age=0";
+  document.cookie = `${SESSION_COOKIE}=; path=/; max-age=0`;
 });
 
-describe("useAuth - context state tracks supabase-mock.ts's own session", () => {
+describe("useAuth - context state tracks auth-memory.ts's own session", () => {
   it("starts with loading true, then settles to no session", async () => {
     render(
       <AuthProvider>
@@ -58,7 +66,7 @@ describe("useAuth - context state tracks supabase-mock.ts's own session", () => 
     expect(screen.getByTestId("user-id")).toHaveTextContent("none");
   });
 
-  it("signUp() through the context matches supabase-mock.getSession() read directly", async () => {
+  it("signUp() through the context matches auth-memory's getSession() read directly", async () => {
     render(
       <AuthProvider>
         <Probe email="signup-check@example.com" />
@@ -75,7 +83,7 @@ describe("useAuth - context state tracks supabase-mock.ts's own session", () => 
     const contextEmail = screen.getByTestId("user-email").textContent;
     const contextId = screen.getByTestId("user-id").textContent;
 
-    // Bypasses the context entirely - reads the mock's own session
+    // Bypasses the context entirely - reads the backend's own session
     // straight from the cookie, the same way middleware.ts eventually
     // will, independent of anything the React tree did.
     const directSession = await mockAuth.getSession();

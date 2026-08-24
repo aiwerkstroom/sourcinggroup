@@ -30,6 +30,19 @@ process.env.TSG_STRIPE_MOCK_LATENCY_MS = "0";
 /** Same reasoning as the Stripe mock's latency override, for source-mock.ts (pijler 2). */
 process.env.TSG_SOURCE_MOCK_LATENCY_MS = "0";
 
+/**
+ * lib/auth/auth-client.ts (the live Auth swap) defaults to the real
+ * Supabase SDK, which has no reachable project from this sandbox or from
+ * CI. The component test suite - the signin/signup page tests, the
+ * logout-button test, useAuth.test.tsx - renders the real AuthProvider
+ * and drives real signUp()/signIn()/signOut() calls through it, so it
+ * needs the in-memory backend instead. This is the opt-in
+ * auth-client.ts's own docstring describes, set here rather than per
+ * file so no test can forget it and silently start trying to reach a
+ * Supabase project that is not there.
+ */
+process.env.TSG_AUTH_STORE = "memory";
+
 afterEach(() => {
   cleanup();
 });

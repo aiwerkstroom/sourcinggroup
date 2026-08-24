@@ -42,7 +42,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </noscript>
       </head>
       <body>
-        <AuthProvider>{children}</AuthProvider>
+        {/*
+         * process.env.TSG_AUTH_STORE, read here rather than inside
+         * useAuth.tsx: this file is a Server Component, so it reads env
+         * fresh per request; useAuth.tsx ships to the browser, where
+         * Next.js inlines any non-NEXT_PUBLIC_ process.env access to
+         * `undefined` once, at build time (lib/auth/auth-client.ts's
+         * resolveAuthBackend() explains why that distinction matters).
+         * Unset in every real deploy - only the Playwright golden tests
+         * that drive a real sign-up (middleware.test.ts,
+         * app/rapport/nieuw/pand/__tests__/page.test.ts) set it, on the
+         * `next start` server they spawn themselves.
+         */}
+        <AuthProvider authStoreOverride={process.env.TSG_AUTH_STORE}>{children}</AuthProvider>
       </body>
     </html>
   );

@@ -62,7 +62,17 @@ beforeAll(async () => {
     );
   }
 
-  server = spawn(nextBin, ["start", "-p", String(PORT)], { cwd: repoRoot, stdio: "pipe" });
+  // TSG_AUTH_STORE=memory: this server has no Supabase project reachable
+  // from here, and step 4 below drives a real signUp() through the
+  // actual browser - lib/auth/auth-client.ts's resolveAuthBackend() is
+  // what makes this env var (read server-side, per request, by
+  // app/layout.tsx) actually reach AuthProvider despite this being a
+  // production build.
+  server = spawn(nextBin, ["start", "-p", String(PORT)], {
+    cwd: repoRoot,
+    stdio: "pipe",
+    env: { ...process.env, TSG_AUTH_STORE: "memory" },
+  });
   await waitForServer(Date.now() + START_TIMEOUT_MS);
   browser = await chromium.launch();
 }, TEST_TIMEOUT_MS);

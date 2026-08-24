@@ -4,7 +4,7 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { WizardData } from "@/app/rapport/nieuw/_state/wizard-state";
-import { SESSION_COOKIE } from "@/lib/auth/supabase-mock";
+import { SESSION_COOKIE } from "@/lib/auth/auth-contract";
 
 /**
  * Golden test for POST /rapport/betalen/voorbereiden (fase 4 stap 2),
@@ -121,7 +121,7 @@ const unparseableCase: WizardData = {
 /**
  * This route sits under /rapport, so middleware.ts requires a session.
  * Same approach as pdf-export.test.ts: middleware only checks the
- * cookie's presence and shape, and supabase-mock.ts's signUp()/signIn()
+ * cookie's presence and shape, and the Auth backend's signUp()/signIn()
  * are client-only, so a hand-built cookie in the format they would have
  * set is both sufficient and the only option from a Node-side test.
  */

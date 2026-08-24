@@ -15,7 +15,7 @@
  * caller - the search page, later the wizard-prefill - only ever depends
  * on this file's exported shape, not on how the data was produced, the
  * same convention lib/payments/stripe-mock.ts and
- * lib/auth/supabase-mock.ts already established.
+ * lib/auth/auth-memory.ts already established.
  *
  * SERVER-SIDE ONLY. A real adapter would carry an API key; nothing here
  * should ever reach a client bundle, so every caller of these two

@@ -9,12 +9,16 @@
  *
  * next/navigation's useRouter is mocked (there is no real router in a
  * component rendered outside the Next.js app tree); every other
- * dependency - useAuth(), the mock auth service underneath it - is the
- * real thing, the same AuthProvider the app itself renders.
+ * dependency - useAuth(), the Auth backend underneath it - is the real
+ * thing, the same AuthProvider the app itself renders. That backend is
+ * auth-memory.ts here (vitest.setup.ts sets TSG_AUTH_STORE=memory for the
+ * whole suite): there is no live Supabase project reachable from this
+ * sandbox to test the real backend against.
  */
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { SESSION_COOKIE } from "@/lib/auth/auth-contract";
 import { AuthProvider } from "@/lib/auth/useAuth";
 import SignUpPage from "../page";
 
@@ -25,7 +29,7 @@ vi.mock("next/navigation", () => ({
 
 beforeEach(() => {
   pushMock.mockClear();
-  document.cookie = "tsg-mock-session=; path=/; max-age=0";
+  document.cookie = `${SESSION_COOKIE}=; path=/; max-age=0`;
 });
 
 async function fillAndSubmit(email: string, password: string) {

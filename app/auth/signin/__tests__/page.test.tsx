@@ -4,15 +4,19 @@
  * Golden test for the sign-in page (fase 4 stap 3) - the same shape as
  * signup/__tests__/page.test.tsx: fill in the form, submit, verify the
  * redirect, plus the inline-error path. Each test seeds its own account
- * directly through supabase-mock.ts (bypassing the UI - the sign-up flow
+ * directly through auth-memory.ts (bypassing the UI - the sign-up flow
  * is not what this file is testing) so signIn() has something real to
- * authenticate against.
+ * authenticate against. auth-memory.ts is what the AuthProvider this file
+ * renders actually runs on too - vitest.setup.ts sets TSG_AUTH_STORE=memory
+ * for the whole suite, since there is no live Supabase project reachable
+ * from here to test the real backend against.
  */
 
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { SESSION_COOKIE } from "@/lib/auth/auth-contract";
+import * as mockAuth from "@/lib/auth/auth-memory";
 import { AuthProvider } from "@/lib/auth/useAuth";
-import * as mockAuth from "@/lib/auth/supabase-mock";
 import SignInPage from "../page";
 
 const pushMock = vi.fn();
@@ -22,7 +26,7 @@ vi.mock("next/navigation", () => ({
 
 beforeEach(() => {
   pushMock.mockClear();
-  document.cookie = "tsg-mock-session=; path=/; max-age=0";
+  document.cookie = `${SESSION_COOKIE}=; path=/; max-age=0`;
 });
 
 async function fillAndSubmit(email: string, password: string) {

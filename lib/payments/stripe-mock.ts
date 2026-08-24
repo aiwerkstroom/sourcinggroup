@@ -11,7 +11,7 @@
  * this body with `import Stripe from "stripe"` and a client built from
  * STRIPE_SECRET_KEY, keeping the same three exported functions. Callers
  * only depend on this file's exported shape, the same way useAuth.tsx
- * only depends on supabase-mock.ts's - flat named functions a thin
+ * only depends on auth-memory.ts's - flat named functions a thin
  * wrapper would expose, rather than Stripe's own namespaced
  * `stripe.paymentIntents.create()`. That is the convention stap 1 already
  * set, and following it keeps every call site untouched at swap time.

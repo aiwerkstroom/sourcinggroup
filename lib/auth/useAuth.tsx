@@ -1,41 +1,39 @@
 "use client";
 
 /**
- * React context wrapper around lib/auth/supabase-mock.ts (fase 4 stap 2).
- * Every consumer - the signup/signin pages, the resultaat page's logout
- * button, a future protected-route check - reads auth state through this
- * hook, never by importing supabase-mock.ts directly. That is what keeps
- * the later swap to the real Supabase SDK contained to supabase-mock.ts's
- * internals: this file's own exported shape (AuthProvider, useAuth) does
- * not need to change for that swap to work.
+ * React context wrapper around lib/auth/auth-client.ts (fase 4 stap 2;
+ * swapped to the real Supabase backend in the live-swap task that
+ * replaced auth-memory.ts as the default). Every consumer - the
+ * signup/signin pages, the resultaat page's logout button, a future
+ * protected-route check - reads auth state through this hook, never by
+ * importing a specific backend directly. That is what keeps a future
+ * backend change contained to auth-client.ts and the backend modules
+ * themselves: this file's own exported shape (AuthProvider, useAuth)
+ * does not depend on which one is selected.
  *
  * File is .tsx, not .ts, despite this task's own naming: AuthProvider
  * returns JSX, so it needs the extension that lets it.
  *
- * `user` is not solely reactive to this tab's own signUp()/signIn()/
- * signOut() calls - those update it immediately and synchronously, for
- * instant UI feedback without waiting on anything else - but the mock's
- * session lives in a cookie (supabase-mock.ts's own docstring explains
- * why), not in this component's state alone. Another tab signing out, or
- * the cookie simply expiring, should be reflected here too, which is
- * what the cookie listener below is for. The Cookie Store API's `change`
- * event covers that where the browser implements it (Chromium); a short
- * interval poll is the fallback where it does not (Firefox, Safari at
- * the time of writing), so this does not depend on which engine runs it.
- * Both paths re-read the session via getSession() rather than trusting
- * any event payload - one source of truth for "what does the cookie
- * currently say".
+ * All session state - the initial read, every later change, and the
+ * "instant" update right after this tab's own signUp()/signIn()/
+ * signOut() - flows through one channel: the backend's own
+ * subscribeToSessionChanges(). Earlier this file did its own cookie
+ * polling and set state directly from signUp()/signIn()'s return value
+ * as well, because the mock's session lived in a cookie with no event of
+ * its own. auth-memory.ts and auth-supabase.ts each now own that
+ * mechanism internally (a cookie poll/listener for the former, the SDK's
+ * own onAuthStateChange for the latter) and notify through the same
+ * interface, so this file no longer needs to know which one is running
+ * underneath it.
  */
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import type { AuthResult, AuthUser } from "./supabase-mock";
-import * as mockAuth from "./supabase-mock";
-
-const SESSION_POLL_MS = 1000;
+import type { AuthResult, AuthUser } from "./auth-contract";
+import { resolveAuthBackend } from "./auth-client";
 
 interface AuthContextValue {
   user: AuthUser | null;
-  /** True until the initial getSession() read resolves - lets a consumer avoid a "signed out" flash before that first read completes. */
+  /** True until the first subscribeToSessionChanges() callback fires - lets a consumer avoid a "signed out" flash before that first read completes. */
   loading: boolean;
   signUp: (email: string, password: string) => Promise<AuthResult>;
   signIn: (email: string, password: string) => Promise<AuthResult>;
@@ -44,63 +42,53 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+export function AuthProvider({
+  children,
+  authStoreOverride,
+}: {
+  children: React.ReactNode;
+  /**
+   * A server-side read of process.env.TSG_AUTH_STORE, passed down by
+   * app/layout.tsx (a Server Component, which can read that fresh per
+   * request - unlike this file, which ships to the browser). Only ever
+   * set by that one caller, to route the Playwright golden tests and
+   * local test infrastructure at the in-memory backend without needing a
+   * live Supabase project; omitted, it falls through to
+   * resolveAuthBackend()'s own env read, which is what every real
+   * deploy - and the plain-Node component test suite - actually uses.
+   * See auth-client.ts's resolveAuthBackend() for the full reasoning.
+   */
+  authStoreOverride?: string;
+}) {
+  const backend = useMemo(() => resolveAuthBackend(authStoreOverride), [authStoreOverride]);
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    let cancelled = false;
-    void mockAuth.getSession().then((session) => {
-      if (!cancelled) {
-        setUser(session);
+    let receivedFirst = false;
+    const unsubscribe = backend.subscribeToSessionChanges((session) => {
+      setUser(session);
+      if (!receivedFirst) {
+        receivedFirst = true;
         setLoading(false);
       }
     });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    return unsubscribe;
+  }, [backend]);
 
-  useEffect(() => {
-    let cancelled = false;
-    const refresh = () => {
-      void mockAuth.getSession().then((session) => {
-        if (!cancelled) setUser(session);
-      });
-    };
+  const signUp = useCallback(
+    async (email: string, password: string) => backend.signUp(email, password),
+    [backend],
+  );
 
-    const cookieStore = (window as typeof window & { cookieStore?: EventTarget }).cookieStore;
-    if (cookieStore !== undefined) {
-      cookieStore.addEventListener("change", refresh);
-      return () => {
-        cancelled = true;
-        cookieStore.removeEventListener("change", refresh);
-      };
-    }
-
-    const interval = setInterval(refresh, SESSION_POLL_MS);
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-  }, []);
-
-  const signUp = useCallback(async (email: string, password: string) => {
-    const result = await mockAuth.signUp(email, password);
-    if (result.user !== null) setUser(result.user);
-    return result;
-  }, []);
-
-  const signIn = useCallback(async (email: string, password: string) => {
-    const result = await mockAuth.signIn(email, password);
-    if (result.user !== null) setUser(result.user);
-    return result;
-  }, []);
+  const signIn = useCallback(
+    async (email: string, password: string) => backend.signIn(email, password),
+    [backend],
+  );
 
   const signOut = useCallback(async () => {
-    await mockAuth.signOut();
-    setUser(null);
-  }, []);
+    await backend.signOut();
+  }, [backend]);
 
   const value = useMemo<AuthContextValue>(
     () => ({ user, loading, signUp, signIn, signOut }),

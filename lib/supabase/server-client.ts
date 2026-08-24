@@ -21,7 +21,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  * and this one.
  *
  * NOT VERIFIED AGAINST A LIVE INSTANCE. This sandbox's egress policy
- * blocks *.supabase.co (the same 403 policy denial supabase-mock.ts
+ * blocks *.supabase.co (the same 403 policy denial auth-supabase.ts
  * documents), so nothing here has ever completed a real round trip. What
  * IS verified: it compiles against the real @supabase/supabase-js types
  * (2.112.3), and the narrow interface the pending-input adapter uses is

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { SESSION_COOKIE } from "@/lib/auth/supabase-mock";
+import { SESSION_COOKIE } from "@/lib/auth/auth-contract";
 
 /**
  * Session gate for the paid path (fase 4 stap 4). Runs before any page or
@@ -9,12 +9,15 @@ import { SESSION_COOKIE } from "@/lib/auth/supabase-mock";
  * visitor never even reaches the wizard's client code, not just that the
  * page later notices and bounces them.
  *
- * Only checks the cookie's presence, not the mock user registry behind
- * it: the registry is client-only in-memory state (supabase-mock.ts's own
- * docstring explains why), unreachable from here regardless, and a
- * present, well-formed session cookie is exactly what a real Supabase SSR
- * session check would also rest on at this layer - the swap to the real
- * SDK later replaces the cookie's *origin*, not this file's shape.
+ * Only checks the cookie's presence, never its content or a real
+ * Supabase JWT: the real session lives in the browser's localStorage
+ * (lib/auth/auth-supabase.ts), unreachable from here regardless, and this
+ * cookie is a marker the Auth backend keeps in sync with its own session
+ * state purely so this layer has something to check
+ * (lib/auth/auth-contract.ts's own docstring explains the boundary this
+ * implies). It is a UX gate, not the authorization boundary - that is
+ * row-level security, keyed on the request's own JWT, on the Supabase
+ * side.
  *
  * /rapport/resultaat/print and /rapport/resultaat/print/[token]
  * (fase 3) are deliberately excluded from the /rapport protection below,
