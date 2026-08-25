@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { AuthProvider } from "@/lib/auth/useAuth";
+import { SiteNav } from "./_components/site-nav";
 import "./globals.css";
 
 /**
@@ -54,7 +55,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
          * app/rapport/nieuw/pand/__tests__/page.test.ts) set it, on the
          * `next start` server they spawn themselves.
          */}
-        <AuthProvider authStoreOverride={process.env.TSG_AUTH_STORE}>{children}</AuthProvider>
+        <AuthProvider authStoreOverride={process.env.TSG_AUTH_STORE}>
+          {/*
+           * Site-wide, so /zoeken finally has an entry point that is not
+           * "know the URL". SiteNav removes itself on the print routes -
+           * they are what the PDF pipeline renders, and a nav bar has no
+           * business in a customer's PDF (see its own docstring).
+           */}
+          <SiteNav />
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );

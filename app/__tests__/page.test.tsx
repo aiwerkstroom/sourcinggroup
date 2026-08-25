@@ -16,6 +16,7 @@ import {
   computeExampleOutcome,
 } from "../_components/example-calculator-formula";
 import type { ExampleAnchor } from "../_components/example-calculator-formula";
+import { HERO_DIMENSIONS, HERO_TICKS } from "../_components/hero-cards";
 import HomePage from "../page";
 
 /**
@@ -83,6 +84,25 @@ function importLinesOf(relativePath: string): string[] {
     .filter((line) => /^\s*import\b/.test(line));
 }
 
+/**
+ * Two places on this page draw fictional score rulers now: the hero's
+ * layered-card visual and the interactive example. app/page.tsx marks
+ * both with data-section so the checks below can hold each one to the
+ * rules on its own, instead of counting markers page-wide and losing the
+ * distinction.
+ *
+ * Slices from the marker to the next data-section (or the end). Crude,
+ * and sufficient: the two sections do not nest, which the sanity check
+ * below asserts rather than assumes.
+ */
+function sectionOf(html: string, name: string): string {
+  const marker = `data-section="${name}"`;
+  const start = html.indexOf(marker);
+  expect(start, `no data-section="${name}" in the rendered page`).toBeGreaterThan(-1);
+  const next = html.indexOf("data-section=", start + marker.length);
+  return next === -1 ? html.slice(start) : html.slice(start, next);
+}
+
 describe("the landing page renders all five sections of LANDING_SPEC.md §3", () => {
   const html = renderToStaticMarkup(<HomePage />);
 
@@ -110,9 +130,11 @@ describe("the landing page renders all five sections of LANDING_SPEC.md §3", ()
       expect(html).toContain(dimension.label);
     }
     // Samuel's decision: all five rulers, including the two that hold
-    // still, so the illustration shows the report's real shape.
+    // still, so the illustration shows the report's real shape. Counted
+    // within the example's own section - the hero visual draws rulers
+    // too now, and a page-wide count would stop distinguishing the two.
     expect(defaults.dimensions).toHaveLength(5);
-    expect((html.match(/data-marker="score"/g) ?? []).length).toBe(5);
+    expect((sectionOf(html, "example").match(/data-marker="score"/g) ?? []).length).toBe(5);
 
     // The tool renders its default outcome server-side, so the section is
     // not blank before JavaScript arrives.
@@ -153,11 +175,36 @@ describe("the mandatory fictional-example label (LANDING_SPEC.md §5)", () => {
   });
 
   it("sits with the visualisation rather than after it, so it is read first", () => {
-    const labelAt = html.indexOf("Interactief voorbeeld");
-    const firstRulerAt = html.indexOf('data-marker="score"');
+    const example = sectionOf(html, "example");
+    const labelAt = example.indexOf("Interactief voorbeeld");
+    const firstRulerAt = example.indexOf('data-marker="score"');
     expect(labelAt).toBeGreaterThan(-1);
     expect(firstRulerAt).toBeGreaterThan(-1);
     expect(labelAt).toBeLessThan(firstRulerAt);
+  });
+
+  it("the hero's layered-card visual carries its own label, before its own rulers", () => {
+    // The hero visual draws five invented dimension scores above the
+    // fold, earlier on the page than the interactive example. It is held
+    // to the same rule rather than exempted for being decorative: a
+    // reader meets these numbers first, so the word "fictief" has to
+    // reach them first too.
+    const hero = sectionOf(html, "hero-visual");
+    const labelAt = hero.indexOf("fictieve cijfers");
+    const firstRulerAt = hero.indexOf('data-marker="score"');
+    expect(labelAt).toBeGreaterThan(-1);
+    expect(firstRulerAt).toBeGreaterThan(-1);
+    expect(labelAt).toBeLessThan(firstRulerAt);
+  });
+
+  it("the hero visual is hidden from screen readers, so invented scores are never read as fact", () => {
+    // It restates the hero copy in picture form and adds no information
+    // of its own; the interactive example below is the labelled,
+    // accessible version of the same idea.
+    const hero = sectionOf(html, "hero-visual");
+    expect(hero).toContain('aria-hidden="true"');
+    const hiddenAt = hero.indexOf('aria-hidden="true"');
+    expect(hiddenAt).toBeLessThan(hero.indexOf('data-marker="score"'));
   });
 
   it("is not hidden in small print - §5 asks for 'goed zichtbaar', not a footnote", () => {
@@ -307,6 +354,31 @@ describe("the fictional curve collides with no real one (HOMEPAGE_UPGRADE_SPEC.m
       ).not.toEqual([...realTicks]);
     }
   });
+
+  it("the hero visual's ticks match no real tick set either", () => {
+    // Same rule, same reason. The hero visual came later than the
+    // interactive example and could easily have been given a
+    // plausible-looking tick set copied from the report; this is what
+    // stops that from shipping quietly.
+    for (const [dimension, realTicks] of Object.entries(SCORE_RULER_TICKS)) {
+      expect(
+        [...HERO_TICKS],
+        `HERO_TICKS must not equal ${dimension}'s real anchor positions`,
+      ).not.toEqual([...realTicks]);
+    }
+  });
+
+  it("the hero visual's dimension scores are all non-integer mid-range, reproducing no real endpoint", () => {
+    // Every real dimension spans 0-10. A visual whose invented figures
+    // never reach either end, and never land on a round number, cannot be
+    // mistaken for a real computed outcome - and cannot accidentally
+    // reproduce one.
+    for (const dimension of HERO_DIMENSIONS) {
+      expect(dimension.score, `${dimension.label} must stay off the endpoints`).toBeGreaterThan(0);
+      expect(dimension.score, `${dimension.label} must stay off the endpoints`).toBeLessThan(10);
+      expect(dimension.score % 1, `${dimension.label} must not be a round score`).not.toBe(0);
+    }
+  });
 });
 
 describe("bundle sweep - the landing page reaches nothing in the calculation layer", () => {
@@ -342,6 +414,12 @@ describe("bundle sweep - the landing page reaches nothing in the calculation lay
       // items - but they are the page's own public FAQ copy, declared in
       // this file. Same point stands: it reaches nothing in lib/rules/es.
       "./_components/faq-accordion",
+      // The hero's layered-card visual. A Server Component whose only
+      // import is ./_components/example-score-ruler, which imports
+      // nothing at all - so it reaches nothing in lib/rules/es either,
+      // and the scan below holds it to the same no-real-identifiers rule
+      // as the rest of the example machinery.
+      "./_components/hero-cards",
     ];
 
     const lines = importLinesOf("app/page.tsx");
@@ -354,11 +432,23 @@ describe("bundle sweep - the landing page reaches nothing in the calculation lay
     }
   });
 
+  it("app/_components/hero-cards.tsx imports only the example ruler, which itself imports nothing", () => {
+    // The hero visual shows five invented dimension scores and a
+    // fictional ten-year fragment. It is held to the same import
+    // discipline as the interactive example (HOMEPAGE_UPGRADE_SPEC.md
+    // §4.2) - one hop to a module already proven to import nothing, and
+    // no second route into the calculation layer.
+    const lines = importLinesOf("app/_components/hero-cards.tsx");
+    const specifiers = lines.map((line) => /from\s+"([^"]+)"/.exec(line)?.[1]);
+    expect(specifiers).toEqual(["./example-score-ruler"]);
+  });
+
   it.each([
     "app/page.tsx",
     "app/_components/example-calculator-formula.ts",
     "app/_components/example-calculator.tsx",
     "app/_components/example-score-ruler.tsx",
+    "app/_components/hero-cards.tsx",
   ])("%s contains no real parameter, anchor or mock-listing identifier", (file) => {
     const source = sourceOf(file);
     // Stripped of comments first: every one of these files explains in

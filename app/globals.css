@@ -52,6 +52,24 @@
   --color-signal-positive: #15803d;
   --color-signal-negative: #b91c1c;
   --color-signal-neutral: #b45309;
+
+  /*
+   * Twee schaduwen die Tailwind's eigen trap niet dekt. Beide gebruiken
+   * dezelfde neutrale zwart-met-lage-opacity als shadow-sm - geen nieuwe
+   * kleur, alleen een andere verdeling.
+   *
+   * shadow-nav: de zwevende navigatiepil. Bijna onzichtbaar; hij moet de
+   * pil van de pagina lichten zonder zelf op te vallen, want de balk staat
+   * boven élke pagina en mag nergens de aandacht van de inhoud trekken.
+   *
+   * shadow-layered: de gestapelde kaarten in de hero. Twee lagen - een
+   * korte, strakke laag die de kaartrand pakt, en een wijde, zachte laag
+   * die de diepte doet. Dat is wat de stapel als losse vellen laat lezen
+   * in plaats van als één plat blok; DESIGN_SPEC §9 sluit 3D-transforms en
+   * perspectief uit, dus de diepte moet volledig uit schaduw komen.
+   */
+  --shadow-nav: 0 1px 2px rgb(0 0 0 / 0.04), 0 1px 3px rgb(0 0 0 / 0.03);
+  --shadow-layered: 0 1px 2px rgb(0 0 0 / 0.06), 0 12px 28px rgb(0 0 0 / 0.08);
 }
 
 html {

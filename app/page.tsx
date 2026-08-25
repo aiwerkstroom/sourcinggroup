@@ -3,6 +3,7 @@ import { Card } from "./_components/card";
 import { ExampleCalculator } from "./_components/example-calculator";
 import { FadeIn } from "./_components/fade-in";
 import { FaqAccordion } from "./_components/faq-accordion";
+import { HeroCards } from "./_components/hero-cards";
 
 /**
  * The wervende landing page (LANDING_SPEC.md), replacing the previous
@@ -104,24 +105,48 @@ export default function HomePage() {
       {/* Hero: fades on load, not on scroll - it is already on screen, so
           there is nothing to scroll into (HOMEPAGE_UPGRADE_SPEC.md §2). */}
       <FadeIn trigger="load" className="flex flex-col gap-6">
-        <div className="flex flex-col gap-4">
-          <h1 className="max-w-2xl text-2xl leading-snug font-semibold">
-            Een pand kopen in Spanje voelt vaak als een gok.
-          </h1>
-          <p className="text-text-muted max-w-prose text-lg leading-relaxed">
-            Andere taal, ander systeem, cijfers die u niet zelf kunt narekenen. The Sourcing
-            Group (TSG) rekent het voor u door - met elke aanname zichtbaar en elke uitkomst
-            herleidbaar.
-          </p>
-          <p className="text-text-faint max-w-prose text-sm leading-relaxed">
-            Geen advies over wat u moet kopen, geen belofte van het hoogste rendement - een
-            rekenmethode die u zelf kunt controleren, op elk pand dat u overweegt. Hieronder ziet
-            u hoe dat werkt.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-6">
-          <HeroLink href="/gratis">Gratis indicatie</HeroLink>
-          <HeroLink href="/rapport/nieuw/pand">Betaald rapport — € 49</HeroLink>
+        {/*
+         * Two columns from md up: the copy carries the argument, the card
+         * stack shows what the argument produces. One column below that,
+         * where HeroCards hides itself entirely - a rotated, overlapping
+         * stack has no room to be legible on a phone, and the interactive
+         * example further down does the same job better there.
+         */}
+        <div className="grid grid-cols-1 items-start gap-8 md:grid-cols-[minmax(0,1fr)_auto] md:gap-10">
+          <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-4">
+              <h1 className="max-w-2xl text-2xl leading-snug font-semibold">
+                Een pand kopen in Spanje voelt vaak als een gok.
+              </h1>
+              <p className="text-text-muted max-w-prose text-lg leading-relaxed">
+                Andere taal, ander systeem, cijfers die u niet zelf kunt narekenen. The Sourcing
+                Group (TSG) rekent het voor u door - met elke aanname zichtbaar en elke uitkomst
+                herleidbaar.
+              </p>
+              <p className="text-text-faint max-w-prose text-sm leading-relaxed">
+                Geen advies over wat u moet kopen, geen belofte van het hoogste rendement - een
+                rekenmethode die u zelf kunt controleren, op elk pand dat u overweegt. Hieronder
+                ziet u hoe dat werkt.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-6">
+              <HeroLink href="/gratis">Gratis indicatie</HeroLink>
+              <HeroLink href="/rapport/nieuw/pand">Betaald rapport — € 49</HeroLink>
+            </div>
+          </div>
+
+          {/*
+           * data-section marks the two places on this page that draw
+           * fictional score rulers. app/__tests__/page.test.tsx slices on
+           * these to check each one separately - that its own
+           * fiction-label comes before its own rulers, and that the
+           * interactive tool still draws exactly five. Without the
+           * markers those two checks would silently merge into one
+           * page-wide count and stop meaning anything.
+           */}
+          <div data-section="hero-visual">
+            <HeroCards />
+          </div>
         </div>
       </FadeIn>
 
@@ -155,9 +180,11 @@ export default function HomePage() {
           laten zien hoe het rapport rekent en rapporteert.
         </p>
 
-        <Card size="large">
-          <ExampleCalculator />
-        </Card>
+        <div data-section="example">
+          <Card size="large">
+            <ExampleCalculator />
+          </Card>
+        </div>
       </section>
 
       <section className="mt-16 flex flex-col gap-6">
