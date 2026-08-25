@@ -79,7 +79,7 @@ const FAQ_ITEMS = [
   {
     question: "Werkt dit alleen voor Spanje?",
     answer:
-      "Op dit moment wel. De rekenmethode is gebouwd op de Spaanse fiscale en juridische situatie - belasting, financiering, vergunningen voor verhuur. Andere landen zijn geen onderdeel van deze versie.",
+      "TSG is gebouwd om internationaal te werken, en Spanje - met de regio Valencia als eerste - is de markt waar de rekenmethode nu live staat. Elk land heeft zijn eigen fiscale en juridische regels, die eerst grondig worden uitgezocht voordat een volgende regio wordt toegevoegd.",
   },
   {
     question: "Wat gebeurt er met mijn gegevens?",

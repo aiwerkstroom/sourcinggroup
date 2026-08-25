@@ -151,6 +151,20 @@ describe("the landing page renders all five sections of LANDING_SPEC.md §3", ()
     expect(html).toContain("geen persoonlijk beleggingsadvies");
   });
 
+  it("the 'werkt dit alleen voor Spanje' answer frames Spain/Valencia as the first region, not the only one - and makes no roadmap claim", () => {
+    expect(html).toContain("Werkt dit alleen voor Spanje?");
+    // The framing this copy pass asked for: international by design,
+    // Spain/Valencia as the first region live - not "Spain only for now"
+    // (the wording this replaced).
+    expect(html).toContain("internationaal te werken");
+    expect(html).toContain("Valencia");
+    expect(html).toContain("eerste");
+    // No timeline, no named next country - a roadmap claim is exactly
+    // what this copy pass was told not to make.
+    expect(html).not.toMatch(/volgend jaar|in 20\d\d|binnenkort|binnen [a-z]+ maanden/i);
+    expect(html).not.toMatch(/Frankrijk|Portugal|Italië|Griekenland/i);
+  });
+
   it("5. sluiting - one soft CTA, no urgency language", () => {
     expect(html).toContain("Begin met een gratis indicatie");
     expect(html).not.toMatch(/start nu|nu beginnen|mis niet|laatste kans/i);
