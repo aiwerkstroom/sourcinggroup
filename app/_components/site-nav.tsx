@@ -98,9 +98,16 @@ export function SiteNav() {
         aria-label="Hoofdnavigatie"
         className="bg-surface border-border shadow-nav flex flex-wrap items-center justify-between gap-x-6 gap-y-3 rounded-xl border px-4 py-3 md:px-5"
       >
+        {/*
+         * font-heading, not a heading element: the wordmark is a brand
+         * element, so it takes Space Grotesk explicitly rather than
+         * inheriting it from globals.css's h1/h2/h3 rule. Making it an
+         * <h1> to get the font would be a heading in the wrong place on
+         * every page in the site.
+         */}
         <Link
           href="/"
-          className="focus-visible:ring-accent-ring rounded-sm text-sm font-semibold tracking-tight focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+          className="font-heading focus-visible:ring-accent-ring rounded-sm text-sm font-semibold tracking-tight focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
         >
           Yield &amp; Stone
         </Link>

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Space_Grotesk } from "next/font/google";
 import { AuthProvider } from "@/lib/auth/useAuth";
 import { SiteNav } from "./_components/site-nav";
 import "./globals.css";
@@ -10,10 +10,40 @@ import "./globals.css";
  * which is what removes the flash of unstyled text and keeps the render
  * server-side. Exposed as a CSS variable so globals.css's --font-sans -
  * the single place the family is chosen - can point at it.
+ *
+ * Inter carries everything that is read rather than looked at: body copy,
+ * labels, and - the part that matters most - every figure in the report,
+ * where its tabular-nums keep columns aligned (DESIGN_SPEC.md §2). The
+ * heading face below does not touch any of that.
  */
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
+  display: "swap",
+});
+
+/**
+ * Space Grotesk, the Yield & Stone heading face. Same next/font
+ * treatment as Inter: self-hosted at build time, exposed as a variable,
+ * display:swap - so it costs no runtime request and no layout-blocking
+ * fetch.
+ *
+ * Three weights, not the full family: 500/600/700 is what the heading
+ * scale in DESIGN_SPEC.md §2 actually uses (H1-H3 are all semibold, with
+ * 500 for the eyebrow labels and 700 available for the wordmark). Asking
+ * for the other four weights would roughly double this face's payload
+ * for glyphs nothing renders.
+ *
+ * It is deliberately NOT applied to figures. Space Grotesk has no
+ * tabular-nums feature to speak of, and the report's whole numeric
+ * discipline rests on Inter's - so the split is "titles and the wordmark
+ * versus everything that is data", enforced in globals.css rather than
+ * per component.
+ */
+const spaceGrotesk = Space_Grotesk({
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+  variable: "--font-space-grotesk",
   display: "swap",
 });
 
@@ -25,7 +55,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="nl" className={inter.variable}>
+    <html lang="nl" className={`${inter.variable} ${spaceGrotesk.variable}`}>
       <head>
         {/*
          * Zonder JavaScript flipt niets ooit data-fade naar "in"

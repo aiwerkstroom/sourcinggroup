@@ -57,8 +57,20 @@
  * legt de bevinding vast.
  */
 @theme {
-  /* Inter via next/font (app/layout.tsx) - één familie voor de hele interface. */
+  /*
+   * Twee families, beide via next/font (app/layout.tsx).
+   *
+   * --font-sans (Inter) draagt alles wat gelezen wordt: lopende tekst,
+   * labels, formuliervelden en - het zwaarstwegende deel - elk cijfer in
+   * het rapport, waar de tabular-nums van Inter de kolommen uitlijnen.
+   *
+   * --font-heading (Space Grotesk) draagt alleen wat bekéken wordt:
+   * koppen en het woordmerk. Het is de merkstem van Yield & Stone, niet
+   * een tweede tekstfamilie - zie de regel onderaan dit bestand, die de
+   * scheiding afdwingt op h1/h2/h3 in plaats van per component.
+   */
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-heading: var(--font-space-grotesk), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 
   /* Papier en oppervlakken: gebroken wit voor de pagina, zuiver wit voor kaarten. */
   --color-bg: #f6f4f1;
@@ -135,6 +147,32 @@ table {
 
 .tabular {
   font-variant-numeric: tabular-nums;
+}
+
+/*
+ * De tweeledige typografie van DESIGN_SPEC.md §2, afgedwongen op één
+ * plek in plaats van als klasse op elke kop.
+ *
+ * Waarom hier en niet per component: er staan tientallen koppen in de
+ * wizard, het rapport, de gratis indicatie en de printweergave. Een
+ * utility-klasse op elk daarvan is tientallen kansen om er één te
+ * vergeten, en de vergeten kop valt dan stilletjes terug op Inter -
+ * zichtbaar verkeerd, maar alleen als iemand ernaar kijkt. Een
+ * elementselector kan niet vergeten worden.
+ *
+ * h4-h6 staan er bewust NIET bij. De schaal in §2 gaat tot H3; wat
+ * daaronder zou vallen is in de praktijk een label, en labels zijn
+ * Inter.
+ *
+ * Cijfers raakt deze regel niet. Geen enkele kop in dit project is een
+ * getal - gecontroleerd over de hele app-laag - en tabellen, cellen en
+ * de .tabular-klasse hierboven blijven volledig op Inter, waar de
+ * tabular-nums vandaan komen die de rapportkolommen uitlijnen.
+ */
+h1,
+h2,
+h3 {
+  font-family: var(--font-heading);
 }
 
 /*

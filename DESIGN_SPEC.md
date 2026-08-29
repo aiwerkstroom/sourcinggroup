@@ -102,10 +102,40 @@ categorielabels, niet voor de score-liniaal.
 
 ## 2. Typografie
 
-**Familie: Inter, één familie voor de hele interface.**
-- Laden via next/font (voorkomt FOUT en houdt de font server-side geoptimaliseerd)
+**Twee families, met een scherpe scheiding.** Dit verving de oorspronkelijke
+"Inter, één familie voor de hele interface" toen de merkidentiteit Yield & Stone
+werd vastgesteld: het merk heeft een eigen kopstem nodig, maar de rekendiscipline
+van het rapport hangt aan Inter en mag daar niet onder lijden.
+
+| Familie | Waarvoor | Waarom |
+|---|---|---|
+| **Space Grotesk** (500/600/700) | `h1`, `h2`, `h3` en het woordmerk | De merkstem. Alleen wat *bekeken* wordt. |
+| **Inter** | Lopende tekst, labels, formuliervelden, en **elk cijfer** | Alles wat *gelezen of geteld* wordt. `tabular-nums` komt hiervandaan. |
+
+- Beide via next/font, self-hosted op buildtijd (voorkomt FOUT, geen
+  runtime-request naar Google)
 - `font-variant-numeric: tabular-nums` als default op alle tabellen en cijfercellen —
-  cijfers moeten uitgelijnd zijn in kolommen
+  cijfers moeten uitgelijnd zijn in kolommen. **Ongewijzigd:** Space Grotesk raakt
+  geen enkele cijfercel.
+
+**De scheiding is één elementregel in `app/globals.css`** (`h1, h2, h3 { font-family:
+var(--font-heading) }`), geen utility-klasse per kop. Er staan tientallen koppen in
+de wizard, het rapport, de gratis indicatie en de printweergave; een klasse op elk
+daarvan is tientallen kansen om er één te vergeten. Een elementselector kan niet
+vergeten worden.
+
+`h4`–`h6` vallen er bewust buiten — de schaal hieronder stopt bij H3, en wat
+daaronder zou vallen is in de praktijk een label.
+
+**Deze regel rust op één invariant:** geen enkele kop in dit project is een kaal
+getal. Zou dat ooit veranderen, dan verliest die kop stilzwijgend de tabular-nums
+van Inter. `app/__tests__/typography.test.ts` toetst de invariant, en meet de
+toepassing via computed styles op een echte pagina — niet via klassenamen, want
+wat telt is of de regel wint, niet of hij bestaat.
+
+**Laadkosten:** +21,8 KB preload per paginaweergave (één gewicht), +46,9 KB op
+schijf voor alle drie de gewichten. Gewicht 700 wordt op dit moment door geen
+enkele kop gebruikt en wordt dus nooit opgehaald door de browser.
 
 **Hiërarchie — bescheiden, gelijkmatig.**
 - H1: 24–28px, semibold (600)
