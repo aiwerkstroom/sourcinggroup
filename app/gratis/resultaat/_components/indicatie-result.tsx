@@ -70,7 +70,7 @@ function LabelStat({ label, value }: { label: string; value: string }) {
 
 /** What the paid report adds on top of this indication - factual, per this task's instruction, not sales copy. */
 const FULL_REPORT_ADDITIONS: readonly string[] = [
-  "Volledige TSG-score op alle vijf dimensies (cashflow, schuldbestendigheid, rendement, haalbaarheid, datazekerheid) - deze indicatie scoort er twee.",
+  "Volledige Yield & Stone-score op alle vijf dimensies (cashflow, schuldbestendigheid, rendement, haalbaarheid, datazekerheid) - deze indicatie scoort er twee.",
   "Conservatief, basis en optimistisch scenario naast elkaar, inclusief DSCR en rendement op eigen vermogen (IRR).",
   "Opbouw van de cashflow: elke kostenpost, van bruto huur tot netto maandcashflow na belasting.",
   "Tienjarige projectie, jaar voor jaar.",

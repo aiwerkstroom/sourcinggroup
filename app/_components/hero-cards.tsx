@@ -125,7 +125,7 @@ export function HeroCards() {
         <div className="flex items-baseline justify-between gap-4">
           <div>
             <p className="text-text-faint text-xs font-medium tracking-widest uppercase">
-              TSG-score
+              Yield &amp; Stone-score
             </p>
             <p className="tabular mt-1 text-4xl font-semibold">6,3</p>
           </div>

@@ -18,7 +18,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "The Sourcing Group — Rentabiliteitsrapport",
+  title: "Yield & Stone — Rentabiliteitsrapport",
   description:
     "Onderbouwd rendementsrapport voor Spaans vastgoed. Elke uitkomst herleidbaar, elke aanname zichtbaar.",
 };

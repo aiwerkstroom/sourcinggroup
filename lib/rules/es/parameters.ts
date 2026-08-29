@@ -415,7 +415,7 @@ export const ACQUISITION_RATES: SourcedParameter<{
     agencyFee: 0.05,
   },
   provenance: "SOURCED",
-  source: "Monserrate Inmobiliaria (ITP), Idealista (AJD, notary, registration), The Sourcing Group (agency fee)",
+  source: "Monserrate Inmobiliaria (ITP), Idealista (AJD, notary, registration), Yield & Stone (agency fee)",
   date: "2025",
 };
 

@@ -48,7 +48,7 @@ export function TsgScoreSection({ score, percentile }: TsgScoreSectionProps) {
   return (
     <section aria-labelledby="sectie-tsg-score" className="flex flex-col gap-6">
       <h2 id="sectie-tsg-score" className="text-text-faint text-xs tracking-widest uppercase">
-        1. TSG-score
+        1. Yield &amp; Stone-score
       </h2>
 
       {score === null ? (

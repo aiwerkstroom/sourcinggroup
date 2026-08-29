@@ -114,7 +114,7 @@ describe("the landing page renders all five sections of LANDING_SPEC.md §3", ()
     expect(html).toContain("Hoe het werkt");
     // All three steps, not just the heading.
     expect(html).toContain("1. Pand en cijfers");
-    expect(html).toContain("2. TSG rekent door");
+    expect(html).toContain("2. Yield &amp; Stone rekent door");
     expect(html).toContain("3. U ziet de aannames");
   });
 

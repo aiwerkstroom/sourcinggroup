@@ -51,7 +51,7 @@ const HOW_IT_WORKS_STEPS = [
     body: "U vult de kenmerken van een pand in: prijs, oppervlak, kosten, en - als u die al kent - de verwachte huur.",
   },
   {
-    title: "2. TSG rekent door",
+    title: "2. Yield & Stone rekent door",
     body: "Cashflow, DSCR en rendement over tien jaar, in drie scenario's - conservatief, basis en optimistisch. Dezelfde methode voor ieder pand.",
   },
   {
@@ -69,7 +69,7 @@ const FAQ_ITEMS = [
   {
     question: "Is dit beleggingsadvies?",
     answer:
-      "Nee. TSG rekent een pand voor u door en toont de uitkomst - het geeft geen persoonlijk beleggingsadvies en bemiddelt niet in de aankoop. De beslissing, en het inwinnen van professioneel advies waar nodig, blijft aan u.",
+      "Nee. Yield & Stone rekent een pand voor u door en toont de uitkomst - het geeft geen persoonlijk beleggingsadvies en bemiddelt niet in de aankoop. De beslissing, en het inwinnen van professioneel advies waar nodig, blijft aan u.",
   },
   {
     question: "Hoe wordt de score berekend, en is dat transparant?",
@@ -79,7 +79,7 @@ const FAQ_ITEMS = [
   {
     question: "Werkt dit alleen voor Spanje?",
     answer:
-      "TSG is gebouwd om internationaal te werken, en Spanje - met de regio Valencia als eerste - is de markt waar de rekenmethode nu live staat. Elk land heeft zijn eigen fiscale en juridische regels, die eerst grondig worden uitgezocht voordat een volgende regio wordt toegevoegd.",
+      "Yield & Stone is gebouwd om internationaal te werken, en Spanje - met de regio Valencia als eerste - is de markt waar de rekenmethode nu live staat. Elk land heeft zijn eigen fiscale en juridische regels, die eerst grondig worden uitgezocht voordat een volgende regio wordt toegevoegd.",
   },
   {
     question: "Wat gebeurt er met mijn gegevens?",
@@ -115,12 +115,25 @@ export default function HomePage() {
         <div className="grid grid-cols-1 items-start gap-8 md:grid-cols-[minmax(0,1fr)_auto] md:gap-10">
           <div className="flex flex-col gap-6">
             <div className="flex flex-col gap-4">
-              <h1 className="max-w-2xl text-2xl leading-snug font-semibold">
-                Een pand kopen in Spanje voelt vaak als een gok.
-              </h1>
+              <div className="flex flex-col gap-4">
+                {/*
+                 * The one place the brand's gold appears. Purely
+                 * decorative - a short rule, carrying no information and
+                 * labelling nothing, which is the only role it can
+                 * safely take: #C49A4A reaches 2,4:1 on the page ground,
+                 * below both the 4,5:1 text bar and the 3:1 bar for
+                 * meaningful graphics (DESIGN_SPEC.md §6, and the
+                 * measurements in globals.css's own header). aria-hidden
+                 * so it is not announced as content.
+                 */}
+                <span aria-hidden="true" className="bg-highlight h-0.5 w-10 rounded-full" />
+                <h1 className="max-w-2xl text-2xl leading-snug font-semibold">
+                  Een pand kopen in Spanje voelt vaak als een gok.
+                </h1>
+              </div>
               <p className="text-text-muted max-w-prose text-lg leading-relaxed">
-                Andere taal, ander systeem, cijfers die u niet zelf kunt narekenen. The Sourcing
-                Group (TSG) rekent het voor u door - met elke aanname zichtbaar en elke uitkomst
+                Andere taal, ander systeem, cijfers die u niet zelf kunt narekenen. Yield &amp;
+                Stone rekent het voor u door - met elke aanname zichtbaar en elke uitkomst
                 herleidbaar.
               </p>
               <p className="text-text-faint max-w-prose text-sm leading-relaxed">

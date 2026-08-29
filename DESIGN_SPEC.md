@@ -9,6 +9,45 @@ Referenties: McKinsey-rapportages (helder, ruim, ingetogen), Palantir Foundry
 
 ---
 
+> **Merkwissel Yield & Stone.** Het palet van §1 hieronder is vervangen door
+> het definitieve merkpalet. De structuur van het systeem — licht thema, één
+> accent, signaalkleuren strikt gereserveerd voor drempels, WCAG AA als
+> bindende bovenliggende eis (§6) — is ongewijzigd; alleen de zes kleuren zijn
+> anders. De actuele, gemeten waarden staan in `app/globals.css` en worden
+> gepind door `app/__tests__/design-tokens.test.ts`. De rest van dit document
+> (typografie, layout, componentstijlen, toegankelijkheid) geldt onverkort.
+>
+> | Merkkleur | Hex | Rol in de tokens |
+> |---|---|---|
+> | Donkergroen | `#1F2F28` | `--color-accent` — knoppen, links, koppen-accent |
+> | Saliegroen | `#6D7F74` | `--color-border-strong`, `--color-accent-ring` |
+> | Goud/oker | `#C49A4A` | `--color-highlight` — **uitsluitend decoratief** |
+> | Warm zand | `#D9D2C4` | `--color-border`, `--color-surface-raised`, `--color-accent-subtle` |
+> | Gebroken wit | `#F6F4F1` | `--color-bg` |
+> | Donkergrijs | `#2D343A` | `--color-text` |
+>
+> Drie tokens die het merkpalet niet benoemt zijn afgeleid en gemeten, omdat
+> §6 bindend is bij tegenspraak: `--color-text-muted` `#4A5450` (7,2:1),
+> `--color-text-faint` `#636F69` (4,8:1) en `--color-accent-hover` `#16211C`
+> (15,1:1). Alle drie liggen in de warm-groengrijze familie van `#2D343A`.
+>
+> **Goud draagt geen tekst.** `#C49A4A` haalt 2,4:1 op de paginaachtergrond en
+> 2,6:1 op wit — onder de 4,5:1 voor tekst én onder de 3:1 voor
+> betekenisdragende grafiek. Het mag dus geen link, knoptekst, label of
+> datamarkering zijn op een licht vlak; alleen decoratie, of tekst óp het
+> donkergroen (5,4:1).
+>
+> **Twee gemeten botsingen met de signaalkleuren**, bewust niet opgelost (dat
+> is een aparte ontwerpbeslissing): saliegroen deelt hue én helderheid met
+> signaalgroen "gehaald" en verschilt alleen in verzadiging; goud deelt een
+> hue-familie met signaaloranje maar verschilt wél in helderheid. Zie
+> `design-tokens.test.ts`, dat beide vastlegt met de meting erbij.
+>
+> **Merknaam:** "The Sourcing Group" / "TSG" is in alle klantgerichte tekst
+> vervangen door "Yield & Stone". Interne codebenamingen (`TSG_SCORE_ANCHORS`,
+> `TSG_AUTH_STORE`, `TsgScore*`, bestandsnamen) blijven ongewijzigd —
+> `app/__tests__/brand-name.test.tsx` bewaakt beide richtingen.
+
 ## 1. Palet en thema
 
 **Licht thema als hoofdthema.** Vervangt de huidige donkere globals.css volledig,

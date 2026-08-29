@@ -31,9 +31,10 @@
  *
  * === Styling ===
  *
- * DESIGN_SPEC.md §1's existing tokens throughout - surface, border,
- * accent, text. No new colour is introduced; this is structural UI, not a
- * rebrand.
+ * The semantic tokens throughout - surface, border, accent, text - so the
+ * Yield & Stone palette reached this bar by changing globals.css alone,
+ * with no edit here. That is the whole point of naming tokens by role
+ * rather than by colour.
  *
  * One deliberate deviation, flagged rather than buried: the pill uses
  * rounded-xl (12px), where DESIGN_SPEC.md §3 caps rounding at rounded-lg
@@ -101,7 +102,7 @@ export function SiteNav() {
           href="/"
           className="focus-visible:ring-accent-ring rounded-sm text-sm font-semibold tracking-tight focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
         >
-          The Sourcing Group
+          Yield &amp; Stone
         </Link>
 
         <ul className="order-last flex w-full flex-wrap items-center gap-x-5 gap-y-2 md:order-none md:w-auto md:justify-center">

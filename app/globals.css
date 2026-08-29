@@ -1,52 +1,89 @@
 @import "tailwindcss";
 
 /*
- * Visuele richting: DESIGN_SPEC.md - licht thema als hoofdthema, warm wit
- * papier, één donkerblauw accent, signaalkleuren strikt gereserveerd voor
- * drempels. Referenties: McKinsey (helder en ruim), Palantir Foundry
- * (dichtheid waar nodig), Upfront (nuchtere toon).
+ * Merkpalet Yield & Stone. Vervangt het donkerblauwe palet dat
+ * DESIGN_SPEC.md §1 vastlegde; de structuur van het systeem is
+ * ongewijzigd - licht thema, één accent, signaalkleuren strikt
+ * gereserveerd voor drempels.
  *
  * Tailwind v4 CSS-first config: tokens hier, geen tailwind.config.ts. De
  * tokennamen zijn semantisch (bg/surface/text/border/accent/signal), niet
  * kleurgebonden, zodat componenten nergens een hex of een Tailwind-
- * palletnaam noemen - het thema is op één plek te herzien.
+ * palletnaam noemen - het thema is op één plek te herzien. Dat is precies
+ * waarom deze merkwissel een tokenwissel kon zijn en geen herbouw.
  *
- * Twee waarden wijken bewust af van de hexcodes die DESIGN_SPEC.md §1 als
- * voorbeeld noemt, omdat §6 (WCAG AA, 4.5:1 voor álle tekst, secundair en
- * labels inbegrepen) ze uitsluit. Beide behouden de bedoelde kleurfamilie
- * en de bedoelde onderlinge hiërarchie; alleen de helderheid schuift:
+ * === De zes merkkleuren, en waar ze landen ===
  *
- *   - §1 stelt #9CA3AF voor als subtiele tekst. Dat haalt 2,4:1 op warm wit
- *     en is dus niet leesbaar genoeg voor voetnoten. De hele grijstrap is
- *     daarom één stap donkerder gezet (muted #4B5563 = 7,2:1, faint
- *     #6B7280 = 4,6:1). Drie zichtbaar verschillende niveaus, alle drie AA.
- *   - §1 zegt de bestaande signaalkleuren te behouden. Die waren gekozen
- *     tegen een donkere achtergrond (groen #4ADE80 haalt 1,7:1 op wit) en
- *     kunnen op papier geen tekst dragen. Zelfde tinten, 700-gewicht:
- *     4,8-6,2:1. Ze blijven uitsluitend voor drempels (§1/§7 UI_SPEC).
+ *   #1F2F28 donkergroen  -> --color-accent      (knoppen, links, koppen-accent)
+ *   #6D7F74 saliegroen   -> --color-border-strong, --color-accent-ring
+ *   #C49A4A goud/oker    -> --color-highlight   (zie de waarschuwing hieronder)
+ *   #D9D2C4 warm zand    -> --color-border, --color-surface-raised, --color-accent-subtle
+ *   #F6F4F1 gebroken wit -> --color-bg
+ *   #2D343A donkergrijs  -> --color-text
+ *
+ * === Drie waarden zijn afgeleid, niet aangeleverd ===
+ *
+ * Het systeem heeft tokens die het merkpalet niet benoemt. DESIGN_SPEC.md
+ * §6 is bindend bij tegenspraak ("een nieuwe kleur wordt gemeten vóór hij
+ * wordt vastgelegd"), dus alle drie zijn gemeten tegen zowel de
+ * paginaachtergrond als het witte kaartvlak, en de laagste van de twee telt:
+ *
+ *   --color-text-muted  #4A5450  7,2:1 / 7,9:1  (was #4B5563, 7,2:1)
+ *   --color-text-faint  #636F69  4,8:1 / 5,2:1  (was #6B7280, 4,6:1)
+ *   --color-accent-hover #16211C  15,1:1        (donkerder dan het accent,
+ *                                                zoals DESIGN_SPEC §4 vraagt)
+ *
+ * Alle drie liggen in de warm-groengrijze familie van #2D343A, zodat de
+ * drie tekstniveaus zichtbaar verschillen en geen van drieën terugvalt op
+ * de koele grijzen van het oude palet.
+ *
+ * === GOUD DRAAGT GEEN TEKST ===
+ *
+ * #C49A4A haalt 2,4:1 op de paginaachtergrond en 2,6:1 op wit. Dat is
+ * onder de 4,5:1 voor tekst én onder de 3:1 voor betekenisdragende
+ * grafiek. Goud mag dus geen link, knoptekst, label of datamarkering zijn
+ * op een licht vlak - alleen decoratie, of tekst/grafiek óp het
+ * donkergroen (5,4:1). --color-highlight bestaat zodat het merk compleet
+ * is; waar het gebruikt wordt is het bewust decoratief.
+ *
+ * === Signaalkleuren ongewijzigd ===
+ *
+ * Rood/oranje/groen voor drempels blijven exact wat ze waren. Ze halen op
+ * de nieuwe achtergrond 4,6 / 5,9 / 4,6:1 en dus nog steeds AA. Er zijn
+ * twee gemeten kleurbotsingen met het nieuwe merk - saliegroen tegen
+ * signaalgroen en goud tegen signaaloranje - die bewust NIET zijn
+ * opgelost door een van beide te verschuiven; dat is een ontwerpbeslissing
+ * die buiten deze wissel valt. __tests__/design-tokens.test.ts meet ze en
+ * legt de bevinding vast.
  */
 @theme {
   /* Inter via next/font (app/layout.tsx) - één familie voor de hele interface. */
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, sans-serif;
 
-  /* Papier en oppervlakken: warm wit voor de pagina, zuiver wit voor kaarten. */
-  --color-bg: #fafaf9;
+  /* Papier en oppervlakken: gebroken wit voor de pagina, zuiver wit voor kaarten. */
+  --color-bg: #f6f4f1;
   --color-surface: #ffffff;
   /* Gevulde staat van een keuze-element (geselecteerde radio), niet een derde kaartniveau. */
-  --color-surface-raised: #f3f4f6;
+  --color-surface-raised: #d9d2c4;
 
-  --color-border: #e5e7eb;
-  --color-border-strong: #d1d5db;
+  --color-border: #d9d2c4;
+  --color-border-strong: #6d7f74;
 
-  --color-text: #111827;
-  --color-text-muted: #4b5563;
-  --color-text-faint: #6b7280;
+  --color-text: #2d343a;
+  --color-text-muted: #4a5450;
+  --color-text-faint: #636f69;
 
-  /* Eén accent, donkerblauw: links, primaire knoppen, tabelheader-onderlijnen. */
-  --color-accent: #1e40af;
-  --color-accent-hover: #1e3a8a;
-  --color-accent-subtle: #eff6ff;
-  --color-accent-ring: #3b82f6;
+  /* Eén accent, donkergroen: links, primaire knoppen, tabelheader-onderlijnen. */
+  --color-accent: #1f2f28;
+  --color-accent-hover: #16211c;
+  --color-accent-subtle: #d9d2c4;
+  /* Saliegroen: licht genoeg om tegen het donkergroen van een gevulde knop
+     te zien (3,3:1) én tegen de pagina (3,9:1) - beide boven de 3:1 die
+     DESIGN_SPEC §6 voor grafische elementen stelt. */
+  --color-accent-ring: #6d7f74;
+
+  /* Goud. Decoratief - zie de waarschuwing in de kop van dit bestand. */
+  --color-highlight: #c49a4a;
 
   /* Uitsluitend signaal: drempel gehaald / niet gehaald / tussenniveau. */
   --color-signal-positive: #15803d;
