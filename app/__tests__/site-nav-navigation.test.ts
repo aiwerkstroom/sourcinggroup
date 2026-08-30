@@ -190,6 +190,120 @@ describe("/zoeken is reachable from the homepage - the point of this change", ()
   );
 });
 
+describe("the brand mark in the nav, as it actually renders", () => {
+  /**
+   * The half jsdom cannot answer. Space Grotesk arrives through
+   * next/font and a CSS variable, so only a real browser with the real
+   * stylesheet and the real font file can say whether the wordmark is
+   * genuinely set in it at 700 - a class-name check would pass just as
+   * happily if the font had failed to load or the variable resolved to
+   * nothing.
+   */
+  it(
+    "the wordmark is real text in Space Grotesk 700, beside an inline icon",
+    async () => {
+      const context = await browser.newContext();
+      const page = await context.newPage();
+      await page.goto(BASE_URL, { waitUntil: "networkidle" });
+
+      const brand = page.getByRole("navigation", { name: "Hoofdnavigatie" }).getByRole("link", {
+        name: /Yield & Stone/,
+      });
+      expect(await brand.count()).toBe(1);
+
+      const mark = await brand.evaluate((link) => {
+        const name = link.querySelector(".font-heading") as HTMLElement | null;
+        const svg = link.querySelector("svg");
+        const dot = [...link.querySelectorAll("span")].find((s) => s.textContent === ".");
+        return {
+          text: name?.textContent ?? null,
+          family: name === null ? null : getComputedStyle(name).fontFamily,
+          weight: name === null ? null : getComputedStyle(name).fontWeight,
+          tracking: name === null ? null : getComputedStyle(name).letterSpacing,
+          colour: name === null ? null : getComputedStyle(name).color,
+          hasIcon: svg !== null,
+          iconAriaHidden: svg?.getAttribute("aria-hidden") ?? null,
+          dotColour: dot === undefined ? null : getComputedStyle(dot).color,
+          display: getComputedStyle(link.firstElementChild as Element).display,
+        };
+      });
+      await context.close();
+
+      // The name is text the browser laid out, not a picture of words.
+      expect(mark.text).toBe("Yield & Stone.");
+      expect(mark.family).toContain("Space Grotesk");
+      expect(mark.weight).toBe("700");
+      expect(mark.tracking).not.toBe("normal"); // the -0.02em actually applied
+      expect(mark.colour!.replace(/\s/g, "")).toBe("rgb(29,27,26)"); // #1D1B1A
+
+      // The icon is inline artwork beside it, hidden from assistive tech
+      // because the text carries the name.
+      expect(mark.hasIcon).toBe(true);
+      expect(mark.iconAriaHidden).toBe("true");
+
+      // The gold full stop.
+      expect(mark.dotColour!.replace(/\s/g, "")).toBe("rgb(185,145,82)"); // #B99152
+
+      // Both halves aligned by inline-flex, per the brand sheet.
+      expect(mark.display).toBe("inline-flex");
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    "the icon and the wordmark are optically centred on each other",
+    async () => {
+      // The point of the em-based inline-flex: the two halves share a
+      // centre line without anyone positioning them. Checked as geometry
+      // rather than as CSS, so it stays true if the sizing ever changes.
+      const context = await browser.newContext();
+      const page = await context.newPage();
+      await page.goto(BASE_URL, { waitUntil: "networkidle" });
+
+      const centres = await page
+        .getByRole("navigation", { name: "Hoofdnavigatie" })
+        .getByRole("link", { name: /Yield & Stone/ })
+        .evaluate((link) => {
+          const svg = link.querySelector("svg")!.getBoundingClientRect();
+          const name = link.querySelector(".font-heading")!.getBoundingClientRect();
+          return { icon: svg.top + svg.height / 2, name: name.top + name.height / 2 };
+        });
+      await context.close();
+
+      expect(Math.abs(centres.icon - centres.name)).toBeLessThan(1.5);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    "the favicon is served from the same artwork",
+    async () => {
+      const context = await browser.newContext();
+      const page = await context.newPage();
+      await page.goto(BASE_URL, { waitUntil: "networkidle" });
+
+      const href = await page.evaluate(
+        () => document.querySelector<HTMLLinkElement>('link[rel="icon"]')?.href ?? null,
+      );
+      expect(href, "the page must declare a favicon").not.toBeNull();
+
+      const res = await page.request.get(href!);
+      expect(res.status()).toBe(200);
+      expect(res.headers()["content-type"]).toContain("image/svg+xml");
+
+      // The same drawing as the mark, not a separate icon that could
+      // drift away from it.
+      const body = await res.text();
+      expect(body).toContain("M92 34 C56 39 34 72 37 111");
+      expect(body).toContain("#183A2D");
+      expect(body).toContain("#B99152");
+
+      await context.close();
+    },
+    TEST_TIMEOUT_MS,
+  );
+});
+
 describe("the navigation stays off the print routes, so it never reaches a PDF", () => {
   it(
     "renders no navigation landmark on the print page the PDF pipeline uses",

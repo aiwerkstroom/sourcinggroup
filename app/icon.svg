@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-label="Yield &amp; Stone">
+  <rect width="160" height="160" rx="30" fill="#F6F4F1"/>
+  <g transform="translate(-8.35,4.0) scale(0.858)">
+    <mask id="i-house" maskUnits="userSpaceOnUse" x="0" y="0" width="220" height="200">
+      <rect x="0" y="0" width="220" height="200" fill="#fff"/>
+      <path d="M86 162 L86 133 L102 118 L118 133 L118 162 Z" fill="#000"/>
+      <rect x="99" y="145" width="7" height="17" fill="#fff"/>
+    </mask>
+    <path d="M92 34 C56 39 34 72 37 111 C39 145 62 162 95 163 C126 164 157 153 166 126 C177 92 158 57 129 43 C117 37 105 33 92 34 Z" fill="#183A2D" mask="url(#i-house)"/>
+    <circle cx="144" cy="27" r="13" fill="#B99152"/>
+  </g>
+</svg>

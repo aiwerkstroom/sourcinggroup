@@ -46,6 +46,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth/useAuth";
+import { BrandMark } from "./brand-mark";
 
 /**
  * The print routes, excluded from the nav (see the docstring above). A
@@ -99,17 +100,29 @@ export function SiteNav() {
         className="bg-surface border-border shadow-nav flex flex-wrap items-center justify-between gap-x-6 gap-y-3 rounded-xl border px-4 py-3 md:px-5"
       >
         {/*
-         * font-heading, not a heading element: the wordmark is a brand
-         * element, so it takes Space Grotesk explicitly rather than
-         * inheriting it from globals.css's h1/h2/h3 rule. Making it an
-         * <h1> to get the font would be a heading in the wrong place on
-         * every page in the site.
+         * The brand mark, not a heading element: making it an <h1> to
+         * style it would put a spurious heading on every page in the
+         * site. BrandMark carries its own typography (Space Grotesk 700)
+         * and its own colours - see its docstring for why the icon is
+         * inlined rather than an <img> to public/logo-icoon.svg.
+         *
+         * text-base sets the em basis the whole mark scales from: the
+         * icon is 1.55em tall and the gap 0.55em, so this one value sizes
+         * both halves together.
+         */}
+        {/*
+         * No aria-label: the wordmark is real text, so the link already
+         * has "Yield & Stone" as its accessible name - which is the
+         * convention for a logo link and says everything an added label
+         * would. (An earlier "...naar de homepage" label also made the
+         * link substring-match a search for "Home", colliding with the
+         * Home link in tests and for anyone navigating by name.)
          */}
         <Link
           href="/"
-          className="font-heading focus-visible:ring-accent-ring rounded-sm text-sm font-semibold tracking-tight focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+          className="focus-visible:ring-accent-ring rounded-sm text-base focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
         >
-          Yield &amp; Stone
+          <BrandMark />
         </Link>
 
         <ul className="order-last flex w-full flex-wrap items-center gap-x-5 gap-y-2 md:order-none md:w-auto md:justify-center">

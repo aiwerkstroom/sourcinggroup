@@ -110,14 +110,21 @@ describe("headings render in Space Grotesk", () => {
       const page = await browser.newPage();
       await page.goto(BASE_URL, { waitUntil: "networkidle" });
       const nav = page.getByRole("navigation", { name: "Hoofdnavigatie" });
-      const wordmark = nav.getByRole("link", { name: "Yield & Stone" });
-      expect(await wordmark.count()).toBe(1);
-      expect(await wordmark.evaluate((el) => getComputedStyle(el).fontFamily)).toContain(
-        "Space Grotesk",
-      );
+      const brandLink = nav.getByRole("link", { name: "Yield & Stone" });
+      expect(await brandLink.count()).toBe(1);
+
+      // The face sits on the wordmark span inside the link, not on the
+      // link itself - the link also wraps the icon, which must not
+      // inherit a text font.
+      expect(
+        await brandLink.evaluate(
+          (el) => getComputedStyle(el.querySelector(".font-heading")!).fontFamily,
+        ),
+      ).toContain("Space Grotesk");
+
       // It is a link, not an h1 - a wordmark in a heading element would
       // put a spurious heading on every page in the site.
-      expect(await wordmark.evaluate((el) => el.tagName)).toBe("A");
+      expect(await brandLink.evaluate((el) => el.tagName)).toBe("A");
       await page.close();
     },
     TEST_TIMEOUT_MS,
