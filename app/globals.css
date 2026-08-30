@@ -209,6 +209,49 @@ h3 {
 }
 
 /*
+ * De radar in de scoresectie (_components/score-radar.tsx). Hover- en
+ * focusgedrag in CSS, niet in JavaScript, om dezelfde reden als de
+ * fade-ins hierboven: het werkt vóór en zónder JS, en het houdt de
+ * scoresectie een server component zonder client-bundle.
+ *
+ * Hover én focus-visible sturen dezelfde readout aan. Dat is geen extra
+ * netheid maar de eis zelf: staat de score alleen op :hover, dan is de
+ * data uitsluitend met een muis bereikbaar.
+ */
+[data-radar-tip] {
+  opacity: 0;
+  transition: opacity 150ms ease-out;
+  pointer-events: none;
+}
+
+[data-radar-point]:hover [data-radar-tip],
+[data-radar-point]:focus-visible [data-radar-tip] {
+  opacity: 1;
+}
+
+/*
+ * De browser-eigen outline valt op een SVG-groep vaak grotendeels weg -
+ * hij tekent om de bounding box van de hele groep, inclusief de
+ * onzichtbare trefzone. Vandaar een eigen ring op het punt zelf, in het
+ * accent (12,5:1 op wit): duidelijk zichtbaar, ook bovenop de saliegroene
+ * vulling.
+ */
+[data-radar-point] {
+  outline: none;
+}
+
+[data-radar-point]:focus-visible [data-radar-focus-ring] {
+  stroke: var(--color-accent);
+  stroke-width: 2;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-radar-tip] {
+    transition: none;
+  }
+}
+
+/*
  * Scroll- en laad-fade-ins voor de homepage (HOMEPAGE_UPGRADE_SPEC.md §1).
  *
  * Bewust in CSS en niet in inline styles vanuit React, om drie redenen die

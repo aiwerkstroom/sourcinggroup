@@ -159,8 +159,12 @@ describe("TsgScoreSection - renders five rulers from the reference case", () => 
       <TsgScoreSection score={base.score} percentile={base.percentile} />,
     );
 
-    expect((html.match(/<svg/g) ?? []).length).toBe(5);
+    // Five rulers, counted by their own marker rather than by <svg>: the
+    // section also draws the radar (twice - one variant per medium), so a
+    // bare <svg> count would stop meaning "one ruler per dimension".
     expect((html.match(/data-marker="score"/g) ?? []).length).toBe(5);
+    expect((html.match(/data-radar="/g) ?? []).length).toBe(2);
+    expect((html.match(/<svg/g) ?? []).length).toBe(7);
 
     const expectedTicks = TSG_SCORE_DIMENSION_ORDER.reduce(
       (sum, d) => sum + SCORE_RULER_TICKS[d].length,
