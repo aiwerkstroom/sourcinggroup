@@ -117,12 +117,13 @@ export default function HomePage() {
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-4">
                 {/*
-                 * The one place the brand's gold appears. Purely
+                 * One of two places the brand's gold appears (the
+                 * other is the wordmark's full stop in the nav). Purely
                  * decorative - a short rule, carrying no information and
                  * labelling nothing, which is the only role it can
-                 * safely take: #C49A4A reaches 2,4:1 on the page ground,
-                 * below both the 4,5:1 text bar and the 3:1 bar for
-                 * meaningful graphics (DESIGN_SPEC.md §6, and the
+                 * safely take: the gold reaches 2,64:1 on the page
+                 * ground, below both the 4,5:1 text bar and the 3:1 bar
+                 * for meaningful graphics (DESIGN_SPEC.md §6, and the
                  * measurements in globals.css's own header). aria-hidden
                  * so it is not announced as content.
                  */}

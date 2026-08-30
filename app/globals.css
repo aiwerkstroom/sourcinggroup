@@ -12,11 +12,20 @@
  * palletnaam noemen - het thema is op één plek te herzien. Dat is precies
  * waarom deze merkwissel een tokenwissel kon zijn en geen herbouw.
  *
+ * === KLEURCONSOLIDATIE: het logo is de bron van waarheid ===
+ *
+ * --color-accent en --color-highlight zijn hier bijgesteld naar de exacte
+ * waarden uit app/_components/brand-mark.tsx (STONE_DARK, BRAND_GOLD) -
+ * eerder lagen er twee bijna-identieke groenen en twee bijna-identieke
+ * goudtinten naast elkaar (interface-token vs. logo-constante). Nu is er
+ * nog maar één definitie van elk, en de logo-component blijft die
+ * definitie - deze tokens volgen het logo, niet andersom.
+ *
  * === De zes merkkleuren, en waar ze landen ===
  *
- *   #1F2F28 donkergroen  -> --color-accent      (knoppen, links, koppen-accent)
+ *   #183A2D donkergroen  -> --color-accent      (knoppen, links, koppen-accent)
  *   #6D7F74 saliegroen   -> --color-border-strong, --color-accent-ring
- *   #C49A4A goud/oker    -> --color-highlight   (zie de waarschuwing hieronder)
+ *   #B99152 goud/oker    -> --color-highlight   (zie de waarschuwing hieronder)
  *   #D9D2C4 warm zand    -> --color-border, --color-surface-raised, --color-accent-subtle
  *   #F6F4F1 gebroken wit -> --color-bg
  *   #2D343A donkergrijs  -> --color-text
@@ -28,33 +37,50 @@
  * wordt vastgelegd"), dus alle drie zijn gemeten tegen zowel de
  * paginaachtergrond als het witte kaartvlak, en de laagste van de twee telt:
  *
- *   --color-text-muted  #4A5450  7,2:1 / 7,9:1  (was #4B5563, 7,2:1)
- *   --color-text-faint  #636F69  4,8:1 / 5,2:1  (was #6B7280, 4,6:1)
- *   --color-accent-hover #16211C  15,1:1        (donkerder dan het accent,
- *                                                zoals DESIGN_SPEC §4 vraagt)
+ *   --color-text-muted  #4A5450  7,2:1 / 7,9:1
+ *   --color-text-faint  #636F69  4,8:1 / 5,2:1
+ *   --color-accent-hover #16211C  16,6:1 op het nieuwe accent, en nog
+ *     steeds donkerder dan --color-accent (L* 11,6 tegen 21,6), zoals
+ *     DESIGN_SPEC §4 vraagt - ongewijzigd gebleven bij deze consolidatie.
  *
  * Alle drie liggen in de warm-groengrijze familie van #2D343A, zodat de
  * drie tekstniveaus zichtbaar verschillen en geen van drieën terugvalt op
  * de koele grijzen van het oude palet.
  *
- * === GOUD DRAAGT GEEN TEKST ===
+ * === GOUD DRAAGT GEEN TEKST OP LICHT - EN NIET MEER OP HET ACCENT ===
  *
- * #C49A4A haalt 2,4:1 op de paginaachtergrond en 2,6:1 op wit. Dat is
- * onder de 4,5:1 voor tekst én onder de 3:1 voor betekenisdragende
- * grafiek. Goud mag dus geen link, knoptekst, label of datamarkering zijn
- * op een licht vlak - alleen decoratie, of tekst/grafiek óp het
- * donkergroen (5,4:1). --color-highlight bestaat zodat het merk compleet
- * is; waar het gebruikt wordt is het bewust decoratief.
+ * #B99152 haalt 2,64:1 op de paginaachtergrond en 2,90:1 op wit (was
+ * 2,37 / 2,60 met het vorige goud) - nog steeds ruim onder de 4,5:1 voor
+ * tekst én onder de 3:1 voor betekenisdragende grafiek. Die conclusie
+ * verandert dus niet.
  *
- * === Signaalkleuren ongewijzigd ===
+ * Wél veranderd: goud op het accent haalt nu 4,30:1, niet meer de 4,5:1
+ * die het vorige paar (5,40:1) haalde. Het lichtere accent (L* 21,6 tegen
+ * voorheen 17,8) sluit de marge aan die kant. Goud mag dus nergens tekst
+ * dragen, ook niet meer op het donkergroen - uitsluitend decoratie, wat
+ * ook het enige gebruik is dat vandaag bestaat (de regel onder de
+ * homepage-H1, en de afsluitende punt in het woordmerk, beide
+ * aria-hidden).
  *
- * Rood/oranje/groen voor drempels blijven exact wat ze waren. Ze halen op
- * de nieuwe achtergrond 4,6 / 5,9 / 4,6:1 en dus nog steeds AA. Er zijn
- * twee gemeten kleurbotsingen met het nieuwe merk - saliegroen tegen
- * signaalgroen en goud tegen signaaloranje - die bewust NIET zijn
- * opgelost door een van beide te verschuiven; dat is een ontwerpbeslissing
- * die buiten deze wissel valt. __tests__/design-tokens.test.ts meet ze en
- * legt de bevinding vast.
+ * === Signaalkleuren ongewijzigd, en één randgeval verscherpt ===
+ *
+ * Rood/oranje/groen voor drempels blijven exact wat ze waren en halen op
+ * de paginaachtergrond nog steeds AA (4,57 / 5,89 / 4,57:1). De twee
+ * eerder gemeten kleurbotsingen met het merk - saliegroen tegen
+ * signaalgroen (identiek gebleven: saliegroen is niet gewijzigd) en goud
+ * tegen signaaloranje (marge zelfs iets toegenomen) - zijn bewust NIET
+ * opgelost; dat blijft een ontwerpbeslissing buiten deze consolidatie.
+ *
+ * Het lichtere accent brengt zelf óók een randgeval dichterbij: de
+ * saliegroene focusring tegen een gevuld accent-knop haalt nu 2,94:1, niet
+ * meer de 3,30:1 van voorheen - onder de 3:1-eis voor grafische elementen
+ * als de ring rechtstreeks tegen de knopkleur zou staan. In de praktijk
+ * staat hij daar nooit: elke ring in dit project gebruikt
+ * `ring-offset-2`, wat Tailwind's eigen witte tussenruimte inschuift
+ * vóór de ring - dus de ring grenst altijd aan wit (4,25:1), nooit
+ * rechtstreeks aan het accent. __tests__/design-tokens.test.ts legt beide
+ * getallen vast: de garantie tegen de witte tussenruimte blijft een harde
+ * eis, de sage-tegen-accent-relatie is een bevinding, geen eis.
  */
 @theme {
   /*
@@ -85,17 +111,24 @@
   --color-text-muted: #4a5450;
   --color-text-faint: #636f69;
 
-  /* Eén accent, donkergroen: links, primaire knoppen, tabelheader-onderlijnen. */
-  --color-accent: #1f2f28;
+  /*
+   * Eén accent, donkergroen: links, primaire knoppen, tabelheader-
+   * onderlijnen. #183A2D - de logo-constante STONE_DARK
+   * (brand-mark.tsx), niet meer een net-iets-andere interface-eigen tint.
+   */
+  --color-accent: #183a2d;
   --color-accent-hover: #16211c;
   --color-accent-subtle: #d9d2c4;
-  /* Saliegroen: licht genoeg om tegen het donkergroen van een gevulde knop
-     te zien (3,3:1) én tegen de pagina (3,9:1) - beide boven de 3:1 die
-     DESIGN_SPEC §6 voor grafische elementen stelt. */
+  /* Saliegroen: 3,9:1 tegen de pagina en 4,25:1 tegen de witte
+     ring-offset-tussenruimte die elke ring in dit project gebruikt -
+     beide boven de 3:1 die DESIGN_SPEC §6 voor grafische elementen stelt.
+     Tegen het accent zelf, zonder die tussenruimte, is de marge dunner
+     (2,94:1) - zie de kop van dit bestand. */
   --color-accent-ring: #6d7f74;
 
-  /* Goud. Decoratief - zie de waarschuwing in de kop van dit bestand. */
-  --color-highlight: #c49a4a;
+  /* Goud. Decoratief - zie de waarschuwing in de kop van dit bestand.
+     #B99152, de logo-constante BRAND_GOLD (brand-mark.tsx). */
+  --color-highlight: #b99152;
 
   /* Uitsluitend signaal: drempel gehaald / niet gehaald / tussenniveau. */
   --color-signal-positive: #15803d;

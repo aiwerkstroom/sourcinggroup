@@ -19,29 +19,50 @@ Referenties: McKinsey-rapportages (helder, ruim, ingetogen), Palantir Foundry
 >
 > | Merkkleur | Hex | Rol in de tokens |
 > |---|---|---|
-> | Donkergroen | `#1F2F28` | `--color-accent` — knoppen, links, koppen-accent |
+> | Donkergroen | `#183A2D` | `--color-accent` — knoppen, links, koppen-accent |
 > | Saliegroen | `#6D7F74` | `--color-border-strong`, `--color-accent-ring` |
-> | Goud/oker | `#C49A4A` | `--color-highlight` — **uitsluitend decoratief** |
+> | Goud/oker | `#B99152` | `--color-highlight` — **uitsluitend decoratief** |
 > | Warm zand | `#D9D2C4` | `--color-border`, `--color-surface-raised`, `--color-accent-subtle` |
 > | Gebroken wit | `#F6F4F1` | `--color-bg` |
 > | Donkergrijs | `#2D343A` | `--color-text` |
 >
+> **Kleurconsolidatie: het logo is de bron van waarheid.** Donkergroen en
+> goud stonden hierboven aanvankelijk als `#1F2F28` en `#C49A4A` — net-iets-
+> andere tinten dan de logo-constanten `STONE_DARK`/`BRAND_GOLD` in
+> `app/_components/brand-mark.tsx`. Vier bijna-identieke kleuren zijn nu twee:
+> de tokens volgen het logo, niet andersom. `design-tokens.test.ts` leest
+> beide bestanden en faalt als ze ooit weer uiteenlopen.
+>
 > Drie tokens die het merkpalet niet benoemt zijn afgeleid en gemeten, omdat
 > §6 bindend is bij tegenspraak: `--color-text-muted` `#4A5450` (7,2:1),
 > `--color-text-faint` `#636F69` (4,8:1) en `--color-accent-hover` `#16211C`
-> (15,1:1). Alle drie liggen in de warm-groengrijze familie van `#2D343A`.
+> (16,6:1 op het nieuwe accent). Alle drie liggen in de warm-groengrijze
+> familie van `#2D343A` en zijn ongewijzigd door de consolidatie.
 >
-> **Goud draagt geen tekst.** `#C49A4A` haalt 2,4:1 op de paginaachtergrond en
-> 2,6:1 op wit — onder de 4,5:1 voor tekst én onder de 3:1 voor
-> betekenisdragende grafiek. Het mag dus geen link, knoptekst, label of
-> datamarkering zijn op een licht vlak; alleen decoratie, of tekst óp het
-> donkergroen (5,4:1).
+> **Goud draagt geen tekst — en niet meer op het accent.** `#B99152` haalt
+> 2,64:1 op de paginaachtergrond en 2,90:1 op wit (was 2,37 / 2,60) — die
+> conclusie staat dus nog steeds. Wél veranderd door het lichtere accent:
+> goud-op-accent haalt nu 4,30:1, niet meer de 4,5:1 van het vorige paar
+> (5,40:1). Goud mag daarom nergens tekst dragen, ook niet meer op het
+> donkergroen — uitsluitend decoratie, wat ook het enige bestaande gebruik is.
 >
 > **Twee gemeten botsingen met de signaalkleuren**, bewust niet opgelost (dat
 > is een aparte ontwerpbeslissing): saliegroen deelt hue én helderheid met
-> signaalgroen "gehaald" en verschilt alleen in verzadiging; goud deelt een
-> hue-familie met signaaloranje maar verschilt wél in helderheid. Zie
-> `design-tokens.test.ts`, dat beide vastlegt met de meting erbij.
+> signaalgroen "gehaald" en verschilt alleen in verzadiging (ongewijzigd —
+> saliegroen zelf is niet aangeraakt); goud deelt een hue-familie met
+> signaaloranje maar verschilt wél in helderheid (marge 15,8, was 19,2 —
+> kleiner maar nog steeds reëel). Zie `design-tokens.test.ts`, dat beide
+> vastlegt met de meting erbij.
+>
+> **Eén nieuw randgeval, gemeld in plaats van opgelost.** De saliegroene
+> focusring tegen het gevulde accent zónder ring-offset-tussenruimte haalt nu
+> 2,94:1, niet meer de 3,30:1 van voorheen — net onder de 3:1-eis voor
+> grafische elementen. Zonder gevolg voor wat een gebruiker daadwerkelijk
+> ziet: elke ring in dit project gebruikt `ring-offset-2`, dus de ring grenst
+> in de praktijk altijd aan Tailwinds witte tussenruimte (4,25:1), nooit
+> rechtstreeks aan het accent. `design-tokens.test.ts` legt de eis tegen die
+> witte tussenruimte vast als harde toets, en de dunnere marge tegen het
+> accent zelf als bevinding.
 >
 > **Merknaam:** "The Sourcing Group" / "TSG" is in alle klantgerichte tekst
 > vervangen door "Yield & Stone". Interne codebenamingen (`TSG_SCORE_ANCHORS`,

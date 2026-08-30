@@ -46,14 +46,15 @@
 import { useId } from "react";
 
 /**
- * The mark's own two colours, which are NOT the interface palette's.
- *
- * The stone is #183A2D, a little deeper and greener than the interface
- * accent #1F2F28; the mark's gold is #B99152, where the interface
- * highlight is #C49A4A. Both differences are small and both are
- * deliberate - these are the brand artwork's values as delivered. They
- * live here as named constants rather than as loose hexes so the
- * distinction is visible rather than looking like a typo.
+ * The mark's own two colours - and, since the colour consolidation, the
+ * ONLY definition of them. --color-accent and --color-highlight in
+ * globals.css used to carry their own, slightly different values
+ * (#1F2F28, #C49A4A); that near-duplication is gone, and these two
+ * constants are now what both the mark and the interface tokens read.
+ * They stay named constants rather than loose hexes so the single source
+ * of truth is visible here, in code, not just in a comment elsewhere.
+ * __tests__/design-tokens.test.ts reads this file's own source to check
+ * that globals.css still matches it.
  */
 const STONE_DARK = "#183A2D";
 const STONE_LIGHT = "#F6F4F1";

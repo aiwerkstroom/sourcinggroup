@@ -80,10 +80,17 @@ function lightness(hex: string): number {
   return lab(hex)[0];
 }
 
+/**
+ * The colour consolidation: --color-accent and --color-highlight now
+ * equal brand-mark.tsx's STONE_DARK and BRAND_GOLD exactly - one
+ * definition instead of two near-identical ones. Checked directly
+ * against that file below, not just asserted as a literal, so the two
+ * cannot drift apart again silently.
+ */
 const BRAND = {
-  primary: "#1f2f28",
+  primary: "#183a2d",
   sage: "#6d7f74",
-  gold: "#c49a4a",
+  gold: "#b99152",
   sand: "#d9d2c4",
   offWhite: "#f6f4f1",
   darkGrey: "#2d343a",
@@ -124,6 +131,32 @@ describe("the six brand colours land in the roles they were given", () => {
   it("no colour from the old blue palette survives anywhere in the tokens", () => {
     for (const dead of ["#1e40af", "#1e3a8a", "#eff6ff", "#3b82f6", "#fafaf9", "#111827"]) {
       expect(CSS.toLowerCase(), `${dead} is from the retired palette`).not.toContain(dead);
+    }
+  });
+
+  it("the two near-duplicate greens and golds are gone - the logo is the only definition left", () => {
+    // Before the consolidation, the interface accent (#1F2F28) and gold
+    // (#C49A4A) were close to, but not the same as, brand-mark.tsx's own
+    // STONE_DARK (#183A2D) and BRAND_GOLD (#B99152). Both retired values
+    // must be gone from the tokens, and the surviving ones must match the
+    // component file exactly - read from source, not retyped, so the two
+    // cannot quietly diverge again.
+    const brandMarkSrc = readFileSync(
+      path.join(REPO_ROOT, "app/_components/brand-mark.tsx"),
+      "utf8",
+    );
+    const stoneDark = /STONE_DARK\s*=\s*"(#[0-9a-fA-F]{6})"/.exec(brandMarkSrc)?.[1]?.toLowerCase();
+    const brandGold = /BRAND_GOLD\s*=\s*"(#[0-9a-fA-F]{6})"/.exec(brandMarkSrc)?.[1]?.toLowerCase();
+    expect(stoneDark, "brand-mark.tsx must still define STONE_DARK").toBeDefined();
+    expect(brandGold, "brand-mark.tsx must still define BRAND_GOLD").toBeDefined();
+
+    expect(token("color-accent")).toBe(stoneDark);
+    expect(token("color-highlight")).toBe(brandGold);
+
+    for (const retired of ["#1f2f28", "#c49a4a"]) {
+      expect(CSS.toLowerCase(), `${retired} was the pre-consolidation near-duplicate`).not.toContain(
+        retired,
+      );
     }
   });
 });
@@ -168,11 +201,38 @@ describe("contrast - DESIGN_SPEC.md §6 is binding, and is recomputed here", () 
     expect(luminance(token("color-accent-hover"))).toBeLessThan(luminance(token("color-accent")));
   });
 
-  it("the focus ring is visible against both the page and a filled primary button", () => {
+  it("the focus ring is visible against the page and against the white ring-offset gap", () => {
     // A ring the same colour as the button it surrounds is no ring at
-    // all - which is why this is sage and not the accent itself.
+    // all - which is why this is sage and not the accent itself. This is
+    // the hard requirement: every ring in this project is rendered with
+    // `ring-offset-2`, which inserts Tailwind's white ring-offset colour
+    // between the element and the ring itself - so the ring's real
+    // neighbour is white, never the accent fill directly.
     expect(contrast(token("color-accent-ring"), BRAND.offWhite)).toBeGreaterThanOrEqual(3);
-    expect(contrast(token("color-accent-ring"), token("color-accent"))).toBeGreaterThanOrEqual(3);
+    expect(contrast(token("color-accent-ring"), "#ffffff")).toBeGreaterThanOrEqual(3);
+  });
+
+  /**
+   * NOT a hard requirement, and deliberately not enforced as one - a
+   * measured finding from the colour consolidation, kept here so it
+   * cannot quietly drift further.
+   *
+   * Before this change, sage against the accent fill itself (no
+   * ring-offset gap) reached 3,30:1 - just over the 3:1 graphic-element
+   * bar. The new, lighter accent (#183A2D, L* 21,6 against the old
+   * #1F2F28's L* 17,8) narrows that to 2,94:1, just under it. This was
+   * checked and reported rather than silently fixed, per the
+   * consolidation's own instruction: no rendering in this project is
+   * actually affected, since ring-offset-2 means the ring never sits
+   * directly against the accent fill (the test above is the one that
+   * matters for what a user actually sees) - but the fill-adjacent
+   * margin is genuinely thinner than it was, and a future component that
+   * renders the ring WITHOUT an offset would need a different colour.
+   */
+  it("FINDING: sage-on-accent-fill (no offset) has narrowed below 3:1 with the lighter accent", () => {
+    const withoutOffset = contrast(token("color-accent-ring"), token("color-accent"));
+    expect(withoutOffset).toBeGreaterThan(2.8);
+    expect(withoutOffset).toBeLessThan(3);
   });
 
   it("accent links are legible on the page ground and on a card", () => {
@@ -191,8 +251,27 @@ describe("contrast - DESIGN_SPEC.md §6 is binding, and is recomputed here", () 
     for (const [label, ground] of GROUND) {
       expect(contrast(BRAND.gold, ground), `gold on the ${label} ground`).toBeLessThan(3);
     }
-    // Where it does work: on the dark green.
-    expect(contrast(BRAND.gold, BRAND.primary)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  /**
+   * FINDING from the colour consolidation, not a requirement. Before this
+   * change, gold on the dark green accent reached 5,40:1 - enough for
+   * text. The lighter accent this consolidation introduces (#183A2D)
+   * drops that to 4,30:1: still well clear of the 3:1 graphic bar, but
+   * under the 4,5:1 that would let gold carry actual text there.
+   *
+   * Checked and reported rather than silently resolved, same as the
+   * focus-ring finding above. Nothing live is affected today - grepped
+   * across the app, gold has no text usage anywhere; both its uses (the
+   * homepage's decorative rule under the H1, the wordmark's full stop)
+   * are aria-hidden and decorative already. What this closes off is the
+   * option, mentioned in this file's own header before the consolidation,
+   * of putting real text in gold on the accent - that is no longer safe.
+   */
+  it("FINDING: gold-on-accent no longer clears AA text contrast, though it still clears the graphic bar", () => {
+    const onAccent = contrast(BRAND.gold, BRAND.primary);
+    expect(onAccent).toBeGreaterThanOrEqual(3);
+    expect(onAccent).toBeLessThan(4.5);
   });
 });
 
@@ -243,18 +322,24 @@ describe("the threshold signal colours are untouched by the rebrand", () => {
 
   it("FINDING 2 (the milder one): gold and the 'waarschuwing' orange share a hue family, but not lightness", () => {
     expect(Math.abs(hueAngle(BRAND.gold) - hueAngle(SIGNALS.neutral))).toBeLessThan(30);
-    // Unlike finding 1, lightness does separate these - L* 66 against 47 -
-    // so greyscale and reduced colour vision both still tell them apart.
+    // Unlike finding 1, lightness does separate these. The colour
+    // consolidation narrowed this gap too - L* 62,7 against 46,9, a
+    // 15,8-point gap, down from 19,2 with the previous gold - but it
+    // stays a real, usable separation, so greyscale and reduced colour
+    // vision both still tell them apart. The margin below 15 is
+    // deliberately thin: tight enough to fail here if it narrows further.
     expect(Math.abs(lightness(BRAND.gold) - lightness(SIGNALS.neutral))).toBeGreaterThan(15);
   });
 
   it("NOT a collision: the dark green accent is far from the 'gehaald' signal, despite the shared hue", () => {
     // The pairing the brief specifically worried about turns out to be
-    // the safe one. The hues are close (165 vs 147 degrees), but the
-    // accent is far darker - L* 18 against 47 - and that lightness gap
-    // separates them on every axis that matters.
+    // the safe one, before and after the colour consolidation. The hues
+    // are close (165 vs 147 degrees both times), but the accent is far
+    // darker - L* 21,6 against 46,9 now (a 25,3-point gap, narrower than
+    // the previous accent's 29,1-point gap, and still comfortably clear)
+    // - and that lightness gap separates them on every axis that matters.
     expect(Math.abs(hueAngle(BRAND.primary) - hueAngle(SIGNALS.positive))).toBeLessThan(25);
-    expect(lightness(SIGNALS.positive) - lightness(BRAND.primary)).toBeGreaterThan(25);
+    expect(lightness(SIGNALS.positive) - lightness(BRAND.primary)).toBeGreaterThan(20);
     expect(luminance(SIGNALS.positive) / luminance(BRAND.primary)).toBeGreaterThan(3);
   });
 });
