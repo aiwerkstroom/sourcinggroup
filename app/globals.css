@@ -245,8 +245,45 @@ h3 {
   stroke-width: 2;
 }
 
+/*
+ * De cashflowgrafiek (_components/cashflow-chart.tsx). Zelfde mechaniek
+ * als de radar hierboven, en om dezelfde reden: hover én focus-visible
+ * sturen dezelfde readout, want op :hover alleen zou het bedrag
+ * uitsluitend met een muis bereikbaar zijn.
+ */
+[data-cashflow-tip] {
+  opacity: 0;
+  transition: opacity 150ms ease-out;
+  pointer-events: none;
+}
+
+[data-cashflow-point]:hover [data-cashflow-tip],
+[data-cashflow-point]:focus-visible [data-cashflow-tip] {
+  opacity: 1;
+}
+
+[data-cashflow-point] {
+  outline: none;
+}
+
+[data-cashflow-point]:focus-visible [data-cashflow-focus-ring] {
+  stroke: var(--color-accent);
+  stroke-width: 2;
+}
+
+/*
+ * Het gefocuste punt komt bovenop zijn buren te liggen. Zonder dit valt
+ * een readout deels achter het volgende paneel of het volgende punt,
+ * omdat SVG geen z-index kent en puur op documentvolgorde tekent.
+ */
+[data-cashflow-point]:hover,
+[data-cashflow-point]:focus-visible {
+  isolation: isolate;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  [data-radar-tip] {
+  [data-radar-tip],
+  [data-cashflow-tip] {
     transition: none;
   }
 }

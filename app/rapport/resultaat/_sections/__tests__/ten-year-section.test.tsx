@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { referenceCase } from "@/lib/rules/es/__tests__/referencecase";
 import { runEngine } from "@/lib/rules/es/engine";
 import type { ScenarioId } from "@/lib/rules/es/types";
-import { CashflowTrendChart, TenYearSection, TenYearTable } from "../ten-year-section";
+import { TenYearSection, TenYearTable } from "../ten-year-section";
 
 /**
  * Golden fixture: all 30 scenario-years (conservative/base/optimistic x
@@ -142,45 +142,88 @@ describe("TenYearTable - rendered against the reference case", () => {
   });
 });
 
-describe("CashflowTrendChart - SVG structure against the reference case", () => {
-  it("renders exactly one polyline and ten points per scenario", () => {
-    const outcomes = outcomesFromReferenceCase();
-    const html = renderToStaticMarkup(<CashflowTrendChart outcomes={outcomes} />);
+describe("CashflowChart - the section's chart against the reference case", () => {
+  /**
+   * The chart moved from three overlaid lines to three stacked panels
+   * tinted by sign, so the markup it is asserted through changed. What
+   * did NOT change, and is the part worth keeping, is the golden claim:
+   * all thirty scenario-years must reach the chart as monthly cashflow,
+   * matching the independently computed fixture above.
+   */
+  const chartHtml = () =>
+    renderToStaticMarkup(<TenYearSection outcomes={outcomesFromReferenceCase()} />);
 
-    const polylines = [...html.matchAll(/<polyline data-scenario="([^"]+)"/g)];
-    expect(polylines).toHaveLength(3);
-    expect(polylines.map((m) => m[1]).sort()).toEqual(["base", "conservative", "optimistic"]);
-
-    const circles = [...html.matchAll(/<circle data-scenario="([^"]+)" data-year="([^"]+)" data-value="([^"]+)"/g)];
-    expect(circles).toHaveLength(30);
+  it("draws one panel per scenario, in report order", () => {
+    const panels = [...chartHtml().matchAll(/data-cashflow-panel="([^"]+)"/g)].map((m) => m[1]);
+    // Two variants render (interactive + static), so each panel appears twice.
+    expect(panels).toEqual([
+      "Conservatief",
+      "Basis",
+      "Optimistisch",
+      "Conservatief",
+      "Basis",
+      "Optimistisch",
+    ]);
   });
 
-  it("computes all 30 chart points (3 scenarios x 10 years) as monthly cashflow, matching the reference case", () => {
-    const outcomes = outcomesFromReferenceCase();
-    const html = renderToStaticMarkup(<CashflowTrendChart outcomes={outcomes} />);
+  it("carries all 30 scenario-years as monthly cashflow, matching the fixture", () => {
+    const html = chartHtml();
+    const points = [
+      ...html.matchAll(/data-cashflow-point="([^"]+)" data-year="([^"]+)" data-value="([^"]+)"/g),
+    ];
+    // 30 per variant, both variants rendered.
+    expect(points).toHaveLength(60);
 
-    const circles = [...html.matchAll(/<circle data-scenario="([^"]+)" data-year="([^"]+)" data-value="([^"]+)"/g)];
-    const byKey = new Map(
-      circles.map((m) => [`${m[1]}-${m[2]}`, Number.parseFloat(m[3]!)] as const),
-    );
-    expect(byKey.size).toBe(30);
+    const byKey = new Map(points.map((m) => [`${m[1]}`, Number.parseFloat(m[3]!)] as const));
+    const LABEL = { conservative: "Conservatief", base: "Basis", optimistic: "Optimistisch" };
 
     for (const scenario of ["conservative", "base", "optimistic"] as const) {
       for (const expected of GOLDEN[scenario]) {
-        const value = byKey.get(`${scenario}-${expected.yearNumber}`);
-        expect(value).toBeDefined();
+        const value = byKey.get(`${LABEL[scenario]}-${expected.yearNumber}`);
+        expect(value, `${scenario} year ${expected.yearNumber}`).toBeDefined();
+        // Monthly, matching sections 2 and 3 rather than the table's annual columns.
         expect(value).toBeCloseTo(expected.cashflowAfterTax / 12, 6);
       }
     }
   });
 
-  it("does not draw a zero line when a scenario never crosses zero, but does when scenarios mix sign", () => {
-    const outcomes = outcomesFromReferenceCase();
-    const html = renderToStaticMarkup(<CashflowTrendChart outcomes={outcomes} />);
-    // The reference case's three scenarios span both negative and positive
-    // monthly cashflow (conservative stays negative throughout, optimistic
-    // turns positive in year 2), so the zero reference line must be drawn.
-    expect(html).toContain("€ 0");
+  it("marks the zero line in every panel - the reference the whole chart is read against", () => {
+    const html = chartHtml();
+    // Three panels x two variants.
+    expect((html.match(/data-cashflow-zero=""/g) ?? []).length).toBe(6);
+    expect(html).toContain("€ 0");
+  });
+
+  it("tints below and above the line differently, which is what shows the crossover", () => {
+    const html = chartHtml();
+    const negatives = (html.match(/data-cashflow-fill="negative"/g) ?? []).length;
+    const positives = (html.match(/data-cashflow-fill="positive"/g) ?? []).length;
+    // The reference case crosses in base (year 10) and optimistic (year 2)
+    // and never in conservative, so both tints must be present.
+    expect(negatives).toBeGreaterThan(0);
+    expect(positives).toBeGreaterThan(0);
+  });
+
+  it("shows where the sourced years end, because the base crossover sits past that line", () => {
+    // Base turns positive in year 10, which is extrapolated. A reader who
+    // took that for measured data would over-read it, so the boundary and
+    // the dashed continuation are part of the chart rather than only a
+    // footnote under the table.
+    const html = chartHtml();
+    expect((html.match(/data-cashflow-boundary=""/g) ?? []).length).toBe(6);
+    expect((html.match(/data-cashflow-extrapolated=""/g) ?? []).length).toBe(6);
+  });
+
+  it("spends no signal colour - section 7's badges stay the only pass/fail colour", () => {
+    const html = chartHtml();
+    const chartOnly = html.slice(html.indexOf("data-cashflow-chart"), html.indexOf("<table"));
+    expect(chartOnly).not.toContain("--color-signal-positive");
+    expect(chartOnly).not.toContain("--color-signal-negative");
+    expect(chartOnly).not.toContain("--color-signal-neutral");
+  });
+
+  it("uses no gold as a data colour", () => {
+    expect(chartHtml()).not.toContain("--color-highlight");
   });
 });
 
@@ -197,7 +240,73 @@ describe("TenYearSection - composes the table and the chart under one heading", 
     // each shape" does.
     expect((html.match(/<table class="w-full min-w-4xl/g) ?? []).length).toBe(1);
     expect((html.match(/<table class="w-full max-w-lg/g) ?? []).length).toBe(3);
-    expect((html.match(/<svg/g) ?? []).length).toBe(1);
-    expect((html.match(/<polyline/g) ?? []).length).toBe(3);
+    // One chart per medium (interactive on screen, static in print), each
+    // one <svg>. The old three-overlaid-lines chart is gone.
+    expect((html.match(/<svg/g) ?? []).length).toBe(2);
+    expect((html.match(/data-cashflow-chart="interactive"/g) ?? []).length).toBe(1);
+    expect((html.match(/data-cashflow-chart="static"/g) ?? []).length).toBe(1);
+  });
+
+  it("puts the chart above the table, so the story is read before the detail", () => {
+    const html = renderToStaticMarkup(<TenYearSection outcomes={outcomesFromReferenceCase()} />);
+    expect(html.indexOf("data-cashflow-chart")).toBeGreaterThan(-1);
+    expect(html.indexOf("data-cashflow-chart")).toBeLessThan(html.indexOf("<table"));
+  });
+});
+
+/**
+ * The table is this chart's text alternative AND the only place four of
+ * its five metrics appear anywhere in the report: gross rent and NOI
+ * exist elsewhere only as a single steady-state year (section 4), the
+ * mortgage balance only as its exit value (section 6), and equity built
+ * in no other section at all. Adding a chart above it must not become a
+ * licence to thin it out later - so this pins every column, every figure
+ * and both markers, in both table shapes.
+ *
+ * Same pattern as the FAQ's no-roadmap-claim guard: it asserts what must
+ * still be there, so a refactor that quietly drops it fails loudly.
+ */
+describe("TenYearSection - no table column may silently disappear", () => {
+  const html = renderToStaticMarkup(<TenYearSection outcomes={outcomesFromReferenceCase()} />);
+  const screenTable = html.slice(
+    html.indexOf('<table class="w-full min-w-4xl'),
+    html.indexOf('<table class="w-full max-w-lg'),
+  );
+  const printTables = html.slice(html.indexOf('<table class="w-full max-w-lg'));
+
+  const COLUMNS = [
+    "Bruto huur",
+    "NOI",
+    "Cashflow na belasting",
+    "Hypotheekschuld",
+    "Eigen vermogen opgebouwd",
+  ] as const;
+
+  it.each(COLUMNS)("keeps the %s column in both table shapes", (column) => {
+    // Three scenario groups side by side on screen; one per stacked table in print.
+    expect((screenTable.match(new RegExp(column, "g")) ?? []).length).toBe(3);
+    expect((printTables.match(new RegExp(column, "g")) ?? []).length).toBe(3);
+  });
+
+  it("still renders all 150 figures per table shape - 3 scenarios x 10 years x 5 metrics", () => {
+    const cells = (markup: string) =>
+      (markup.match(/class="tabular px-4 py-3 text-right"/g) ?? []).length;
+    expect(cells(screenTable)).toBe(150);
+    expect(cells(printTables)).toBe(150);
+  });
+
+  it("keeps year 5's underline and the extrapolated 'e' markers in the table", () => {
+    // Deliberately still the table's own markers: the chart draws the same
+    // boundary in its own idiom (dashed divider + dashed line), it does not
+    // take these over.
+    expect((screenTable.match(/underline decoration-1/g) ?? []).length).toBe(1);
+    expect((printTables.match(/underline decoration-1/g) ?? []).length).toBe(3);
+    expect((screenTable.match(/ml-1 text-xs italic">e<\/span>/g) ?? []).length).toBe(5);
+    expect((printTables.match(/ml-1 text-xs italic">e<\/span>/g) ?? []).length).toBe(15);
+  });
+
+  it("keeps the footnote that explains both markers", () => {
+    expect(html).toContain("Correction Factors");
+    expect(html).toContain("geëxtrapoleerd");
   });
 });

@@ -2,12 +2,27 @@
  * §6.5 of UI_SPEC.md's report structure: "De tienjarige reeks — met jaar 5
  * gemarkeerd, geëxtrapoleerde jaren aangeduid."
  *
- * Two parts in one section, same source data: a table with every
- * scenario's year-by-year figures, and an SVG line chart of the monthly
- * cashflow trend. Both plain function components, same reasoning as the
- * sections before them - they take EngineResult.scenarioOutcomes as-is and
- * render it, so the golden-render test, the wizard's result page and the
- * later PDF all see the identical markup (CLAUDE.md §3).
+ * Two parts in one section, same source data: the cashflow chart first,
+ * for the story, and the table under it, for the detail - the same order
+ * the score section uses for its radar and rulers. Both plain function
+ * components, same reasoning as the sections before them - they take
+ * EngineResult.scenarioOutcomes as-is and render it, so the golden-render
+ * test, the wizard's result page and the later PDF all see the identical
+ * markup (CLAUDE.md §3).
+ *
+ * NOTHING WAS REMOVED FROM THE TABLE, and that was checked rather than
+ * assumed. It carries five metrics per scenario per year, and four of the
+ * five appear nowhere else in the report: gross rent and NOI exist only
+ * as a single steady-state year in section 4, the mortgage balance only
+ * as its exit value in section 6, and equity built appears in no other
+ * section at all. Replacing the table with a chart of one metric would
+ * have dropped 120 of its 150 figures. So the chart was added above it,
+ * and the table doubles as the chart's text alternative.
+ *
+ * The chart it replaces (CashflowTrendChart) drew all three scenarios as
+ * overlaid lines coloured per scenario. That could not also tint by sign
+ * - three sign-tinted fills would sit on top of each other - so it became
+ * three stacked panels on one shared scale. See cashflow-chart.tsx.
  *
  * ScenarioOutcome.years already carries `extrapolated` per year
  * (indexation.ts's isExtrapolated, via projection.ts and outcome.ts) - this
@@ -19,12 +34,11 @@
  * read off `extrapolated` turning true one row later - not a second,
  * independent "year === 5" rule that could disagree with it.
  *
- * The three scenario colours are the app's own signal palette
- * (globals.css): conservative in signal-negative, optimistic in
- * signal-positive, base in signal-neutral - not a rule this report bends
- * (UI_SPEC.md §1 reserves colour for pass/fail signals elsewhere), but a
- * deliberate choice for this one chart, where the three lines' relative
- * standing is exactly what "worse / middle / better" already means.
+ * The signal palette is no longer spent here. The old chart used it for
+ * the three scenarios; the new one encodes sign in the brand's own sage
+ * and dark green and uses no signal colour at all - so section 7's
+ * badges are once again the only place in the report where a colour
+ * means pass or fail, and UI_SPEC.md §1's reservation needs no exception.
  *
  * Table style (DESIGN_SPEC.md §4): the compound two-row header (scenario
  * groups over their five metrics each) gets one accent-coloured underline
@@ -37,7 +51,8 @@
  */
 
 import { SCENARIO_ID_COPY_NL } from "@/lib/copy/es/scenarios";
-import type { ScenarioId, ScenarioOutcome } from "@/lib/rules/es/types";
+import type { ScenarioOutcome } from "@/lib/rules/es/types";
+import { CashflowChart } from "../_components/cashflow-chart";
 import { formatEuro } from "../_lib/format";
 
 const MONTHS_PER_YEAR = 12;
@@ -46,12 +61,6 @@ export interface TenYearSectionProps {
   /** Exactly three outcomes, conservative/base/optimistic - the order EngineResult.scenarioOutcomes already arrives in. */
   outcomes: readonly ScenarioOutcome[];
 }
-
-const SCENARIO_COLOR: Readonly<Record<ScenarioId, string>> = {
-  conservative: "var(--color-signal-negative)",
-  base: "var(--color-signal-neutral)",
-  optimistic: "var(--color-signal-positive)",
-};
 
 function euroInt(value: number): string {
   return formatEuro(Math.round(value));
@@ -214,157 +223,56 @@ function TenYearTables(props: TenYearSectionProps) {
   );
 }
 
-const CHART_WIDTH = 640;
-const CHART_HEIGHT = 320;
-const MARGIN = { top: 16, right: 16, bottom: 28, left: 64 };
-
-export function CashflowTrendChart({ outcomes }: TenYearSectionProps) {
-  const plotWidth = CHART_WIDTH - MARGIN.left - MARGIN.right;
-  const plotHeight = CHART_HEIGHT - MARGIN.top - MARGIN.bottom;
-
-  const series = outcomes.map((outcome) => ({
-    scenario: outcome.scenario,
-    points: outcome.years.map((y) => ({
-      yearNumber: y.yearNumber,
-      monthlyCashflow: y.cashflowAfterTax / MONTHS_PER_YEAR,
+export function TenYearSection({ outcomes }: TenYearSectionProps) {
+  // Derived once and handed to both chart variants, so the two drawings
+  // cannot disagree about what they are drawing.
+  const panels = outcomes.map((outcome) => ({
+    label: SCENARIO_ID_COPY_NL[outcome.scenario],
+    years: outcome.years.map((year) => ({
+      yearNumber: year.yearNumber,
+      // Monthly, matching sections 2 and 3's headline figures rather
+      // than the table's annual columns directly below.
+      monthlyCashflow: year.cashflowAfterTax / MONTHS_PER_YEAR,
+      extrapolated: year.extrapolated,
     })),
   }));
 
-  const yearNumbers = series[0]?.points.map((p) => p.yearNumber) ?? [];
-  const minYear = Math.min(...yearNumbers);
-  const maxYear = Math.max(...yearNumbers);
-
-  const allValues = series.flatMap((s) => s.points.map((p) => p.monthlyCashflow));
-  const rawMin = Math.min(...allValues, 0);
-  const rawMax = Math.max(...allValues, 0);
-  // A little headroom so the extreme points do not sit on the plot's edge.
-  const padding = (rawMax - rawMin) * 0.08 || 1;
-  const valueMin = rawMin - padding;
-  const valueMax = rawMax + padding;
-
-  const xFor = (yearNumber: number): number => {
-    if (maxYear === minYear) return MARGIN.left + plotWidth / 2;
-    return MARGIN.left + ((yearNumber - minYear) / (maxYear - minYear)) * plotWidth;
-  };
-  const yFor = (value: number): number => {
-    if (valueMax === valueMin) return MARGIN.top + plotHeight / 2;
-    return MARGIN.top + (1 - (value - valueMin) / (valueMax - valueMin)) * plotHeight;
-  };
-
-  const zeroY = yFor(0);
-  const showZeroLine = valueMin < 0 && valueMax > 0;
-
-  return (
-    <div className="flex flex-col gap-3">
-      <svg
-        role="img"
-        aria-label="Cashflow-trend per scenario, maandcashflow na belasting, jaar 1 tot en met 10"
-        viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
-        className="w-full max-w-2xl"
-      >
-        {/* Axes */}
-        <line
-          x1={MARGIN.left}
-          y1={MARGIN.top}
-          x2={MARGIN.left}
-          y2={CHART_HEIGHT - MARGIN.bottom}
-          stroke="var(--color-border)"
-        />
-        <line
-          x1={MARGIN.left}
-          y1={CHART_HEIGHT - MARGIN.bottom}
-          x2={CHART_WIDTH - MARGIN.right}
-          y2={CHART_HEIGHT - MARGIN.bottom}
-          stroke="var(--color-border)"
-        />
-
-        {showZeroLine ? (
-          <line
-            x1={MARGIN.left}
-            y1={zeroY}
-            x2={CHART_WIDTH - MARGIN.right}
-            y2={zeroY}
-            stroke="var(--color-border)"
-            strokeDasharray="3 3"
-          />
-        ) : null}
-
-        {/* Y-axis reference labels: min, zero (if in range) and max */}
-        <text x={MARGIN.left - 8} y={yFor(valueMax) + 4} textAnchor="end" className="fill-text-faint text-[10px]">
-          {euroInt(valueMax)}
-        </text>
-        {showZeroLine ? (
-          <text x={MARGIN.left - 8} y={zeroY + 4} textAnchor="end" className="fill-text-faint text-[10px]">
-            {euroInt(0)}
-          </text>
-        ) : null}
-        <text x={MARGIN.left - 8} y={yFor(valueMin) + 4} textAnchor="end" className="fill-text-faint text-[10px]">
-          {euroInt(valueMin)}
-        </text>
-
-        {/* X-axis year labels */}
-        {yearNumbers.map((yearNumber) => (
-          <text
-            key={yearNumber}
-            x={xFor(yearNumber)}
-            y={CHART_HEIGHT - MARGIN.bottom + 16}
-            textAnchor="middle"
-            className="fill-text-faint text-[10px]"
-          >
-            {yearNumber}
-          </text>
-        ))}
-
-        {series.map((s) => (
-          <g key={s.scenario} data-scenario={s.scenario}>
-            <polyline
-              data-scenario={s.scenario}
-              points={s.points.map((p) => `${xFor(p.yearNumber)},${yFor(p.monthlyCashflow)}`).join(" ")}
-              fill="none"
-              stroke={SCENARIO_COLOR[s.scenario]}
-              strokeWidth={2}
-            />
-            {s.points.map((p) => (
-              <circle
-                key={p.yearNumber}
-                data-scenario={s.scenario}
-                data-year={p.yearNumber}
-                data-value={p.monthlyCashflow}
-                cx={xFor(p.yearNumber)}
-                cy={yFor(p.monthlyCashflow)}
-                r={2.5}
-                fill={SCENARIO_COLOR[s.scenario]}
-              />
-            ))}
-          </g>
-        ))}
-      </svg>
-
-      <ul className="flex flex-wrap gap-x-6 gap-y-1.5 text-xs">
-        {outcomes.map((outcome) => (
-          <li key={outcome.scenario} className="flex items-center gap-2">
-            <span
-              aria-hidden="true"
-              className="inline-block h-2.5 w-2.5 rounded-sm"
-              style={{ backgroundColor: SCENARIO_COLOR[outcome.scenario] }}
-            />
-            <span className="text-text-muted">{SCENARIO_ID_COPY_NL[outcome.scenario]}</span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-export function TenYearSection({ outcomes }: TenYearSectionProps) {
   return (
     <section aria-labelledby="sectie-tienjarige-reeks" className="flex flex-col gap-6">
       <h2 id="sectie-tienjarige-reeks" className="text-text-faint text-xs tracking-widest uppercase">
         5. De tienjarige reeks
       </h2>
 
+      {/*
+       * Chart first for the story, table under it for the detail - the
+       * same order the score section uses for its radar and rulers. The
+       * table is unchanged and stays the full record: it is the only
+       * place in the report carrying gross rent, NOI, mortgage balance
+       * and equity built per year, and equity built appears nowhere else
+       * at all. It doubles as this chart's text alternative.
+       */}
+      <CashflowChart panels={panels} variant="interactive" className="print:hidden" />
+      {/*
+       * No break-inside-avoid here, and that was measured rather than
+       * assumed: the printed chart renders 543px tall against landscape
+       * A4's 703px printable height and currently lands whole on page 5.
+       * Adding break-inside-avoid changed the rendered PDF by not one
+       * byte - this section is a flex container, and Chromium does not
+       * honour break-inside on flex items. If the chart ever does end up
+       * straddling a page break, the fix is to take it out of the flex
+       * flow first; the property on its own will not do anything.
+       */}
+      <CashflowChart panels={panels} variant="static" className="hidden print:block" />
+
+      <p className="text-text-faint max-w-prose text-xs leading-relaxed">
+        Maandcashflow na belasting per scenario, alle drie op dezelfde schaal. De donkere vlakken
+        liggen boven nul, de lichte eronder — waar een vlak de nullijn kruist, slaat de cashflow om.
+        Vanaf de stippellijn zijn de jaren geëxtrapoleerd: die omslag rust dus op doorgetrokken
+        groei, niet op brondata. De tabel hieronder geeft dezelfde reeks als cijfers, met vier
+        andere posten erbij.
+      </p>
+
       <TenYearTables outcomes={outcomes} />
-      <CashflowTrendChart outcomes={outcomes} />
     </section>
   );
 }
