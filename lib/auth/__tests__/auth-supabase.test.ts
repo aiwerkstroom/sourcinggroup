@@ -248,3 +248,89 @@ describe("subscribeToSessionChanges() - the one writer of the marker cookie midd
     expect(client._unsubscribe).toHaveBeenCalledOnce();
   });
 });
+
+/**
+ * The fix for this task: a session object is not automatically current
+ * just because the SDK handed one back. @supabase/auth-js reads a
+ * cached session from localStorage with no server round trip whenever
+ * it is more than 90 seconds from its OWN claimed expires_at
+ * (EXPIRY_MARGIN_MS, GoTrueClient's __loadSession()) - so a session
+ * revoked on the Supabase side keeps arriving here as non-null for up
+ * to its access token's remaining lifetime. These tests exercise the
+ * one part of that this file can act on without a network round trip:
+ * a session whose own expires_at has already passed.
+ */
+describe("subscribeToSessionChanges() - a session already past its own expires_at is treated as no session", () => {
+  function deliverVia(onAuthStateChange: ReturnType<typeof vi.fn>) {
+    let deliver: (event: string, session: unknown) => void = () => {};
+    onAuthStateChange.mockImplementation((cb: typeof deliver) => {
+      deliver = cb;
+      return { data: { subscription: { unsubscribe: vi.fn() } } };
+    });
+    return (event: string, session: unknown) => deliver(event, session);
+  }
+
+  it("clears the cookie for a session object whose expires_at is already in the past", () => {
+    const onAuthStateChange = vi.fn();
+    createClient.mockReturnValue(fakeClient({ onAuthStateChange }));
+    const deliver = deliverVia(onAuthStateChange);
+    document.cookie = "tsg-session=1; path=/; max-age=604800";
+
+    const onChange = vi.fn();
+    auth.subscribeToSessionChanges(onChange);
+    const expiredSecondsAgo = Math.floor(Date.now() / 1000) - 3600;
+    deliver("TOKEN_REFRESHED", {
+      user: { id: "user-6", email: "stale@example.com" },
+      expires_at: expiredSecondsAgo,
+    });
+
+    expect(document.cookie).not.toContain("tsg-session=1");
+    expect(onChange).toHaveBeenCalledWith(null);
+  });
+
+  it("keeps the cookie for a session whose expires_at is still in the future", () => {
+    const onAuthStateChange = vi.fn();
+    createClient.mockReturnValue(fakeClient({ onAuthStateChange }));
+    const deliver = deliverVia(onAuthStateChange);
+
+    const onChange = vi.fn();
+    auth.subscribeToSessionChanges(onChange);
+    const expiresInOneHour = Math.floor(Date.now() / 1000) + 3600;
+    deliver("SIGNED_IN", {
+      user: { id: "user-7", email: "fresh@example.com" },
+      expires_at: expiresInOneHour,
+    });
+
+    expect(document.cookie).toContain("tsg-session=1");
+    expect(onChange).toHaveBeenCalledWith({ id: "user-7", email: "fresh@example.com" });
+  });
+
+  it("still trusts a session that carries no expires_at at all, rather than treating the field's absence as expiry", () => {
+    // Defensive default: the real SDK always sets expires_at, but nothing
+    // here should invent an expiry the SDK itself did not claim.
+    const onAuthStateChange = vi.fn();
+    createClient.mockReturnValue(fakeClient({ onAuthStateChange }));
+    const deliver = deliverVia(onAuthStateChange);
+
+    const onChange = vi.fn();
+    auth.subscribeToSessionChanges(onChange);
+    deliver("SIGNED_IN", { user: { id: "user-8", email: "no-expiry@example.com" } });
+
+    expect(document.cookie).toContain("tsg-session=1");
+    expect(onChange).toHaveBeenCalledWith({ id: "user-8", email: "no-expiry@example.com" });
+  });
+
+  it("still clears the cookie for the unconditional case this fix leaves untouched: session === null", () => {
+    const onAuthStateChange = vi.fn();
+    createClient.mockReturnValue(fakeClient({ onAuthStateChange }));
+    const deliver = deliverVia(onAuthStateChange);
+    document.cookie = "tsg-session=1; path=/; max-age=604800";
+
+    const onChange = vi.fn();
+    auth.subscribeToSessionChanges(onChange);
+    deliver("SIGNED_OUT", null);
+
+    expect(document.cookie).not.toContain("tsg-session=1");
+    expect(onChange).toHaveBeenCalledWith(null);
+  });
+});

@@ -164,11 +164,47 @@ function clearSessionCookie(): void {
   document.cookie = `${SESSION_COOKIE}=; path=/; max-age=0`;
 }
 
+/**
+ * session !== null is not the same question as "is this session still
+ * good right now" - the gap this task's own investigation found.
+ * @supabase/auth-js reads a cached session straight from localStorage
+ * and hands it back with no server round trip whenever it is more than
+ * EXPIRY_MARGIN_MS (90 seconds) from its OWN claimed expiry
+ * (GoTrueClient's __loadSession()), so a session revoked on the
+ * Supabase side - the account deleted, a password reset that signs out
+ * everywhere, a manual revocation - keeps arriving here as a non-null
+ * session, unnoticed, for up to its access token's full lifetime
+ * (default one hour). onAuthStateChange never fires a separate event to
+ * say so: a failed refresh either surfaces as SIGNED_OUT with
+ * session: null (GoTrueClient's _removeSession(), which every genuinely
+ * dead refresh routes through) or, if the access token was still
+ * technically valid at that moment, no event at all
+ * ("proactive-preserve" - the SDK's own term for it). TOKEN_REFRESHED
+ * itself never fires with a failure; it is a success-only event.
+ *
+ * So the one thing this file CAN check without adding a network round
+ * trip this task did not ask for is the session's own expires_at
+ * against the clock - which is exactly what this function does. It does
+ * NOT close the gap above (nothing client-side can, short of a
+ * getUser() call on every event, which was explicitly out of scope for
+ * this fix): a session Supabase revoked five minutes ago, whose access
+ * token is not due to expire for another fifty, will still read as
+ * valid here, because its own expires_at has not been reached yet
+ * either. What this DOES fix is no longer trusting a session object
+ * whose own timestamp already says it is dead, regardless of which
+ * event happened to carry it.
+ */
+function isCurrentlyValid(session: Session | null): session is Session {
+  if (session === null) return false;
+  if (session.expires_at === undefined) return true;
+  return session.expires_at * 1000 > Date.now();
+}
+
 function handleSessionEvent(
   session: Session | null,
   onChange: (user: AuthUser | null) => void,
 ): void {
-  if (session === null) {
+  if (!isCurrentlyValid(session)) {
     clearSessionCookie();
     onChange(null);
   } else {
@@ -185,7 +221,9 @@ function handleSessionEvent(
  * keeps the cookie from being able to drift out of step with what the
  * SDK itself considers the current session: there is exactly one writer,
  * and it is the SDK's own event, not signIn()/signUp()/signOut() setting
- * it directly.
+ * it directly - handleSessionEvent()'s own expiry check above is what
+ * keeps that one writer honest about a session it already knows is
+ * dead, on top of session === null.
  */
 export function subscribeToSessionChanges(onChange: (user: AuthUser | null) => void): () => void {
   const {
