@@ -18,18 +18,25 @@
  * still the plainest text rendering of the five values. Each ruler stays
  * independent, on its own 0-10 scale.
  *
- * ONE STANDING OBJECTION, RECORDED RATHER THAN SILENTLY DROPPED. Interview
- * round 2 ruled a radar out for a specific reason: a radar's enclosed area
- * reads as a total, and its equal-angle axes read as equal weights - while
- * the real weights are not equal (SCORE_SPEC.md §3) and are exactly what
- * UI_SPEC.md §5 keeps unpublished. That objection still applies to the
- * drawing itself; the radar is a later, deliberate decision that overrode
- * it. Two things keep it from actively misleading: the total is printed as
- * its own figure above the chart, so nobody has to infer it from an area,
- * and the copy under the chart says in as many words that the shape is not
- * a sum and the axes are not weights. The tension is real and is not
- * resolved by the drawing - worth knowing before anyone leans harder on
- * the shape.
+ * WHY THE ANGLES ARE EQUAL, AND WHY THAT NEEDS A CAPTION. Interview round
+ * 2 originally ruled a radar out for a specific reason: equal-angle axes
+ * read as equal weights, and the real weights are not equal
+ * (SCORE_SPEC.md §3). Both other ways out were rejected on their merits -
+ * angles proportional to the weights draw badly at five dimensions, and
+ * publishing the weights is ruled out by SCORE_SPEC.md, which explains the
+ * method in outline and deliberately does not publish the weighting.
+ *
+ * So the fix is a caption rather than a change of shape: the paragraph
+ * under the chart states both that the chart shows a score per dimension
+ * and that the dimensions do not weigh equally in the total. That
+ * corrects the false inference the geometry would otherwise invite,
+ * without giving the weighting away. The total is also printed as its own
+ * figure above the chart, so nobody has to read it off an area.
+ *
+ * The caption is load-bearing, not decoration - without it the drawing
+ * asserts something untrue about the model. __tests__/score-ruler.test.tsx
+ * guards both halves of it against a silent refactor, the same way the
+ * homepage test guards the FAQ against a roadmap claim creeping back in.
  *
  * The ruler itself (tick-marks at SCORE_SPEC §2's anchors, single accent
  * marker) lives in ScoreRuler - DESIGN_SPEC.md §4 asked for one component
@@ -116,10 +123,22 @@ function ScoreBody({ score, percentile }: { score: TsgScore; percentile: number 
       <ScoreRadar points={radarPoints} variant="interactive" className="print:hidden" />
       <ScoreRadar points={radarPoints} variant="static" className="hidden print:block" />
 
+      {/*
+       * The caption that corrects what the shape would otherwise imply.
+       * Equal angles are a drawing decision, not a statement about the
+       * model: the dimensions do not count equally toward the total.
+       * Making the angles proportional to the weights was ruled out (it
+       * draws badly), and publishing the weights is ruled out by
+       * SCORE_SPEC.md - the method is explained in outline, the weighting
+       * itself is not published. So the correction is words, not
+       * geometry. __tests__/score-ruler.test.tsx pins that both halves
+       * stay: what the chart shows, and that equal angles are not equal
+       * weights.
+       */}
       <p className="text-text-faint max-w-prose text-xs leading-relaxed">
-        De vijf assen staan elk op hun eigen schaal van 0 tot 10. Het omsloten vlak is geen
-        optelsom en de assen zijn niet gewogen — de totaalscore hierboven is de uitkomst, en die
-        volgt een vaste weging die per dimensie verschilt.
+        Deze grafiek toont de score per dimensie, elk op een eigen schaal van 0 tot 10. De
+        dimensies wegen niet gelijk mee in het totaal — gelijke hoeken betekenen dus geen gelijke
+        weging, en het omsloten vlak is geen optelsom.
       </p>
 
       <div className="flex flex-col gap-6">

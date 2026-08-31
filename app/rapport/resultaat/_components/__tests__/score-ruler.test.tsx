@@ -180,3 +180,72 @@ describe("TsgScoreSection - renders five rulers from the reference case", () => 
     }
   });
 });
+
+/**
+ * The radar's caption, guarded the way app/__tests__/page.test.tsx guards
+ * the FAQ against a roadmap claim: by asserting what must be said AND
+ * what must not be implied.
+ *
+ * This caption is load-bearing rather than decorative. The radar draws
+ * five axes at equal angles because proportional angles read badly at
+ * five dimensions - but the dimensions do not weigh equally in the total
+ * (SCORE_SPEC.md §3), and equal angles invite exactly that inference. The
+ * caption is the only thing correcting it, since the weighting itself is
+ * deliberately not published. Delete it in a refactor and the chart goes
+ * back to asserting something untrue about the model, silently.
+ */
+describe("TsgScoreSection - the radar's caption cannot silently disappear", () => {
+  const html = renderToStaticMarkup(
+    (() => {
+      const base = runEngine(referenceCase).scenarioOutcomes!.find((o) => o.scenario === "base")!;
+      return <TsgScoreSection score={base.score} percentile={base.percentile} />;
+    })(),
+  );
+  // Tags stripped so a line break inside the JSX cannot fail a match.
+  const text = html.replace(/<[^>]*>/g, " ").replace(/&nbsp;|&#x27;/g, " ").replace(/\s+/g, " ");
+
+  it("(a) says what the chart shows", () => {
+    expect(text).toMatch(/score per dimensie/i);
+  });
+
+  it("(b) says the dimensions do NOT weigh equally in the total", () => {
+    // The correction itself. Phrasing may be reworded; the claim may not
+    // be dropped, so this matches the assertion rather than a sentence.
+    expect(text).toMatch(/wegen niet gelijk mee|niet gelijk mee in het totaal/i);
+  });
+
+  it("spells out that equal angles are not equal weights", () => {
+    expect(text).toMatch(/gelijke hoeken/i);
+    expect(text).toMatch(/geen gelijke weging/i);
+  });
+
+  it("still does not publish the weighting - the whole reason a caption was needed", () => {
+    // SCORE_SPEC.md §3's actual weights, as percentages and as decimals.
+    // If any of these ever appears in this section, the caption has
+    // stopped protecting what it exists to protect.
+    for (const leak of ["30%", "20%", "15%", "0,30", "0,20", "0,15", "0.3", "0.2", "0.15"]) {
+      expect(text, `the weighting must stay unpublished, found ${leak}`).not.toContain(leak);
+    }
+  });
+
+  it("sits with the chart rather than after the rulers, so it is read before the shape is trusted", () => {
+    const captionAt = html.indexOf("score per dimensie");
+    const firstRulerAt = html.indexOf('data-marker="score"');
+    const radarAt = html.indexOf('data-radar="');
+    expect(captionAt).toBeGreaterThan(-1);
+    expect(radarAt).toBeGreaterThan(-1);
+    expect(captionAt).toBeGreaterThan(radarAt); // under the chart
+    expect(captionAt).toBeLessThan(firstRulerAt); // before the rulers
+  });
+
+  it("is in the report's caption register, not shouted and not hidden", () => {
+    // The same text-text-faint/text-xs treatment every other caption in
+    // the report uses - visible small print, not a footnote nobody reads
+    // and not a warning banner.
+    const captionAt = html.indexOf("score per dimensie");
+    const opening = html.lastIndexOf("<p", captionAt);
+    const markup = html.slice(opening, captionAt);
+    expect(markup).toContain("text-text-faint");
+    expect(markup).toContain("text-xs");
+  });
+});
