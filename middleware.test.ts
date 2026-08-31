@@ -160,4 +160,22 @@ describe("middleware - route-to-route walkthrough", () => {
 
     await context.close();
   });
+
+  it("leaves the review-demo route reachable without a session, with its notice visible", async () => {
+    // /demo/rapport sits outside middleware's matcher entirely (it does
+    // not match "/rapport/:path*"), so this is really a test that the
+    // matcher was left alone rather than widened - the same guarantee
+    // the print-route test above gives for its own carve-out.
+    const context = await browser.newContext();
+    const page = await context.newPage();
+
+    const response = await page.goto(`${BASE_URL}/demo/rapport`, { waitUntil: "networkidle" });
+    expect(response?.status()).toBe(200);
+    expect(pathnameOf(page.url())).toBe("/demo/rapport");
+
+    const notice = await page.locator("[data-demo-notice]").innerText();
+    expect(notice).toContain("voorbeeldrapport");
+
+    await context.close();
+  });
 });
