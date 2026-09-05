@@ -12,7 +12,7 @@ import { TEST_CARDS } from "@/lib/payments/test-cards";
  * wizard input -> prepare -> pay -> release -> the report on screen,
  * driven by a real browser against a real production server.
  *
- * The anchor is the point. The reference case's base scenario scores 3.8
+ * The anchor is the point. The reference case's base scenario scores 3.7
  * at percentile 70 - pinned independently in engine.test.ts against the
  * hand-assembled outcome, and in the PDF golden test against the printed
  * document. If it also comes out of the paid chain, then reordering the
@@ -170,9 +170,13 @@ describe("the paid chain, end to end", () => {
 
       const body = await page.locator("body").innerText();
 
-      // THE ANCHOR: base scenario, 3.8 at percentile 70 - the same pair
-      // engine.test.ts pins directly against the engine.
-      expect(body).toContain("3,8");
+      // THE ANCHOR: base scenario, 3.7 at percentile 70 - the same pair
+      // engine.test.ts pins directly against the engine. It was 3.8 until
+      // the ITP/AJD correction (AJD is not owed on an existing-build
+      // purchase, so it left the acquisition costs); that moved the
+      // score by one tenth everywhere it is pinned, and this test was the
+      // one place it was not updated.
+      expect(body).toContain("3,7");
       expect(body).toContain("percentiel 70");
 
       // The report itself arrived, not just a page.
