@@ -43,6 +43,20 @@ process.env.TSG_SOURCE_MOCK_LATENCY_MS = "0";
  */
 process.env.TSG_AUTH_STORE = "memory";
 
+/**
+ * Same reasoning, for the payment-intent store: since the live fix that
+ * moved stripe-mock.ts's intents out of a per-process Map,
+ * lib/payments/payment-intent-store.ts defaults to Supabase, which no
+ * test here can reach. Every test that creates or confirms a payment
+ * would otherwise try to open a connection that is not there. Set once
+ * here so no test file can forget it.
+ *
+ * The two files that must NOT inherit this - payment-intent-selection.test.ts,
+ * which is about what the default resolves to, and the cross-process
+ * durability test - override or delete it themselves.
+ */
+process.env.TSG_PAYMENT_STORE = "memory";
+
 afterEach(() => {
   cleanup();
 });

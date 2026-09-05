@@ -112,6 +112,7 @@ describe("the internal vocabulary is deliberately untouched", () => {
     "TSG_SCORE_ANCHORS",
     "TSG_AUTH_STORE",
     "TSG_PENDING_STORE",
+    "TSG_PAYMENT_STORE",
   ])("%s still exists as an identifier", (identifier) => {
     expect(grepCount(identifier)).toBeGreaterThan(0);
   });

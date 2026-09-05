@@ -153,7 +153,7 @@ beforeAll(async () => {
   server = spawn(nextBin, ["start", "-p", String(PORT)], {
     cwd: repoRoot,
     stdio: "pipe",
-    env: { ...process.env, TSG_PENDING_STORE: "memory" },
+    env: { ...process.env, TSG_PENDING_STORE: "memory", TSG_PAYMENT_STORE: "memory" },
   });
   await waitForServer(Date.now() + START_TIMEOUT_MS);
 }, TEST_TIMEOUT_MS);

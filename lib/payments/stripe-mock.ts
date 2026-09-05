@@ -25,15 +25,38 @@
  * function boundary.
  *
  * SERVER-SIDE ONLY, and that is the whole point rather than an
- * implementation detail. The intent registry below is the authority on
- * whether something was paid for. The release route (stap 4) asks
+ * implementation detail. The intent store is the authority on whether
+ * something was paid for. The release route (stap 4) asks
  * retrievePaymentIntent() and believes that, never the browser's claim of
  * success - otherwise anyone who can call the route gets a EUR 49 report
  * for free. Keeping the trust boundary here from day one is what makes
  * the eventual swap a one-file change instead of a security rewrite.
+ *
+ * WHERE THE INTENTS LIVE, and why that is no longer this file's business.
+ * They used to sit in a globalThis Map right here, which was a live bug:
+ * on Vercel the route that creates an intent and the page that reads it
+ * back are separate Serverless Functions with separate memory, so the
+ * page found nothing and redirected every paying customer from the end of
+ * step 4 back to step 1 of the wizard. The Map moved out to
+ * payment-intent-memory.ts and gained a durable sibling in
+ * payment-intent-supabase.ts, selected by payment-intent-store.ts - the
+ * same swap the pending-input store and the auth registry already made,
+ * and the third and last per-process store in this codebase.
+ *
+ * That leaves this module what it always was: the mock PROVIDER. It still
+ * invents intents and still decides on a test card number. Only the
+ * storage changed, so the eventual replacement of this body with the real
+ * Stripe SDK is unaffected - it deletes the store along with the mock,
+ * because Stripe keeps intent state on its own servers.
  */
 
 import { randomUUID } from "node:crypto";
+import type { PaymentIntent } from "./payment-intent-contract";
+import {
+  readPaymentIntent,
+  storePaymentIntent,
+  writePaymentIntentStatus,
+} from "./payment-intent-store";
 import { TEST_CARDS } from "./test-cards";
 
 /** EUR 49 from UI_SPEC.md section 2, in cents - Stripe's own unit for EUR. */
@@ -62,24 +85,14 @@ function simulatedLatencyMs(): number {
 }
 
 /**
- * Stripe's own PaymentIntent lifecycle, narrowed to the states this flow
- * can actually produce. `processing` and `requires_capture` exist in the
- * real API but belong to asynchronous methods and manual capture, neither
- * of which this flow uses.
+ * The intent's own type and lifecycle moved to payment-intent-contract.ts
+ * when the registry below became swappable - both store adapters have to
+ * name them, and a type owned by this file would have made the adapters
+ * import the mock. Re-exported here unchanged so every existing call site
+ * that imports PaymentIntent or PaymentIntentStatus from this module
+ * keeps working verbatim.
  */
-export type PaymentIntentStatus =
-  | "requires_payment_method"
-  | "requires_action"
-  | "succeeded"
-  | "canceled";
-
-export interface PaymentIntent {
-  id: string;
-  client_secret: string;
-  status: PaymentIntentStatus;
-  amount: number;
-  currency: string;
-}
+export type { PaymentIntent, PaymentIntentStatus } from "./payment-intent-contract";
 
 export interface StripeError {
   type: "card_error" | "invalid_request_error";
@@ -100,16 +113,6 @@ export interface ConfirmPaymentResult {
  * component, and it must not reach into this file to get them.
  */
 export { TEST_CARDS };
-
-// globalThis-backed for the same reason pending-results.ts is: Next.js
-// hands a Route Handler and a Page separate module instances even inside
-// one `next start` process, confirmed empirically during fase 3. An
-// intent created by one route and read by another would otherwise land in
-// two different Maps, and the release check would see nothing.
-const globalKey = Symbol.for("tsg.mockPaymentIntents");
-type GlobalWithIntents = typeof globalThis & { [globalKey]?: Map<string, PaymentIntent> };
-const g = globalThis as GlobalWithIntents;
-const intents = (g[globalKey] ??= new Map<string, PaymentIntent>());
 
 function token(): string {
   return randomUUID().replace(/-/g, "").slice(0, 24);
@@ -147,7 +150,7 @@ export async function createPaymentIntent(params: {
     amount: params.amount,
     currency: params.currency,
   };
-  intents.set(id, intent);
+  await storePaymentIntent(intent);
   return { ...intent };
 }
 
@@ -161,8 +164,7 @@ export async function createPaymentIntent(params: {
  * into a `succeeded` it never reached.
  */
 export async function retrievePaymentIntent(id: string): Promise<PaymentIntent | null> {
-  const intent = intents.get(id);
-  return intent === undefined ? null : { ...intent };
+  return readPaymentIntent(id);
 }
 
 /**
@@ -183,8 +185,8 @@ export async function confirmPayment(params: {
   await delay();
 
   const id = intentIdFromClientSecret(params.clientSecret);
-  const intent = id === null ? undefined : intents.get(id);
-  if (intent === undefined) {
+  const intent = id === null ? null : await readPaymentIntent(id);
+  if (intent === null) {
     return {
       paymentIntent: null,
       error: {
@@ -208,10 +210,16 @@ export async function confirmPayment(params: {
 
   const number = params.cardNumber.replace(/\s/g, "");
 
+  // Status changes are written back to the store rather than mutated in
+  // place. Against the Map those were the same thing - the object the
+  // caller held WAS the stored record - but a durable store hands back a
+  // copy, so an unwritten mutation would be forgotten the moment this
+  // function returns. That is the one behavioural trap in this swap, and
+  // stripe-mock.test.ts pins each of these transitions because of it.
   if (number === TEST_CARDS.declined) {
     // Stays payable: a declined card is not a dead intent, the customer
     // can try another one. Same as Stripe's own behaviour.
-    intent.status = "requires_payment_method";
+    await writePaymentIntentStatus(intent.id, "requires_payment_method");
     return {
       paymentIntent: null,
       error: {
@@ -223,12 +231,12 @@ export async function confirmPayment(params: {
   }
 
   if (number === TEST_CARDS.requiresAuthentication) {
-    intent.status = "requires_action";
-    return { paymentIntent: { ...intent }, error: null };
+    const updated = await writePaymentIntentStatus(intent.id, "requires_action");
+    return { paymentIntent: updated, error: null };
   }
 
   if (number !== TEST_CARDS.success) {
-    intent.status = "requires_payment_method";
+    await writePaymentIntentStatus(intent.id, "requires_payment_method");
     return {
       paymentIntent: null,
       error: {
@@ -239,8 +247,8 @@ export async function confirmPayment(params: {
     };
   }
 
-  intent.status = "succeeded";
-  return { paymentIntent: { ...intent }, error: null };
+  const succeeded = await writePaymentIntentStatus(intent.id, "succeeded");
+  return { paymentIntent: succeeded, error: null };
 }
 
 /**
@@ -260,8 +268,8 @@ export async function completeAuthentication(clientSecret: string): Promise<Conf
   await delay();
 
   const id = intentIdFromClientSecret(clientSecret);
-  const intent = id === null ? undefined : intents.get(id);
-  if (intent === undefined || intent.status !== "requires_action") {
+  const intent = id === null ? null : await readPaymentIntent(id);
+  if (intent === null || intent.status !== "requires_action") {
     return {
       paymentIntent: null,
       error: {
@@ -272,6 +280,6 @@ export async function completeAuthentication(clientSecret: string): Promise<Conf
     };
   }
 
-  intent.status = "succeeded";
-  return { paymentIntent: { ...intent }, error: null };
+  const succeeded = await writePaymentIntentStatus(intent.id, "succeeded");
+  return { paymentIntent: succeeded, error: null };
 }
